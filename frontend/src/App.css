@@ -1,0 +1,281 @@
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: #102a2f;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #d7e4df;
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(16, 42, 47, 0.06);
+}
+
+.header-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0.35rem 0;
+  font-size: 1.8rem;
+}
+
+.sub {
+  margin: 0;
+  color: #475569;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.status-grid div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.status-grid p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.status-grid strong {
+  font-size: 0.92rem;
+}
+
+.ok { color: #15803d; }
+.warn { color: #b45309; }
+.err { color: #b91c1c; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.kpi-grid article p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.kpi-grid article h2 {
+  margin: 0.5rem 0 0 0;
+  font-size: 2rem;
+}
+
+.tabs-panel {
+  padding: 0.85rem;
+  background: linear-gradient(180deg, #f8fffd 0%, #f3faf8 100%);
+}
+
+.tab-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.citizen-tab-row {
+  width: 100%;
+  max-width: none;
+}
+
+.race-tab-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.citizen-switch-panel {
+  padding: 0.85rem;
+}
+
+.tab-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: #1f2937;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.tab-btn:hover {
+  transform: translateY(-1px);
+  border-color: #94a3b8;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.11);
+}
+
+.tab-btn.active {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.32);
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+.secondary-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.8rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.toolbar h3,
+.section-header h3,
+.alerts h3,
+.stack h3 {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  color: #475569;
+}
+
+select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+  background: #fff;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 320px;
+  margin-top: 0.8rem;
+}
+
+.echart-host {
+  width: 100%;
+  height: 100%;
+}
+
+.meta {
+  margin: 0.5rem 0 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.alerts ul,
+.list {
+  margin: 0.8rem 0 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.alerts li,
+.list li {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.error-box {
+  margin-top: 0.75rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.warn-box {
+  margin-top: 0.75rem;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.map {
+  height: 420px;
+  border-radius: 10px;
+  border: 1px solid #dbe6e3;
+}
+
+@media (max-width: 980px) {
+  .header-panel,
+  .main-grid,
+  .secondary-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tab-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .race-tab-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-grid {
+    width: 100%;
+  }
+}

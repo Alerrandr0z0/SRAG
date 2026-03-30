@@ -1,0 +1,22 @@
+    # Calcular diferença em dias
+    durations = (sub["dt_evoluca"] - sub["dt_interna"]).dt.days
+    # Remover inconsistências e focar em durações de até 60 dias para o gráfico não ficar espremido
+    valid_durations = durations[(durations >= 0) & (durations <= 60)].tolist()
+
+    return sanitize_data(valid_durations)
+
+@app.get("/geo/macrosector_heatpoints")
+def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1):
+    return {"available": False, "points": []}
+
+@app.get("/geo/municipality_boundary")
+def get_geo_boundary():
+    path = Path("data/processed/mossoro_municipality_boundary.geojson")
+    if path.exists(): return FileResponse(path)
+    return {"error": "Boundary not found"}
+
+@app.get("/geo/bairros_choropleth")
+def get_geo_get_bairros():
+    path = Path("data/mossoro_bairros.geojson")
+    if path.exists(): return FileResponse(path)
+    return {"error": "Bairros GeoJSON not found"}
