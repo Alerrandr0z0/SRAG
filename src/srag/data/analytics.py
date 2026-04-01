@@ -3,7 +3,202 @@
 import pandas as pd
 import numpy as np
 
+from lifelines import KaplanMeierFitter
+
 from srag.utils.epi_weeks import format_epi_week, get_epi_week
+
+CAMPANHAS_GRIPE = {
+    2019: pd.to_datetime("2019-04-10").date(),
+    2020: pd.to_datetime("2020-03-23").date(),
+    2021: pd.to_datetime("2021-04-12").date(),
+    2022: pd.to_datetime("2022-04-04").date(),
+    2023: pd.to_datetime("2023-04-10").date(),
+    2024: pd.to_datetime("2024-03-25").date(),
+    2025: pd.to_datetime("2025-03-20").date(),
+}
+
+
+def apply_citizen_filters(
+    df: pd.DataFrame, profiles: list[str] | None = None, races: list[str] | None = None
+) -> pd.DataFrame:
+    """Apply hierarchy of filters with support for multi-selection."""
+    if df.empty:
+        return df
+
+    # Clean empty strings that might come from frontend
+    profiles = [p for p in (profiles or []) if p]
+    races = [r for r in (races or []) if r]
+
+    # 1. Macro Profiles Filter
+    if profiles:
+        age = _age_years(df)
+        masks = []
+        if "crianca" in profiles:
+            masks.append(age < 12)
+        if "adolescente" in profiles:
+            masks.append((age >= 12) & (age < 20))
+        if "adulto" in profiles:
+            masks.append((age >= 20) & (age < 60))
+        if "idoso" in profiles:
+            masks.append(age >= 60)
+
+        if masks:
+            df = df[pd.concat(masks, axis=1).any(axis=1)]
+
+    # 2. Race/Color Filter
+    if races:
+        race_map = {"Branca": 1, "Preta": 2, "Amarela": 3, "Parda": 4, "Indígena": 5}
+        codes = [race_map.get(r) for r in races if r in race_map]
+        if codes:
+            df = df[df["CS_RACA"].isin(codes)]
+
+    return df
+
+
+def classificar_status_gripe(row: pd.Series | dict) -> str:
+    """Determine epidemiological status for Flu based on vaccination date and symptoms."""
+    vacina = row.get("VACINA")
+    dt_dose = row.get("DT_UT_DOSE")
+    dt_sintoma = row.get("DT_SIN_PRI")
+
+    try:
+        vacina = float(vacina) if pd.notna(vacina) else np.nan
+    except:
+        vacina = np.nan
+
+    nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
+    is_menor_6m = False
+    is_crianca_8y = False
+    tp_idade = row.get("TP_IDADE")
+
+    if pd.notna(tp_idade):
+        if tp_idade == 1:
+            is_menor_6m = True
+        elif tp_idade == 2:
+            if nu_idade < 6:
+                is_menor_6m = True
+            else:
+                is_crianca_8y = True  # Between 6 months and 1 year
+        elif tp_idade == 3 and nu_idade <= 8:
+            is_crianca_8y = True
+    else:
+        if (1000 <= nu_idade <= 1365) or (2000 <= nu_idade < 2006):
+            is_menor_6m = True
+        elif (2006 <= nu_idade <= 2011) or (3000 <= nu_idade <= 3008):
+            is_crianca_8y = True
+
+    label_prefix = "protegido"
+
+    # 1. Handle infants < 6 months (Mother's Vaccine)
+    if is_menor_6m:
+        mae_vac = row.get("MAE_VAC")
+        dt_vac_mae = row.get("DT_VAC_MAE")
+        try:
+            vacina = float(mae_vac) if pd.notna(mae_vac) else vacina
+        except:
+            pass
+        dt_dose = dt_vac_mae if pd.notna(dt_vac_mae) else dt_dose
+
+    # 2. Handle children 6m - 8y (Specific doses)
+    elif is_crianca_8y:
+        if pd.notna(row.get("DT_2_DOSE")):
+            dt_dose = row.get("DT_2_DOSE")
+            label_prefix = "dose_2"
+        elif pd.notna(row.get("DT_1_DOSE")):
+            dt_dose = row.get("DT_1_DOSE")
+            label_prefix = "dose_1"
+        elif pd.notna(row.get("DT_DOSEUNI")):
+            dt_dose = row.get("DT_DOSEUNI")
+            label_prefix = "dose_unica"
+
+    if pd.isna(vacina) or vacina == 9:
+        return "ignorado"
+
+    if vacina == 2:
+        if pd.notna(dt_dose):
+            return "inconsistencia"
+        return "nao_vacinado"
+
+    if vacina == 1:
+        if pd.isna(dt_dose):
+            return "ignorado"
+
+        dt_dose_val = dt_dose.date() if isinstance(dt_dose, pd.Timestamp) else dt_dose
+        dt_sintoma_val = (
+            dt_sintoma.date() if isinstance(dt_sintoma, pd.Timestamp) else dt_sintoma
+        )
+
+        if pd.isna(dt_sintoma_val):
+            return "ignorado"
+
+        if isinstance(dt_dose_val, str):
+            try:
+                dt_dose_val = pd.to_datetime(dt_dose_val, dayfirst=True, format="mixed").date()
+            except:
+                return "ignorado"
+
+        if isinstance(dt_sintoma_val, str):
+            try:
+                dt_sintoma_val = pd.to_datetime(
+                    dt_sintoma_val, dayfirst=True, format="mixed"
+                ).date()
+            except:
+                return "ignorado"
+
+        if not hasattr(dt_dose_val, "year") or not hasattr(dt_sintoma_val, "year"):
+            return "ignorado"
+
+        if dt_dose_val > dt_sintoma_val:
+            return "inconsistencia"
+
+        ano_sintoma = getattr(dt_sintoma_val, "year", None)
+        if not ano_sintoma:
+            return "ignorado"
+
+        inicio_campanha = CAMPANHAS_GRIPE.get(
+            ano_sintoma, pd.to_datetime(f"{ano_sintoma}-04-01").date()
+        )
+
+        if dt_dose_val >= inicio_campanha:
+            return label_prefix if is_crianca_8y else "protegido"
+        else:
+            return "vencida"
+
+    return "ignorado"
+
+
+def compute_vaccine_survival(df: pd.DataFrame, vax_date_col: str) -> dict[str, list[float]]:
+    """Compute Kaplan-Meier survival curve for vaccine protection."""
+    if df.empty or vax_date_col not in df.columns:
+        return {}
+
+    km_df = pd.DataFrame(
+        {
+            "last_vax": pd.to_datetime(df[vax_date_col], errors="coerce"),
+            "symptoms": pd.to_datetime(df["DT_SIN_PRI"], errors="coerce"),
+        }
+    ).dropna()
+
+    km_df["months"] = (km_df["symptoms"] - km_df["last_vax"]).dt.days / 30.44
+    km_df = km_df[(km_df["months"] >= 0) & (km_df["months"] <= 24)]
+
+    if km_df.empty:
+        return {}
+
+    kmf = KaplanMeierFitter()
+    # Assume all cases in this subset are events (they got sick)
+    # This represents the "time to breakthrough infection"
+    kmf.fit(durations=km_df["months"], event_observed=np.ones(len(km_df)))
+
+    surv = kmf.survival_function_.reset_index()
+    ci = kmf.confidence_interval_.reset_index()
+
+    return {
+        "timeline": surv.iloc[:, 0].tolist(),
+        "survival": (surv.iloc[:, 1] * 100).tolist(),
+        "ci_upper": (ci.iloc[:, 1] * 100).tolist(),
+        "ci_lower": (ci.iloc[:, 2] * 100).tolist(),
+    }
 
 
 def categorize_age(age: float) -> str:
