@@ -40,6 +40,10 @@ data/external/*
 .DS_Store
 Thumbs.db
 
+# Project Agents/Internal docs
+AGENTS.md
+GEMINI.md
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
