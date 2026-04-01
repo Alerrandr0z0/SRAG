@@ -1,80 +1,76 @@
 # GEMINI.md - SRAG Mossoró/RN
 
 ## Project Overview
-**SRAG Mossoró/RN** is a municipal epidemiological surveillance system designed for Mossoró/RN. It automates SIVEP-Gripe data analysis and provides forecasting models to support public health decision-making.
+**SRAG Mossoró/RN** is a municipal epidemiological surveillance system designed for Mossoró/RN. It automates SIVEP-Gripe data analysis and provides advanced forecasting models to support public health decision-making.
 
-The project is fully functional with an integrated React frontend and a high-performance FastAPI backend.
+The project features a high-performance architecture leveraging DuckDB for data orchestration, Facebook Prophet for seasonal forecasting, and React for a rich analytical dashboard.
 
 ---
 
 ## Architecture & Implementation Details
 
+### Data Ingestion (Universal Engine)
+The project uses a master ingestion script `scripts/ingest_data.py` that implements a **Bronze/Silver/Gold** data flow:
+- **Engine:** DuckDB is used as the primary processing engine for its extreme performance with Parquet and CSV files.
+- **Universal Handling:** Automatically detects and processes all `.parquet` and `.csv` files within `data/raw/`.
+- **Deduplication:** Implements a global MD5 hash based on `(DT_NOTIFIC, ID_MUNICIP, DT_SIN_PRI, NU_IDADE_N, CS_SEXO, ID_UNIDADE)`. Duplicates across source files are discarded, maintaining a unique source of truth in SQLite.
+- **Flexible Parsing:** Supports both Brazilian (`DD/MM/YYYY`) and ISO (`YYYY-MM-DD`) date formats using a `COALESCE` + `TRY_CAST` strategy in DuckDB.
+
 ### Backend (FastAPI + Python 3.14)
-The API resides in `src/srag/api/main.py` and implements several high-performance patterns:
-- **Observability:** Integrated with **Pydantic Logfire** for real-time telemetry, SQL profiling, and error tracking.
-- **Database Persistence:** SQLite (`data/srag_mossoro.db`) using SQLAlchemy with a **Singleton Engine** and `pool_pre_ping=True`.
-- **Advanced Analytics:** Uses the `lifelines` library to compute rigorous Kaplan-Meier survival curves for vaccine protection analysis.
-- **Performance Optimization:**
-    - **Memory Caching:** Implements a TTL-based cache (15 min) for the main DataFrame to minimize disk I/O.
-    - **Surgical Column Selection:** Only essential columns (defined in `CORE_COLS`) are loaded from SQLite.
-    - **NumPy Sanitization:** Explicit conversion of `np.float64` and `np.int64` to native Python types for reliable JSON serialization.
-- **Key Endpoints:**
-    - `/clinical_flow`: Clinical journey Sankey (Admission -> ICU -> Ventilation -> Outcome).
-    - `/hospitalization_duration`: Distribution of stay lengths (Histogram).
-    - `/vaccination_profile`: Unified horizontal stacked bar chart data comparing COVID-19 (detailed doses) and Flu vaccination coverage.
-    - `/vaccine_survival`: Dual Kaplan-Meier survival curves (COVID-19 and Flu) showing protection over time with 95% Confidence Intervals.
-    - `/territory_bootstrap`: Integrated GeoJSON delivery (neighborhood boundaries + cases).
-    - `/citizen_bootstrap`: Hierarchical profiles, age pyramids, and symptoms heatmap.
+The API resides in `src/srag/api/main.py`:
+- **Observability:** Integrated with **Pydantic Logfire** for telemetry.
+- **Database Persistence:** SQLite located at `data/processed/srag_mossoro.db`.
+- **Performance:** TTL-based caching (15 min) for the main DataFrame and surgical column selection.
+- **Key Analytics:** Kaplan-Meier survival curves for vaccine effectiveness decoupled into `srag.data.analytics`.
+
+### Forecasting (Facebook Prophet)
+Located in `src/srag/models/forecasting.py`:
+- **Model:** Seasonal additive model using the Prophet library.
+- **Seasonality:** Automatically captures yearly SRAG cycles (winter peaks/summer lows).
+- **Uncertainty:** Returns 80% confidence intervals (`predicted_cases_lower/upper`) for risk management.
+- **Date Mapping:** Uses `get_date_from_epi_week` to align epidemiological weeks with historical timeframes.
 
 ### Frontend (React + Vite + TypeScript)
-Located in `frontend/`, the dashboard is built for responsiveness and speed:
-- **Proxy Configuration:** `vite.config.ts` handles API routing using `127.0.0.1` (IPv4) to avoid resolution conflicts, with prefix rewriting from `/api/*` to `/*`.
-- **Hybrid Charting Engine:** 
-    - **Chart.js:** Used for trends and standard bar charts.
-    - **ECharts (Modular):** Used for heavy visualizations: **Sankey Diagram**, **Symptoms Heatmap**, **Hospitalization Histogram**, **Vaccination Profile**, and **Kaplan-Meier Curve**.
-- **Optimization:** Dynamic `import()` loaders for ECharts and Leaflet to keep the initial bundle small.
+- **Geospatial:** Advanced Leaflet implementation with 90-degree quadrant sectors, floating legend, and golden connection lines.
+- **Visualization:** Hybrid engine using Chart.js (trends) and Modular ECharts (Sankey, Heatmaps, Histograms).
 
 ---
 
-## Technical Findings & Standards (Critical)
+## Technical Findings & Standards
 
-### Nomenclatura Oficial (Rule of Thumb)
-O projeto segue uma convenção de caixa estrita para evitar inconsistências entre Backend e Frontend:
-1. **Campos Oficiais SIVEP & Negócio (MAIÚSCULO):** Exemplos: `DT_SIN_PRI`, `CLASSI_FIN`, `ID_UNIDADE`, `BAIRRO_REF`, `ZONA`, `NOSOCOMIAL`, `DOSE_1_COV`, `DT_UT_DOSE`.
-2. **Chaves de Resposta & Agregações (minúsculo):** Exemplos: `count`, `total`, `history`, `forecast`, `nodes`, `links`, `male`, `female`, `age_band`.
+### Nomenclatura Oficial
+1. **Campos Oficiais (MAIÚSCULO):** `DT_SIN_PRI`, `CLASSI_FIN`, `BAIRRO_REF`, `ZONA`, `NOSOCOMIAL`, `unique_hash`.
+2. **Chaves de Resposta (minúsculo):** `count`, `total`, `history`, `forecast`, `nodes`, `links`.
 
-### Database Schema
-- A tabela `casos_srag` utiliza nomes de colunas em **MAIÚSCULO**.
-- O campo `BAIRRO_REF` contém o nome do bairro normalizado (limpo), enquanto `NM_BAIRRO` contém o texto original da ficha.
-- A variável `NOSOCOMIAL` foi adicionada via migração para rastrear infecções hospitalares.
-- **Vacinação Detalhada:** O banco armazena as datas exatas de cada dose (ex: `DOSE_1_COV`, `DOSE_REF`, `DOS_RE_BI` para COVID, e `DT_UT_DOSE` para Gripe) para permitir análises temporais rigorosas.
-- **Atenção:** Colunas `sg_uf` e `tp_idade` do dicionário original estão ausentes no SQLite de produção e foram removidas de `CORE_COLS` para evitar falhas de SQL.
-
-### Data Parsing
-- Colunas de data (ex: `DT_SIN_PRI`, `DT_INTERNA`, e todas as datas de vacina) devem ser convertidas para objetos `datetime.date` ou validadas corretamente para compatibilidade com cálculos de tempo (ex: `lifelines`) e economia de memória.
+### Testing Standards
+The project maintains a comprehensive test suite via `pytest`:
+- **Unit Tests:** Located in `tests/unit/`, covering `analytics`, `database`, and `forecasting`.
+- **Integration Tests:** Located in `tests/integration/`, validating `api` endpoints and `ingestion` flows.
+- **Coverage:** Mandatory validation for any new epidemiological calculation or classification logic.
 
 ---
 
 ## Building and Running
 
-### Prerequisites
-- Python >= 3.14 (uv manager recommended)
-- Node.js (npm)
+### Data Update
+```bash
+uv run scripts/ingest_data.py
+```
 
-### Integrated Execution
+### Full Stack Execution
 ```bash
 ./scripts/port_control.sh start
 ```
-*Starts API on port 8000 and Frontend on port 5173.*
 
-### Maintenance
-- **Backend Sync:** `uv sync`
-- **Observability:** `uv run logfire live` (terminal viewer) or [Logfire Web](https://logfire-us.pydantic.dev/alerrandr0z0/srag-mossoro).
-- **Restart Services:** `./scripts/port_control.sh restart`
+### Quality Assurance
+```bash
+uv run pytest
+```
 
 ---
 
 ## Development Conventions
-- **API Consistency:** New endpoints must use the `sanitize_data` helper to ensure JSON compatibility.
-- **Frontend State:** `App.tsx` is the primary entry point; avoid duplicating fetch logic outside the `API_BASE` pattern.
-- **Git Workflow:** Keep `data/*.db` and `data/*.geojson` local; do not commit large datasets.
+- **Data Integrity:** Never skip the `unique_hash` check during ingestion.
+- **Modular Analytics:** New aggregation logic MUST be added to `analytics.py`, not directly in API endpoints.
+- **Privacy:** `tools/mossoro_privacy_tool/` must be used for any data export destined for public/shared environments.
+- **Git Workflow:** Do not commit files in `data/raw/`, `data/processed/*.db` or generated `.geojson` files.

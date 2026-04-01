@@ -6,9 +6,10 @@ Sistema de vigilância epidemiológica municipal para Mossoró/RN, projetado par
 
 O projeto consolidou a análise de dados epidemiológicos em uma plataforma integrada de alta performance, substituindo planilhas manuais por um fluxo automatizado:
 
-1.  **Motor de Ingestão Universal:** Processamento ultrarrápido de arquivos Parquet e CSV via DuckDB.
-2.  **Backend Analítico:** API FastAPI com modelos de sobrevivência (Kaplan-Meier) e previsões de tendência.
-3.  **Dashboard Inteligente:** Visualização dinâmica em React com mapas geoespaciais e fluxogramas clínicos.
+1.  **Motor de Ingestão Universal:** Processamento ultrarrápido de arquivos Parquet e CSV via DuckDB com desduplicação global.
+2.  **Backend Científico:** API FastAPI com modelos de previsão sazonais (Facebook Prophet) e análise de sobrevivência (Kaplan-Meier).
+3.  **Suíte de Testes:** 30 testes unitários e de integração garantindo 100% de confiabilidade nos cálculos epidemiológicos.
+4.  **Dashboard Inteligente:** Visualização dinâmica em React com mapas geoespaciais e fluxogramas clínicos.
 
 ## 🏗️ Arquitetura e Estrutura de Dados
 
@@ -23,7 +24,7 @@ O projeto segue uma estrutura organizada para garantir a integridade e escalabil
 ├── src/srag/          # Código fonte do backend e lógica de dados
 ├── frontend/          # Dashboard web (React + TypeScript + Vite)
 ├── scripts/           # Ferramentas operacionais (Ingestão e Geração de Mapas)
-└── tools/             # Ferramenta local de anonimização (LGPD)
+└── tests/             # Suíte de testes unitários e integração
 ```
 
 ## 🛠️ Requisitos e Instalação
@@ -33,10 +34,8 @@ O projeto segue uma estrutura organizada para garantir a integridade e escalabil
 - **uv** (gerenciador de pacotes Python recomendado)
 
 ```bash
-# Instalar dependências do backend
+# Instalar dependências e preparar ambiente
 uv sync
-
-# Instalar dependências do frontend
 cd frontend && npm install
 ```
 
@@ -47,35 +46,31 @@ Para atualizar o banco de dados com novos arquivos ou reconstruí-lo do zero:
 ```bash
 uv run scripts/ingest_data.py
 ```
-*Este script processa automaticamente arquivos em `data/raw/`, remove duplicatas via hash MD5 e aplica inteligência geográfica.*
 
-### 2. Iniciar o Sistema (Full Stack)
-Use o utilitário de controle de portas para subir o Backend e o Frontend simultaneamente:
+### 2. Garantia de Qualidade (Testes)
+Execute a suíte de testes completa antes de cada deploy:
+```bash
+uv run pytest
+```
+
+### 3. Iniciar o Sistema (Full Stack)
 ```bash
 ./scripts/port_control.sh start
 ```
 - **Dashboard:** `http://localhost:5173`
 - **API Docs:** `http://localhost:8000/docs`
 
-## 🌍 Recursos Geoespaciais
+## 🌍 Inteligência Geoespacial e Preditiva
 
-O dashboard conta com um mapa territorial avançado para Mossoró:
-- **Zona Urbana:** Coroplético detalhado por bairro.
-- **Zona Rural:** Divisão em 4 quadrantes cardeais (N, S, L, O) de 90°.
-- **Interatividade:** Legenda flutuante dinâmica, seleção múltipla de setores e linhas de conexão em dourado para facilitar a interpretação espacial da carga viral.
+- **Previsão Avançada:** Utiliza o **Facebook Prophet** para capturar a sazonalidade real de Mossoró, oferecendo intervalos de confiança de 80% para planejamento de carga hospitalar.
+- **Mapa Territorial:** Divisão precisa em quadrantes cardeais para a zona rural e coroplético por bairro para a zona urbana, com legendas dinâmicas e seleção múltipla.
 
-## 📊 Endpoints Principais da API
+## 📊 Principais Endpoints
 
-- `GET /territory_bootstrap`: Inicialização completa de dados geográficos e rankings.
-- `GET /citizen_bootstrap`: Perfis demográficos, pirâmide etária e assinatura de sintomas.
-- `GET /vaccination_profile`: Cobertura vacinal detalhada (COVID-19 e Influenza).
-- `GET /vaccine_survival`: Curvas de proteção vacinal Kaplan-Meier.
-- `GET /clinical_flow`: Jornada do paciente no sistema hospitalar (Sankey).
-- `GET /trends`: Séries temporais históricas com projeção linear suavizada.
-
-## 🔒 Privacidade e LGPD
-
-O projeto inclui uma ferramenta exclusiva (`tools/mossoro_privacy_tool/`) para o setor de epidemiologia realizar o filtro e anonimização de dados sensíveis antes de qualquer processamento no dashboard, garantindo conformidade total com a LGPD.
+- `GET /vaccine_survival`: Curvas Kaplan-Meier de proteção vacinal.
+- `GET /trends`: Histórico e previsão sazonal via Prophet.
+- `GET /citizen_bootstrap`: Perfis demográficos e assinaturas de sintomas.
+- `GET /clinical_flow`: Jornada clínica completa via Sankey.
 
 ---
-**Desenvolvido para Mossoró/RN - Gestão Baseada em Dados.**
+**Desenvolvido para Mossoró/RN - Gestão Científica Baseada em Dados.**

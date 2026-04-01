@@ -46,3 +46,15 @@ def get_epi_week(dt: date) -> tuple[int, int]:
 def format_epi_week(year: int, week: int) -> str:
     """Format SE as YYYY-WW string."""
     return f"{year}-{week:02d}"
+
+
+def get_date_from_epi_week(year: int, week: int) -> date:
+    """Return the start date (Sunday) of a given epidemiological week.
+    
+    Inverse of `get_epi_week`.
+    """
+    # The first SE of the year is the week containing Jan 4th
+    jan4 = date(year, 1, 4)
+    first_sun = jan4 - timedelta(days=(jan4.weekday() + 1) % 7)
+    
+    return first_sun + timedelta(weeks=week - 1)
