@@ -250,9 +250,16 @@ select {
 }
 
 .map {
-  height: 420px;
-  border-radius: 10px;
+  height: 520px;
+  border-radius: 14px;
   border: 1px solid #dbe6e3;
+}
+
+.rural-sector-label {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 @media (max-width: 980px) {

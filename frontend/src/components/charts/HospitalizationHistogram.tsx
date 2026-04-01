@@ -46,7 +46,7 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
             return `Permanência: <b>${b.value[0]} dias</b><br/>Volume: <b>${b.value[1]} casos</b>`;
         }
       },
-      grid: { top: 40, left: 50, right: 30, bottom: 60, containLabel: true },
+      grid: { top: 40, left: 50, right: 30, bottom: 60, containLabel: false },
       xAxis: { 
         type: 'value', 
         name: 'Dias de Internação', 

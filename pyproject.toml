@@ -20,6 +20,7 @@ dependencies = [
     "logfire[fastapi,sqlalchemy]>=4.31.0",
     "httpx>=0.28.1",
     "lifelines>=0.30.3",
+    "duckdb>=1.5.1",
 ]
 
 [project.optional-dependencies]

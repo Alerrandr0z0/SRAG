@@ -6,10 +6,8 @@ export function useTerritoryData(active: boolean, mapZoneMode: string) {
   const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({ bairros: [], zonas: [] });
   const [boundary, setBoundary] = useState<any>(null);
   const [choropleth, setChoropleth] = useState<Epi.TerritoryBootstrap['choropleth'] | null>(null);
-  const [macroPoints, setMacroPoints] = useState<Record<string, { available: boolean; points: any[] }>>({ 
-    Rural: { available: false, points: [] }, 
-    Periurbana: { available: false, points: [] } 
-  });
+  const [ruralData, setRuralData] = useState<{ sectors: any[]; center: any } | null>(null);
+  const [ruralSectorsGeo, setRuralSectorsGeo] = useState<any>(null);
   const [entities, setEntities] = useState<Epi.TerritoryBootstrap['territory_entities']>({ urban_bairros: [], rural_comunidades: [] });
   const [loading, setLoading] = useState(false);
 
@@ -38,24 +36,30 @@ export function useTerritoryData(active: boolean, mapZoneMode: string) {
   }, [active]);
 
   useEffect(() => {
-    if (!active || mapZoneMode === 'Urbana') return;
-    const modeKey = mapZoneMode === 'Rural' ? 'Rural' : 'Periurbana';
-    if (macroPoints[modeKey]?.available) return;
-
+    if (!active) return;
     let isMounted = true;
-    async function loadPoints() {
+
+    async function loadRuralData() {
       try {
-        const points = await api.fetchMacrosectorPoints(modeKey);
-        if (isMounted) {
-          setMacroPoints(prev => ({ ...prev, [modeKey]: points }));
-        }
+         const [points, geo] = await Promise.all([
+           api.fetchRuralHeatpoints(),
+           api.fetchRuralSectorsGeo(),
+         ]);
+         if (isMounted) {
+           setRuralData(points);
+           setRuralSectorsGeo(geo);
+         }
       } catch (e) {
-        console.error("Failed to load macro points", e);
+        console.error("Failed to load rural data", e);
+        if (isMounted) {
+          setRuralData(null);
+          setRuralSectorsGeo(null);
+        }
       }
     }
-    loadPoints();
+    loadRuralData();
     return () => { isMounted = false; };
-  }, [active, mapZoneMode]);
+  }, [active]);
 
-  return { territory, boundary, choropleth, macroPoints, entities, loading };
+  return { territory, boundary, choropleth, ruralData, ruralSectorsGeo, entities, loading };
 }
