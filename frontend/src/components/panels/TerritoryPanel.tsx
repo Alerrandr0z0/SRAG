@@ -9,7 +9,8 @@ interface TerritoryPanelProps {
   territory: Epi.TerritoryBootstrap['territory'];
   boundary: any;
   choropleth: Epi.TerritoryBootstrap['choropleth'] | null;
-  macroPoints: Record<string, { available: boolean; points: any[] }>;
+  ruralData: { sectors: any[]; points: any[]; center: any } | null;
+  ruralSectorsGeo: any;
 }
 
 const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
@@ -17,9 +18,11 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   territory,
   boundary,
   choropleth,
-  macroPoints
+  ruralData,
+  ruralSectorsGeo,
 }) => {
   const [mapZoneMode, setMapZoneMode] = useState('Urbana');
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
 
   return (
     <div className="stack">
@@ -39,7 +42,13 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
       <div className="filters">
         <label>
           Zona
-          <select value={mapZoneMode} onChange={(e) => setMapZoneMode(e.target.value)}>
+          <select
+            value={mapZoneMode}
+            onChange={(e) => {
+              setMapZoneMode(e.target.value);
+              setSelectedSectors([]);
+            }}
+          >
             <option value="Urbana">Urbana</option>
             <option value="Rural">Rural</option>
           </select>
@@ -48,8 +57,11 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
       <LeafletMap 
         boundary={boundary}
         choropleth={choropleth}
-        macroPoints={macroPoints}
+        ruralData={ruralData}
+        ruralSectorsGeo={ruralSectorsGeo}
         mapZoneMode={mapZoneMode}
+        selectedSectors={selectedSectors}
+        onSectorSelect={(sectors: any) => setSelectedSectors(sectors)}
       />
     </div>
   );

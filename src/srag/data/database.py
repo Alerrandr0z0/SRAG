@@ -7,7 +7,7 @@ from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # Database path (local SQLite file)
-DB_URL = "sqlite:///data/srag_mossoro.db"
+DB_URL = "sqlite:///data/processed/srag_mossoro.db"
 
 
 class Base(DeclarativeBase):
@@ -31,9 +31,11 @@ class SragRecord(Base):
     DT_SIN_PRI = Column(Date, nullable=False)
     ID_UNIDADE = Column(String(30))
     BAIRRO_REF = Column(String(80))
+    NM_BAIRRO = Column(String(120))
     ZONA = Column(String(20))
     CS_ZONA = Column(Integer)
     NU_IDADE_N = Column(Integer)
+    TP_IDADE = Column(Integer)
     IDADE_ANOS = Column(Float)
     CS_SEXO = Column(String(1))
     CS_RACA = Column(Integer)
@@ -115,6 +117,11 @@ class SragRecord(Base):
     DOS_RE_BI = Column(Date)
     VACINA = Column(Integer)
     DT_UT_DOSE = Column(Date)
+    MAE_VAC = Column(Integer)
+    DT_VAC_MAE = Column(Date)
+    DT_DOSEUNI = Column(Date)
+    DT_1_DOSE = Column(Date)
+    DT_2_DOSE = Column(Date)
     ANTIVIRAL = Column(Integer)
     TRAT_COV = Column(Integer)
 
@@ -151,148 +158,28 @@ def init_db() -> None:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ID_UNIDADE VARCHAR(30)"))
         if "BAIRRO_REF" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN BAIRRO_REF VARCHAR(80)"))
+        if "NM_BAIRRO" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN NM_BAIRRO VARCHAR(120)"))
         if "ZONA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ZONA VARCHAR(20)"))
         if "CS_ZONA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ZONA INTEGER"))
+        if "TP_IDADE" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_IDADE INTEGER"))
         if "CS_RACA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_RACA INTEGER"))
         if "CS_ESCOL_N" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ESCOL_N INTEGER"))
-        if "PCR_VSR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_VSR INTEGER"))
-        if "AN_VSR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_VSR INTEGER"))
-        if "PCR_SARS2" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_SARS2 INTEGER"))
-        if "AN_SARS2" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_SARS2 INTEGER"))
-        if "TP_FLU_PCR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_FLU_PCR INTEGER"))
-        if "TP_FLU_AN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_FLU_AN INTEGER"))
-        if "PCR_RESUL" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_RESUL INTEGER"))
-        if "RES_AN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_AN INTEGER"))
-        if "DT_PCR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_PCR DATE"))
-        if "DT_RES_AN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_RES_AN DATE"))
-        if "DT_COLETA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_COLETA DATE"))
-        if "LAB_AN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN LAB_AN VARCHAR(120)"))
-        if "CO_LAB_AN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CO_LAB_AN VARCHAR(20)"))
-        if "POS_PCRFLU" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN POS_PCRFLU INTEGER"))
-        if "PCR_FLUASU" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_FLUASU INTEGER"))
-        if "PCR_FLUBLI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_FLUBLI INTEGER"))
-        if "PCR_RINO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_RINO INTEGER"))
-        if "PCR_METAP" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_METAP INTEGER"))
-        if "PCR_ADENO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_ADENO INTEGER"))
-        if "PCR_PARA1" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_PARA1 INTEGER"))
-        if "PCR_PARA2" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_PARA2 INTEGER"))
-        if "PCR_PARA3" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_PARA3 INTEGER"))
-        if "PCR_PARA4" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PCR_PARA4 INTEGER"))
-        if "POS_AN_OUT" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN POS_AN_OUT INTEGER"))
-        if "AN_ADENO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_ADENO INTEGER"))
-        if "AN_PARA1" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_PARA1 INTEGER"))
-        if "AN_PARA2" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_PARA2 INTEGER"))
-        if "AN_PARA3" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN AN_PARA3 INTEGER"))
-        if "DT_INTERNA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_INTERNA DATE"))
-        if "DT_ENTUTI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_ENTUTI DATE"))
-        if "DT_SAIDUTI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_SAIDUTI DATE"))
-        if "DT_EVOLUCA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_EVOLUCA DATE"))
-        if "SUPORT_VEN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN SUPORT_VEN INTEGER"))
-        if "RAIOX_RES" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RAIOX_RES INTEGER"))
-        if "TOMO_RES" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TOMO_RES INTEGER"))
-        if "ASMA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ASMA INTEGER"))
-        if "IMUNODEPRE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN IMUNODEPRE INTEGER"))
-        if "RENAL" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RENAL INTEGER"))
-        if "DIABETES" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DIABETES INTEGER"))
-        if "OBESIDADE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN OBESIDADE INTEGER"))
-        if "HEMATOLOGI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN HEMATOLOGI INTEGER"))
-        if "SIND_DOWN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN SIND_DOWN INTEGER"))
-        if "HEPATICA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN HEPATICA INTEGER"))
-        if "NEUROLOGIC" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN NEUROLOGIC INTEGER"))
-        if "PNEUMOPATI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PNEUMOPATI INTEGER"))
-        if "TABAG" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TABAG INTEGER"))
-        if "OUT_MORBI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN OUT_MORBI INTEGER"))
-        if "CARDIOPATI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CARDIOPATI INTEGER"))
-        if "FEBRE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN FEBRE INTEGER"))
-        if "TOSSE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TOSSE INTEGER"))
-        if "GARGANTA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN GARGANTA INTEGER"))
-        if "DISPNEIA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DISPNEIA INTEGER"))
-        if "DESC_RESP" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DESC_RESP INTEGER"))
-        if "SATURACAO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN SATURACAO INTEGER"))
-        if "DIARREIA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DIARREIA INTEGER"))
-        if "VOMITO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VOMITO INTEGER"))
-        if "DOR_ABD" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DOR_ABD INTEGER"))
-        if "FADIGA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN FADIGA INTEGER"))
-        if "PERD_OLFT" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PERD_OLFT INTEGER"))
-        if "PERD_PALA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PERD_PALA INTEGER"))
-        if "OUTRO_SIN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN OUTRO_SIN INTEGER"))
-        if "CS_GESTANT" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_GESTANT INTEGER"))
-        if "PUERPERA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN PUERPERA INTEGER"))
-        if "VACINA_COV" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VACINA_COV INTEGER"))
-        if "VACINA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VACINA INTEGER"))
-        if "ANTIVIRAL" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ANTIVIRAL INTEGER"))
-        if "TRAT_COV" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TRAT_COV INTEGER"))
+        if "MAE_VAC" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN MAE_VAC INTEGER"))
+        if "DT_VAC_MAE" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_VAC_MAE DATE"))
+        if "DT_DOSEUNI" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_DOSEUNI DATE"))
+        if "DT_1_DOSE" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_1_DOSE DATE"))
+        if "DT_2_DOSE" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_2_DOSE DATE"))
 
 
 def save_cases(cases: list[dict[str, Any]]) -> int:
@@ -320,9 +207,11 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                     DT_SIN_PRI=case_dict.get("DT_SIN_PRI"),
                     ID_UNIDADE=case_dict.get("ID_UNIDADE"),
                     BAIRRO_REF=case_dict.get("BAIRRO_REF"),
+                    NM_BAIRRO=case_dict.get("NM_BAIRRO"),
                     ZONA=case_dict.get("ZONA"),
                     CS_ZONA=case_dict.get("CS_ZONA"),
                     NU_IDADE_N=case_dict.get("NU_IDADE_N"),
+                    TP_IDADE=case_dict.get("TP_IDADE"),
                     IDADE_ANOS=case_dict.get("IDADE_ANOS"),
                     CS_SEXO=case_dict.get("CS_SEXO"),
                     CS_RACA=case_dict.get("CS_RACA"),
@@ -404,6 +293,11 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                     DOS_RE_BI=case_dict.get("DOS_RE_BI"),
                     VACINA=case_dict.get("VACINA"),
                     DT_UT_DOSE=case_dict.get("DT_UT_DOSE"),
+                    MAE_VAC=case_dict.get("MAE_VAC"),
+                    DT_VAC_MAE=case_dict.get("DT_VAC_MAE"),
+                    DT_DOSEUNI=case_dict.get("DT_DOSEUNI"),
+                    DT_1_DOSE=case_dict.get("DT_1_DOSE"),
+                    DT_2_DOSE=case_dict.get("DT_2_DOSE"),
                     ANTIVIRAL=case_dict.get("ANTIVIRAL"),
                     TRAT_COV=case_dict.get("TRAT_COV"),
                 )
@@ -411,6 +305,18 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                 new_count += 1
             else:
                 # Lightweight enrichment for already-seen cases.
+                if exists.TP_IDADE is None and case_dict.get("TP_IDADE") is not None:
+                    exists.TP_IDADE = case_dict.get("TP_IDADE")
+                if exists.MAE_VAC is None and case_dict.get("MAE_VAC") is not None:
+                    exists.MAE_VAC = case_dict.get("MAE_VAC")
+                if exists.DT_VAC_MAE is None and case_dict.get("DT_VAC_MAE") is not None:
+                    exists.DT_VAC_MAE = case_dict.get("DT_VAC_MAE")
+                if exists.DT_DOSEUNI is None and case_dict.get("DT_DOSEUNI") is not None:
+                    exists.DT_DOSEUNI = case_dict.get("DT_DOSEUNI")
+                if exists.DT_1_DOSE is None and case_dict.get("DT_1_DOSE") is not None:
+                    exists.DT_1_DOSE = case_dict.get("DT_1_DOSE")
+                if exists.DT_2_DOSE is None and case_dict.get("DT_2_DOSE") is not None:
+                    exists.DT_2_DOSE = case_dict.get("DT_2_DOSE")
                 if exists.PCR_VSR is None and case_dict.get("PCR_VSR") is not None:
                     exists.PCR_VSR = case_dict.get("PCR_VSR")
                 if exists.AN_VSR is None and case_dict.get("AN_VSR") is not None:
@@ -441,6 +347,8 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                     exists.ID_UNIDADE = case_dict.get("ID_UNIDADE")
                 if exists.BAIRRO_REF is None and case_dict.get("BAIRRO_REF") is not None:
                     exists.BAIRRO_REF = case_dict.get("BAIRRO_REF")
+                if exists.NM_BAIRRO is None and case_dict.get("NM_BAIRRO") is not None:
+                    exists.NM_BAIRRO = case_dict.get("NM_BAIRRO")
                 if exists.ZONA is None and case_dict.get("ZONA") is not None:
                     exists.ZONA = case_dict.get("ZONA")
                 if exists.CS_ZONA is None and case_dict.get("CS_ZONA") is not None:

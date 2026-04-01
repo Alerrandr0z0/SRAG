@@ -73,4 +73,10 @@ export const api = {
     
   fetchMacrosectorPoints: (zone: string) =>
     fetchJson<{ available: boolean, points: any[] }>(`${API_BASE}${API_ENDPOINTS.MACROSECTOR_HEATPOINTS}?zone=${encodeURIComponent(zone)}&min_cases=1`),
+
+  fetchRuralHeatpoints: () =>
+    fetchJson<{ available: boolean; sectors: any[]; center: any }>(`${API_BASE}/geo/rural_heatpoints?min_cases=1`),
+
+  fetchRuralSectorsGeo: () =>
+    fetchJson<any>(`${API_BASE}/geo/rural_sectors`),
 };

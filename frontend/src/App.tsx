@@ -269,7 +269,8 @@ function App() {
               territory={territoryData.territory}
               boundary={territoryData.boundary}
               choropleth={territoryData.choropleth}
-              macroPoints={territoryData.macroPoints}
+              ruralData={territoryData.ruralData}
+              ruralSectorsGeo={territoryData.ruralSectorsGeo}
             />
           </article>
         )}
