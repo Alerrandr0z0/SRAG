@@ -2,7 +2,7 @@
 
 Sistema de vigilância epidemiológica municipal para Mossoró/RN, projetado para automatizar a análise de dados do SIVEP-Gripe e oferecer inteligência geoespacial e preditiva para apoio à decisão em saúde pública.
 
-## 🚀 Visão Geral
+##  Visão Geral
 
 O projeto consolidou a análise de dados epidemiológicos em uma plataforma integrada de alta performance, substituindo planilhas manuais por um fluxo automatizado:
 
@@ -11,7 +11,7 @@ O projeto consolidou a análise de dados epidemiológicos em uma plataforma inte
 3.  **Suíte de Testes:** 30 testes unitários e de integração garantindo 100% de confiabilidade nos cálculos epidemiológicos.
 4.  **Dashboard Inteligente:** Visualização dinâmica em React com mapas geoespaciais e fluxogramas clínicos.
 
-## 🏗️ Arquitetura e Estrutura de Dados
+##  Arquitetura e Estrutura de Dados
 
 O projeto segue uma estrutura organizada para garantir a integridade e escalabilidade dos dados:
 
@@ -39,7 +39,7 @@ uv sync
 cd frontend && npm install
 ```
 
-## ⚡ Como Executar
+##  Como Executar
 
 ### 1. Ingestão de Dados (Motor Master)
 Para atualizar o banco de dados com novos arquivos ou reconstruí-lo do zero:
@@ -60,12 +60,12 @@ uv run pytest
 - **Dashboard:** `http://localhost:5173`
 - **API Docs:** `http://localhost:8000/docs`
 
-## 🌍 Inteligência Geoespacial e Preditiva
+##  Inteligência Geoespacial e Preditiva
 
 - **Previsão Avançada:** Utiliza o **Facebook Prophet** para capturar a sazonalidade real de Mossoró, oferecendo intervalos de confiança de 80% para planejamento de carga hospitalar.
 - **Mapa Territorial:** Divisão precisa em quadrantes cardeais para a zona rural e coroplético por bairro para a zona urbana, com legendas dinâmicas e seleção múltipla.
 
-## 📊 Principais Endpoints
+##  Principais Endpoints
 
 - `GET /vaccine_survival`: Curvas Kaplan-Meier de proteção vacinal.
 - `GET /trends`: Histórico e previsão sazonal via Prophet.
@@ -73,4 +73,3 @@ uv run pytest
 - `GET /clinical_flow`: Jornada clínica completa via Sankey.
 
 ---
-**Desenvolvido para Mossoró/RN - Gestão Científica Baseada em Dados.**
