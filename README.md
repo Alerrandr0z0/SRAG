@@ -27,7 +27,7 @@ O projeto segue uma estrutura organizada para garantir a integridade e escalabil
 └── tests/             # Suíte de testes unitários e integração
 ```
 
-## 🛠️ Requisitos e Instalação
+##  Requisitos e Instalação
 
 - **Python >= 3.14**
 - **Node.js (npm)**

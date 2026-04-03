@@ -1,11 +1,13 @@
-import pytest
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from srag.data.database import Base, SragRecord, save_cases, generate_case_hash, init_db
 from datetime import date
 
-# Use a temporary file for testing instead of :memory: to avoid 
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from srag.data.database import SragRecord, generate_case_hash, init_db, save_cases
+
+# Use a temporary file for testing instead of :memory: to avoid
 # new engines creating new empty databases.
 TEST_DB_FILE = "test_srag_temp.db"
 TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
@@ -15,12 +17,12 @@ def test_db_setup(monkeypatch):
     # Patch DB_URL in database.py
     import srag.data.database
     monkeypatch.setattr(srag.data.database, "DB_URL", TEST_DB_URL)
-    
+
     # Initialize DB
     init_db()
-    
+
     yield
-    
+
     # Cleanup
     if os.path.exists(TEST_DB_FILE):
         os.remove(TEST_DB_FILE)
@@ -52,11 +54,11 @@ def test_save_cases_deduplication(test_db_setup):
             "CLASSI_FIN": 5
         }
     ]
-    
+
     # Save once
     added = save_cases(cases)
     assert added == 1
-    
+
     # Save same case again
     added_again = save_cases(cases)
     assert added_again == 0
@@ -73,15 +75,15 @@ def test_save_cases_enrichment(test_db_setup):
         "CLASSI_FIN": None,
         "TP_IDADE": None
     }
-    
+
     save_cases([base_case])
-    
+
     enriched_case = base_case.copy()
     enriched_case["TP_IDADE"] = 3
-    
+
     added = save_cases([enriched_case])
     assert added == 0
-    
+
     # Verify in DB
     engine = create_engine(TEST_DB_URL)
     session_factory = sessionmaker(bind=engine)

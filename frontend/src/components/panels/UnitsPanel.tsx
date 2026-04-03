@@ -23,14 +23,14 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
   hospitalization,
   clinicalFlow,
   timelineData,
-  icuBottleneck,
+  icuBottleneck = [],
   swimmerVirus,
   setSwimmerVirus,
 }) => {
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>("year");
 
   const icuSummary = useMemo(() => {
-    if (!icuBottleneck.length) return null;
+    if (!icuBottleneck || !icuBottleneck.length) return null;
     const total = icuBottleneck.length;
     const sameDay = icuBottleneck.filter((d) => d.wait_days === 0).length;
     const waitMore = total - sameDay;
@@ -59,7 +59,9 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
 
       <h3>Fluxo da Jornada Clínica</h3>
       <div className="chart-wrap" style={{ height: "450px" }}>
-        <SankeyChart nodes={clinicalFlow.nodes} links={clinicalFlow.links} />
+        {clinicalFlow?.nodes && clinicalFlow?.links && (
+          <SankeyChart nodes={clinicalFlow.nodes} links={clinicalFlow.links} />
+        )}
       </div>
 
       {/* Ridgeline Plot com Contexto de Volume */}

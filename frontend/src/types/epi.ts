@@ -1,6 +1,15 @@
 export interface TrendsData {
-  history: Array<{ epi_week: string; cases: number }>;
-  forecast: Array<{ epi_week: string; predicted_cases: number; lower_ci: number; upper_cases: number }>;
+  history: Array<{ epi_week: string; total: number }>;
+  forecast: Array<{ 
+    epi_week: string; 
+    predicted_cases: number; 
+    predicted_cases_lower: number; 
+    predicted_cases_upper: number;
+    is_forecast: boolean;
+  }>;
+  thresholds?: { medium: number; high: number; very_high: number };
+  composition?: Array<{ epi_week: string; virus: string; count: number }>;
+  base_cumulative?: number;
 }
 
 export interface VirusStats {

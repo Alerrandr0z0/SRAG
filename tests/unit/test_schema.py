@@ -1,5 +1,5 @@
-from datetime import date
 from srag.data.schema import SragCase, is_mossoro_case
+
 
 def test_is_mossoro_case_by_code():
     case = SragCase(
