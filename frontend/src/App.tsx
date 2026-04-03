@@ -29,8 +29,8 @@ import * as Epi from './types/epi';
 function App() {
   // Config State
   const [panel, setPanel] = useState('territorio');
-  const [weeksWindow, setWeeksWindow] = useState('26');
-  const [lookback, setLookback] = useState('8');
+  const [weeksWindow, setWeeksWindow] = useState('0'); // Init in 'Tudo'
+  const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [virusDetail, setVirusDetail] = useState('summary');
   
@@ -55,44 +55,57 @@ function App() {
   // Context Trends State
   const [territoryTrendZone, setTerritoryTrendZone] = useState('macro');
   const [territoryTrendEntity, setTerritoryTrendEntity] = useState('ALL');
-  const [territoryTrendData, setTerritoryTrendData] = useState<Epi.TrendsData | null>(null);
+  const [contextTrends, setContextTrends] = useState<Epi.TrendsData | null>(null);
 
   // KPIs Memo
   const kpis = useMemo(() => {
     if (!data?.summary) {
       return { total: 0, uti: '0%', death: '0%', next: '--' };
     }
+    const trends = contextTrends || data.trends;
     return {
       total: data.summary.total ?? 0,
       uti: `${data.summary.uti_rate ?? 0}%`,
       death: `${data.summary.death_rate ?? 0}%`,
-      next: data.trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
+      next: trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
     };
-  }, [data]);
+  }, [data, contextTrends]);
+
+  // Sync entity options when territory zone changes
+  useEffect(() => {
+    setTerritoryTrendEntity('ALL');
+  }, [territoryTrendZone]);
+
+  const territoryEntityOptions = useMemo(() => {
+    if (territoryTrendZone === 'macro') return [];
+    return territoryTrendZone === 'urbana' 
+      ? (territoryData.entities?.urban_bairros || []) 
+      : (territoryData.entities?.rural_comunidades || []);
+  }, [territoryData.entities, territoryTrendZone]);
 
   // Load Territory Specific Trends
   useEffect(() => {
-    if (panel !== 'territorio' || !data) return;
-    
-    let active = true;
+    let cancelled = false;
     async function loadTrend() {
+      if (panel !== 'territorio' || territoryTrendZone === 'macro') {
+        setContextTrends(null);
+        return;
+      }
       const zoneLabel = territoryTrendZone === 'urbana' ? 'Urbana' : 'Rural';
-      const key = territoryTrendZone === 'macro' 
-        ? 'ALL' 
-        : territoryTrendEntity === 'ALL' 
+      const key = territoryTrendEntity === 'ALL' 
           ? `ZONA::${zoneLabel}` 
           : `BAIRRO::${territoryTrendEntity}`;
       
       try {
         const payload = await api.fetchContextTrends(key, weeksWindow, lookback);
-        if (active) setTerritoryTrendData(payload);
+        if (!cancelled) setContextTrends(payload);
       } catch {
-        if (active) setTerritoryTrendData(null);
+        if (!cancelled) setContextTrends(null);
       }
     }
     loadTrend();
-    return () => { active = false; };
-  }, [panel, territoryTrendZone, territoryTrendEntity, weeksWindow, lookback, !!data]);
+    return () => { cancelled = true; };
+  }, [panel, territoryTrendZone, territoryTrendEntity, weeksWindow, lookback]);
 
   const panelButtons = [
     { key: 'territorio', label: 'Território' },
@@ -108,17 +121,7 @@ function App() {
     { key: 'idoso', label: 'Idoso' },
   ];
 
-  const territoryEntityOptions = useMemo(() => {
-    if (territoryTrendZone === 'macro') return [];
-    return territoryTrendZone === 'urbana' 
-      ? (territoryData.entities?.urban_bairros || []) 
-      : (territoryData.entities?.rural_comunidades || []);
-  }, [territoryData.entities, territoryTrendZone]);
-
-  const currentTrends = useMemo(() => {
-    if (panel === 'territorio' && territoryTrendData) return territoryTrendData;
-    return data?.trends;
-  }, [panel, territoryTrendData, data?.trends]);
+  const currentTrends = contextTrends || data?.trends;
 
   return (
     <main className="app-shell">
@@ -128,16 +131,16 @@ function App() {
           <p className="sub">Monitoramento de gravidade e perfil viral.</p>
         </div>
         <div className="status-grid">
-          <div><p>Atualização</p><strong>{lastUpdate}</strong></div>
-          <div><p>Status</p><strong>{status}</strong></div>
+          <div><p>Sincronização</p><strong>{status === 'online' ? 'BANCO ATIVO' : 'OFFLINE'}</strong></div>
+          <div><p>Atualização</p><strong>{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</strong></div>
         </div>
       </section>
 
       <section className="kpi-grid">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="UTI" value={kpis.uti} />
-        <KpiCard label="Óbito" value={kpis.death} />
-        <KpiCard label="Projeção" value={kpis.next} />
+        <KpiCard label="Total Notificado" value={kpis.total} />
+        <KpiCard label="Taxa de UTI" value={kpis.uti} />
+        <KpiCard label="Letalidade" value={kpis.death} />
+        <KpiCard label="Projeção (S+1)" value={kpis.next} />
       </section>
 
       <section className="panel tabs-panel">
@@ -156,16 +159,29 @@ function App() {
 
       <section className="main-grid">
         <article className="panel">
-          <div className="toolbar">
-            <h3>Tendência</h3>
+          <div className="section-header">
+            <div className="stack" style={{ gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h3 style={{ margin: 0 }}>Tendência</h3>
+              </div>
+              {currentTrends && (
+                <div className="filters" style={{ fontSize: '12px', color: '#64748b', gap: 12 }}>
+                  <span>Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b></span>
+                  <span>Média: <b>{(currentTrends.history.reduce((s, h) => s + h.total, 0) / (currentTrends.history.length || 1)).toFixed(1)}/s</b></span>
+                </div>
+              )}
+            </div>
             <div className="filters">
               {panel === 'territorio' && (
                 <>
-                  <select value={territoryTrendZone} onChange={e => setTerritoryTrendZone(e.target.value)}>
-                    <option value="macro">Macro</option>
-                    <option value="urbana">Urbana</option>
-                    <option value="rural">Rural</option>
-                  </select>
+                  <label>
+                    Zona
+                    <select value={territoryTrendZone} onChange={e => setTerritoryTrendZone(e.target.value)}>
+                      <option value="macro">Macro</option>
+                      <option value="urbana">Urbana</option>
+                      <option value="rural">Rural</option>
+                    </select>
+                  </label>
                   {territoryTrendZone !== 'macro' && (
                     <select value={territoryTrendEntity} onChange={e => setTerritoryTrendEntity(e.target.value)}>
                       <option value="ALL">Todas</option>
@@ -176,14 +192,26 @@ function App() {
                   )}
                 </>
               )}
-              <select value={weeksWindow} onChange={e => setWeeksWindow(e.target.value)}>
-                <option value="12">12s</option>
-                <option value="26">26s</option>
-                <option value="52">52s</option>
-              </select>
+              <div className="pill-group">
+                {[
+                  { v: '0', l: 'Tudo' },
+                  { v: '52', l: '52s' },
+                  { v: '26', l: '26s' },
+                  { v: '12', l: '12s' }
+                ].map(opt => (
+                  <button
+                    key={opt.v}
+                    className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
+                    onClick={() => setWeeksWindow(opt.v)}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
               <select value={seriesMode} onChange={e => setSeriesMode(e.target.value)}>
                 <option value="weekly">Semanal</option>
                 <option value="cumulative">Acumulada</option>
+                <option value="composition">Composição</option>
               </select>
             </div>
           </div>
@@ -192,6 +220,9 @@ function App() {
               <TrendChart 
                 history={currentTrends.history}
                 forecast={currentTrends.forecast}
+                thresholds={currentTrends.thresholds}
+                composition={currentTrends.composition}
+                baseCumulative={currentTrends.base_cumulative}
                 seriesMode={seriesMode}
               />
             )}
@@ -250,12 +281,12 @@ function App() {
         </article>
 
         <article className="panel alerts">
-          <h3>Leitura operacional</h3>
+          <h3>Resumo operacional</h3>
           {error ? <p className="error-box">{error}</p> : (
-            <ul>
-              <li>Taxa de UTI: {kpis.uti}</li>
-              <li>Taxa de óbito: {kpis.death}</li>
-              <li>Projeção inicial: {kpis.next}</li>
+            <ul className="list">
+              <li><span>Taxa de UTI</span><span>{kpis.uti}</span></li>
+              <li><span>Taxa de óbito</span><span>{kpis.death}</span></li>
+              <li><span>Projeção próxima semana</span><span>{kpis.next}</span></li>
             </ul>
           )}
         </article>
@@ -295,14 +326,13 @@ function App() {
             <CitizenPanel 
               loading={citizenData.loading}
               pyramid={citizenData.pyramid}
+              raceProfile={citizenData.raceProfile}
               schooling={citizenData.schooling}
               symptomsSignature={citizenData.symptomsSignature}
               riskFactors={citizenData.riskFactors}
               vaccination={citizenData.vaccination}
               survival={citizenData.survival}
               timelineData={citizenData.timelineData}
-              swimmerVirus={citizenData.swimmerVirus}
-              setSwimmerVirus={citizenData.setSwimmerVirus}
             />
           </article>
         )}

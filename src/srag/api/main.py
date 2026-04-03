@@ -1,37 +1,38 @@
-from datetime import datetime, timedelta, UTC
-from typing import Annotated, Any
 import json
-import logfire
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Annotated, Any
 
-import pandas as pd
+import logfire
 import numpy as np
-from fastapi import FastAPI, HTTPException, Query
+import pandas as pd
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pathlib import Path
 from sqlalchemy import create_engine
-from srag.data.database import DB_URL
+
 from srag.data.analytics import (
-    compute_time_series,
-    compute_virus_distribution,
-    compute_virus_detailed_distribution,
-    compute_territory_distribution,
-    compute_territory_week_heatmap,
-    compute_unit_distribution,
-    compute_severity_metrics,
-    compute_zone_distribution,
-    compute_citizen_profile_tree,
-    compute_citizen_pyramid,
-    compute_race_profile,
-    compute_schooling_profile,
-    compute_symptoms_signature,
-    compute_risk_factors_full_profile,
-    compute_laboratory_network_summary,
-    compute_territory_entities_by_zone,
     apply_citizen_filters,
     classificar_status_gripe,
+    compute_alert_thresholds,
+    compute_citizen_profile_tree,
+    compute_citizen_pyramid,
+    compute_laboratory_network_summary,
+    compute_race_profile,
+    compute_risk_factors_full_profile,
+    compute_schooling_profile,
+    compute_symptoms_signature,
+    compute_territory_distribution,
+    compute_territory_entities_by_zone,
+    compute_time_series,
+    compute_time_series_by_virus,
+    compute_unit_distribution,
     compute_vaccine_survival,
+    compute_virus_detailed_distribution,
+    compute_virus_distribution,
+    compute_zone_distribution,
 )
+from srag.data.database import DB_URL
 from srag.models.forecasting import predict_next_weeks
 
 # --- Configuração e Otimização ---
@@ -211,19 +212,35 @@ def get_summary():
 
 
 @app.get("/trends")
-def get_trends(last_n_weeks: int = 26, weeks_to_predict: int = 4, lookback_weeks: int = 8):
+def get_trends(last_n_weeks: int = 26, weeks_to_predict: int = 4, lookback_weeks: int = 0):
     df = get_df()
     if df.empty:
-        return {"history": [], "forecast": []}
+        return {"history": [], "forecast": [], "thresholds": {}, "composition": []}
 
+    # 1. Série principal e Previsão (Série Completa para Estabilidade)
     ts = compute_time_series(df)
-    lb = None if lookback_weeks == 0 else lookback_weeks
-    result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict, lookback_weeks=lb)
+    result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
 
-    # Slice history
-    result["history"] = result["history"][-last_n_weeks:]
+    # 2. Limiares de Alerta (InfoGripe Percentiles)
+    result["thresholds"] = compute_alert_thresholds(df)
+
+    # 3. Composição por Vírus (Série Temporal Segmentada)
+    ts_virus = compute_time_series_by_virus(df)
+    history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
+    composition = ts_virus[ts_virus["epi_week"].isin(history_weeks)]
+    result["composition"] = composition.to_dict(orient="records")
+
+    # 4. Cálculo de acumulado base e fatiamento
+    full_history = result["history"]
+    if last_n_weeks > 0:
+        # Soma de casos antes da janela solicitada
+        result["base_cumulative"] = sum(h["total"] for h in full_history[:-last_n_weeks])
+        result["history"] = full_history[-last_n_weeks:]
+    else:
+        result["base_cumulative"] = 0
+        result["history"] = full_history
+
     return sanitize_data(result)
-
 
 @app.get("/virus")
 def get_virus(detail_level: str = "summary"):
@@ -482,21 +499,42 @@ def laboratory_network():
 
 @app.get("/context_trends")
 def context_trends(
-    key: str, last_n_weeks: int = 26, weeks_to_predict: int = 4, lookback_weeks: int = 8
+    key: str, last_n_weeks: int = 26, weeks_to_predict: int = 4, lookback_weeks: int = 0
 ):
     df = get_df()
     if df.empty:
-        return {"history": [], "forecast": []}
-    if key.startswith("BAIRRO::"):
-        df = df[df["BAIRRO_REF"] == key.split("::")[1]]
-    elif key.startswith("ZONA::"):
-        df = df[df["ZONA"].str.capitalize() == key.split("::")[1].capitalize()]
-    ts = compute_time_series(df)
-    lb = None if lookback_weeks == 0 else lookback_weeks
-    result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict, lookback_weeks=lb)
-    result["history"] = result["history"][-last_n_weeks:]
-    return sanitize_data(result)
+        return {"history": [], "forecast": [], "thresholds": {}, "composition": []}
 
+    # Filtrar DF pelo contexto
+    work = df.copy()
+    if key.startswith("BAIRRO::"):
+        work = work[work["BAIRRO_REF"] == key.split("::")[1]]
+    elif key.startswith("ZONA::"):
+        work = work[work["ZONA"].str.capitalize() == key.split("::")[1].capitalize()]
+
+    # 1. Previsão (Série completa para estabilidade)
+    ts = compute_time_series(work)
+    result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
+
+    # 2. Limiares (proporcionais ao volume do contexto)
+    result["thresholds"] = compute_alert_thresholds(work)
+
+    # 3. Composição
+    ts_virus = compute_time_series_by_virus(work)
+    history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
+    composition = ts_virus[ts_virus["epi_week"].isin(history_weeks)]
+    result["composition"] = composition.to_dict(orient="records")
+
+    # 4. Cálculo de acumulado base e fatiamento
+    full_history = result["history"]
+    if last_n_weeks > 0:
+        result["base_cumulative"] = sum(h["total"] for h in full_history[:-last_n_weeks])
+        result["history"] = full_history[-last_n_weeks:]
+    else:
+        result["base_cumulative"] = 0
+        result["history"] = full_history
+
+    return sanitize_data(result)
 
 @app.get("/geo/macrosector_heatpoints")
 def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1):
@@ -505,7 +543,7 @@ def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1):
     df = get_df()
     if df.empty:
         return {"available": False, "points": []}
-    result = build_macrosector_heatpoints(df, "data/mossoro_bairros.geojson", zone, min_cases)
+    result = build_macrosector_heatpoints(df, "data/geojson/mossoro_bairros.geojson", zone, min_cases)
     return sanitize_data(result)
 
 
@@ -517,9 +555,9 @@ def rural_heatpoints(min_cases: int = 1):
     - Sem centroides ou pontos artificiais; apenas contagens por setor para tooltip.
     - Usa a mesma base urbana: tudo que não é bairro urbano (geojson) é rural; setores são quadrantes do bbox municipal.
     """
-    from srag.data.geospatial import _feature_centroid, get_municipality_boundary, _iter_coords
+    from srag.data.geospatial import _feature_centroid, get_municipality_boundary
 
-    bairros_geo_path = Path("data/mossoro_bairros.geojson")
+    bairros_geo_path = Path("data/geojson/mossoro_bairros.geojson")
 
     df = get_df()
     if df.empty:
@@ -533,14 +571,14 @@ def rural_heatpoints(min_cases: int = 1):
         lambda v: str(v).strip().upper() if pd.notna(v) else ""
     )
     work = work[work["zona_norm"] == "RURAL"]
-    total_rural = int(len(work))
+    total_rural = len(work)
 
     boundary = get_municipality_boundary()
     center_features = boundary.get("features", []) if isinstance(boundary, dict) else []
     bbox_center = None
 
     # Prefer rural GeoJSON center to focus the map on the rural area
-    rural_geo_path = Path("data/mossoro_rural.geojson")
+    rural_geo_path = Path("data/geojson/mossoro_rural.geojson")
     if rural_geo_path.exists():
         try:
             rural_geo = json.loads(rural_geo_path.read_text())
@@ -587,9 +625,9 @@ def get_rural_sectors():
     path = Path("data/geojson/mossoro_rural_sectors.geojson")
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    
+
     # Fallback para o antigo modo sintético caso o arquivo não exista
-    from srag.data.geospatial import get_municipality_boundary, _iter_coords
+    from srag.data.geospatial import _iter_coords, get_municipality_boundary
 
     bairros_geo_path = Path("data/geojson/mossoro_bairros.geojson")
 
@@ -665,12 +703,11 @@ def get_geo_bairros():
     path = Path("data/geojson/mossoro_bairros.geojson")
     return FileResponse(path) if path.exists() else {"error": "Not found"}
 
-
 @app.get("/timeline_agg")
 def timeline_agg(
     virus: str = "covid",
-    profile: Annotated[list[str] | None, Query()] = None,
-    race: Annotated[list[str] | None, Query()] = None,
+    profile: list[str] | None = Query(None),
+    race: list[str] | None = Query(None),
 ):
     """Calcula as medianas de tempo com suporte a multi-seleção."""
     df = get_df()
@@ -711,7 +748,7 @@ def timeline_agg(
 
     # 2. Deltas (em dias)
     df["delta_dose"] = (df["DT_LAST_DOSE"] - df["DT_SIN_PRI"]).dt.days
-    df["delta_interna"] = (df["DT_INTERNA"] - df["DT_SIN_PRI"]).dt.days
+    df["delta_interna"] = (df["DT_INTERNA" ] - df["DT_SIN_PRI"]).dt.days
     df["delta_desfecho"] = (df["DT_EVOLUCA"] - df["DT_INTERNA"]).dt.days
 
     # 3. Agregação
@@ -751,7 +788,7 @@ def timeline_agg(
                 "taxa_cura": float(round(cura_pct, 2)),
                 "taxa_obito": float(round(obito_pct, 2)),
                 "severity_score": float(severity_score),
-                "count": int(len(sub)),
+                "count": len(sub),
             }
         )
 

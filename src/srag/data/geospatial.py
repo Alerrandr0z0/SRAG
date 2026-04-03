@@ -356,8 +356,8 @@ def build_macrosector_heatpoints(
         }
         points: list[dict[str, Any]] = []
         for row in grouped.itertuples(index=False):
-            sector = getattr(row, "sector")
-            count = int(getattr(row, "count") or 0)
+            sector = row.sector
+            count = int(row.count or 0)
             theta = math.radians(sector_angles.get(sector, 0))
             dx = 0.06 * math.cos(theta)
             dy = 0.04 * math.sin(theta)
@@ -445,8 +445,8 @@ def build_macrosector_heatpoints(
         }
         points: list[dict[str, Any]] = []
         for row in grouped.itertuples(index=False):
-            sector = getattr(row, "sector")
-            count = int(getattr(row, "count") or 0)
+            sector = row.sector
+            count = int(row.count or 0)
             theta = math.radians(sector_angles.get(sector, 0))
             dx = 0.06 * math.cos(theta)
             dy = 0.04 * math.sin(theta)

@@ -25,7 +25,7 @@ def main() -> None:
     src_gpkg = Path("data/external/geospacial/neighborhoods_2022_simplified.gpkg")
     out_dir = Path("data/geojson")
     out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     out_urban = out_dir / "mossoro_bairros.geojson"
     out_rural = out_dir / "mossoro_rural.geojson"
     out_rural_sectors = out_dir / "mossoro_rural_sectors.geojson"
@@ -72,7 +72,7 @@ def main() -> None:
                 (SELECT ST_Buffer(ST_Buffer(ST_Union_Agg(geom), 0.0005), -0.0005) FROM urban_neighborhoods)
             ) as geom;
         """)
-        
+
         rural_geom_json = con.execute("SELECT ST_AsGeoJSON(geom) FROM rural_base").fetchone()[0]
         rural_fc = {
             "type": "FeatureCollection",
@@ -100,10 +100,10 @@ def main() -> None:
             res = con.execute(f"SELECT ST_AsGeoJSON(ST_Intersection(geom, {poly_sql})) FROM rural_base").fetchone()
             if res and res[0]:
                 sector_features.append({"type": "Feature", "properties": {"sector": name}, "geometry": json.loads(res[0])})
-        
+
         out_rural_sectors.write_text(json.dumps({"type": "FeatureCollection", "features": sector_features}, ensure_ascii=False), encoding="utf-8")
         print(f"GeoJSON setores rurais gerado em: {out_rural_sectors}")
-        
+
     except Exception as e:
         print(f"Erro geoespacial: {e}")
 

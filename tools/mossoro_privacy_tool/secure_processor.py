@@ -1,18 +1,16 @@
-"""
-MOSSORÓ PRIVACY TOOL - SIVEP-GRIPE
+"""MOSSORÓ PRIVACY TOOL - SIVEP-GRIPE
 Este é um programa independente para uso local no Setor de Epidemiologia de Mossoró/RN.
 Ele realiza a filtragem e anonimização de dados de SRAG conforme a LGPD.
 """
 
-import logging
 import tkinter as tk
 import unicodedata
+from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 import pandas as pd
-from pydantic import BaseModel, Field, ValidationError, field_validator
-from datetime import date
+from pydantic import BaseModel, Field, field_validator
 
 # --- LÓGICA DE NEGÓCIO (EMBUTIDA PARA SER INDEPENDENTE) ---
 
@@ -220,7 +218,7 @@ class App:
                     "Aviso", "Nenhum caso de Mossoró foi encontrado no arquivo selecionado."
                 )
         except Exception as e:
-            messagebox.showerror("Erro Fatal", f"Ocorreu um erro ao processar: {str(e)}")
+            messagebox.showerror("Erro Fatal", f"Ocorreu um erro ao processar: {e!s}")
 
 
 if __name__ == "__main__":

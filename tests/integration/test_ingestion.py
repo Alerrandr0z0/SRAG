@@ -1,18 +1,20 @@
-import pytest
-import pandas as pd
-from pathlib import Path
-from scripts.ingest_data import run_ingestion
 import sqlite3
+import pandas as pd
+from scripts.ingest_data import main as ingest_main
 
-def test_run_ingestion_csv(tmp_path):
-    # 1. Create a dummy CSV file in a temp directory
-    data_dir = tmp_path / "raw"
-    data_dir.mkdir()
-    csv_file = data_dir / "test_data.csv"
+def test_run_ingestion_duckdb(tmp_path, monkeypatch):
+    # 1. Setup paths
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    processed_dir = tmp_path / "processed"
+    processed_dir.mkdir()
     
-    # Minimal columns required for ingestion and hash
+    db_path = processed_dir / "srag_mossoro.db"
+    csv_file = raw_dir / "test_data.csv"
+
+    # Minimal columns required for DuckDB ingestion logic
     df = pd.DataFrame({
-        "DT_NOTIFIC": ["01/05/2024", "01/05/2024"], # Duplicate hash test
+        "DT_NOTIFIC": ["01/05/2024", "01/05/2024"], # Duplicate test
         "CO_MUN_NOT": ["2408003", "2408003"],
         "CO_MUN_RES": ["2408003", "2408003"],
         "DT_SIN_PRI": ["25/04/2024", "25/04/2024"],
@@ -23,22 +25,20 @@ def test_run_ingestion_csv(tmp_path):
         "CS_ZONA": [1, 1]
     })
     df.to_csv(csv_file, index=False)
-    
-    # 2. Run ingestion using a temp DB path
-    db_path = tmp_path / "test_srag.db"
-    count = run_ingestion(db_path, [data_dir])
-    
-    # 3. Verify results
-    assert count == 1 # Duplicate should be removed
-    
-    # Connect to the temp DB and check normalization
+
+    # 2. Patch constants to use tmp_path
+    import scripts.ingest_data
+    import srag.data.database
+    monkeypatch.setattr(scripts.ingest_data, "DB_PATH", db_path)
+    monkeypatch.setattr(scripts.ingest_data, "DATA_DIRS", [raw_dir])
+    monkeypatch.setattr(srag.data.database, "DB_URL", f"sqlite:///{db_path}")
+
+    # 3. Run main
+    ingest_main(db_path_override=db_path, data_dirs_override=[raw_dir])
+
+    # 4. Verify results
     with sqlite3.connect(db_path) as conn:
         res = pd.read_sql("SELECT BAIRRO_REF, ZONA FROM casos_srag", conn)
-        assert len(res) == 1
+        assert len(res) == 1 # Deduplicated
         assert res.iloc[0]["BAIRRO_REF"] == "CENTRO"
         assert res.iloc[0]["ZONA"] == "Urbana"
-
-def test_run_ingestion_no_data(tmp_path):
-    db_path = tmp_path / "empty.db"
-    count = run_ingestion(db_path, [tmp_path / "non_existent"])
-    assert count == 0

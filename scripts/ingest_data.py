@@ -16,6 +16,7 @@ from srag.data.loader import (
     _infer_zone_from_bairro
 )
 
+# Defaults
 DB_PATH = Path("data/processed/srag_mossoro.db")
 DATA_DIRS = [Path("data/raw")]
 
@@ -23,40 +24,24 @@ DATA_DIRS = [Path("data/raw")]
 MOSSORO_CODES = ('2408003', '240800', '240800.0')
 MOSSORO_NAMES = ('MOSSORO', 'MOSSORÓ')
 
-def run_ingestion(db_path: Path, data_dirs: list[Path]) -> int:
-    """Run the master ingestion process.
-    
-    Returns:
-        The total number of unique records inserted.
-    """
+def main(db_path_override: Path | None = None, data_dirs_override: list[Path] | None = None) -> None:
+    db_path = db_path_override or DB_PATH
+    data_dirs = data_dirs_override or DATA_DIRS
+
     print(f"🚀 Iniciando motor universal de ingestão (DB: {db_path})...")
     
-    # Ensure parent dir exists
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # 1. Inicializar banco com schema completo
-    import srag.data.database
-    original_url = srag.data.database.DB_URL
-    srag.data.database.DB_URL = f"sqlite:///{db_path}"
-    try:
-        init_db()
-    finally:
-        srag.data.database.DB_URL = original_url
-    
+    init_db()
     con = duckdb.connect()
     con.execute("INSTALL spatial; LOAD spatial;")
     con.execute(f"ATTACH '{db_path}' AS sqlite_db (TYPE SQLITE);")
     
-    # Limpar tabela para carga total
     print("🧹 Limpando dados antigos...")
     con.execute("DELETE FROM sqlite_db.casos_srag;")
 
-    # Obter colunas alvo da tabela SQLite usando sqlite3 standard
     with sqlite3.connect(db_path) as conn:
         cursor = conn.execute("PRAGMA table_info('casos_srag')")
         target_cols = [c[1] for c in cursor.fetchall()]
 
-    # Colunas que sabemos serem datas
     date_cols = {
         "DT_NOTIFIC", "DT_SIN_PRI", "DT_NASC", "DT_INTERNA", "DT_ENTUTI", 
         "DT_SAIDUTI", "DT_EVOLUCA", "DT_PCR", "DT_RES_AN", "DT_COLETA", 
@@ -64,10 +49,10 @@ def run_ingestion(db_path: Path, data_dirs: list[Path]) -> int:
         "DOS_RE_BI", "DT_UT_DOSE"
     }
 
-    # 2. Criar tabela temporária no DuckDB para consolidação e desduplicação
+    # Tabela temporária para consolidação
     con.execute(f"CREATE TABLE temp_cases AS SELECT * FROM sqlite_db.casos_srag WHERE 1=0;")
 
-    # 3. Processar Parquets (Staging e Raw)
+    # 1. Localizar arquivos
     files = []
     for d in data_dirs:
         if d.exists():
@@ -75,8 +60,8 @@ def run_ingestion(db_path: Path, data_dirs: list[Path]) -> int:
             files.extend(list(d.glob("**/*.csv")))
 
     if not files:
-        print(f"⚠️ Nenhum dado encontrado em {[str(d) for d in data_dirs]}.")
-        return 0
+        print(f"⚠️ Nenhum dado encontrado em {data_dirs}.")
+        return
 
     print(f"📦 Processando {len(files)} fontes de dados...")
 
@@ -124,39 +109,34 @@ def run_ingestion(db_path: Path, data_dirs: list[Path]) -> int:
         except Exception as e:
             print(f"  ❌ Erro em {pf.name}: {e}")
 
-    # 4. Desduplicação e Carga Final
+    # 2. Desduplicação e Carga Final
     print("💎 Removendo duplicatas e salvando no banco final...")
     con.execute(f"""
         INSERT INTO sqlite_db.casos_srag ({", ".join(target_cols)})
         SELECT {", ".join(target_cols)} FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY unique_hash ORDER BY (CASE WHEN DT_NOTIFIC IS NULL THEN '1900-01-01' ELSE CAST(DT_NOTIFIC AS VARCHAR) END) DESC) as rn
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY unique_hash ORDER BY DT_NOTIFIC DESC) as rn
             FROM temp_cases
         ) WHERE rn = 1
     """)
     
-    # 5. Normalização Inteligente (Pandas Pass)
+    # 3. Normalização Inteligente (Pandas Pass)
     print("🧪 Aplicando inteligência geográfica...")
     with sqlite3.connect(db_path) as conn:
         df = pd.read_sql("SELECT rowid, NM_BAIRRO, CS_ZONA FROM casos_srag", conn)
-        if not df.empty:
-            df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
+        df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
+        
+        def infer_zone(row):
+            z = _normalize_zone(int(row["CS_ZONA"])) if pd.notna(row["CS_ZONA"]) else None
+            return z or _infer_zone_from_bairro(row["BAIRRO_REF"]) or "Nao informado"
             
-            def infer_zone(row):
-                z = _normalize_zone(int(row["CS_ZONA"])) if pd.notna(row["CS_ZONA"]) else None
-                return z or _infer_zone_from_bairro(row["BAIRRO_REF"]) or "Nao informado"
-                
-            df["ZONA"] = df.apply(infer_zone, axis=1)
-            cursor = conn.cursor()
-            cursor.executemany("UPDATE casos_srag SET BAIRRO_REF = ?, ZONA = ? WHERE rowid = ?", 
-                               df[["BAIRRO_REF", "ZONA", "rowid"]].values.tolist())
-            conn.commit()
+        df["ZONA"] = df.apply(infer_zone, axis=1)
+        cursor = conn.cursor()
+        cursor.executemany("UPDATE casos_srag SET BAIRRO_REF = ?, ZONA = ? WHERE rowid = ?", 
+                           df[["BAIRRO_REF", "ZONA", "rowid"]].values.tolist())
+        conn.commit()
 
     count = con.execute("SELECT count(*) FROM sqlite_db.casos_srag").fetchone()[0]
     print(f"✅ Ingestão finalizada: {count} registros únicos.")
-    return int(count)
-
-def main() -> None:
-    run_ingestion(DB_PATH, [Path("data/raw")])
 
 if __name__ == "__main__":
     main()

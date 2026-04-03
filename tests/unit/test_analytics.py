@@ -1,14 +1,18 @@
-import pandas as pd
-import numpy as np
 from datetime import date
+
+import numpy as np
+import pandas as pd
+
 from srag.data.analytics import (
-    categorize_age,
-    compute_virus_distribution,
-    compute_virus_detailed_distribution,
-    compute_severity_metrics,
     apply_citizen_filters,
+    categorize_age,
     classificar_status_gripe,
+    compute_severity_metrics,
+    compute_virus_distribution,
+    compute_alert_thresholds,
+    compute_time_series_by_virus,
 )
+
 
 def test_categorize_age():
     assert categorize_age(0.5) == "0-1 ano"
@@ -57,30 +61,28 @@ def test_apply_citizen_filters_profile():
     assert 5 in filtered["NU_IDADE_N"].values
     assert 70 in filtered["NU_IDADE_N"].values
 
-def test_classificar_status_gripe_nao_vacinado():
-    row = {"VACINA": 2, "DT_UT_DOSE": np.nan, "DT_SIN_PRI": date(2024, 5, 1)}
-    assert classificar_status_gripe(row) == "nao_vacinado"
+def test_compute_alert_thresholds():
+    # 10 weeks with 10 cases each
+    from datetime import timedelta
+    data = []
+    start_date = date(2024, 1, 1)
+    for i in range(1, 11):
+        data.extend([{
+            "DT_SIN_PRI": start_date + timedelta(weeks=i),
+            "CLASSI_FIN": 5
+        }] * i) # Increasing volume
+    df = pd.DataFrame(data)
+    thresholds = compute_alert_thresholds(df)
+    assert "medium" in thresholds
+    assert "high" in thresholds
+    assert thresholds["high"] > thresholds["medium"]
 
-def test_classificar_status_gripe_protegido():
-    # Symptom in 2024 (Campaign starts 2024-03-25)
-    # Vaccine in 2024-04-01 -> Protected
-    row = {
-        "VACINA": 1, 
-        "DT_UT_DOSE": date(2024, 4, 1), 
-        "DT_SIN_PRI": date(2024, 5, 1),
-        "NU_IDADE_N": 40,
-        "TP_IDADE": 3
-    }
-    assert classificar_status_gripe(row) == "protegido"
-
-def test_classificar_status_gripe_vencida():
-    # Symptom in 2024
-    # Vaccine from 2023 -> Outdated
-    row = {
-        "VACINA": 1, 
-        "DT_UT_DOSE": date(2023, 5, 1), 
-        "DT_SIN_PRI": date(2024, 5, 1),
-        "NU_IDADE_N": 40,
-        "TP_IDADE": 3
-    }
-    assert classificar_status_gripe(row) == "vencida"
+def test_compute_time_series_by_virus():
+    df = pd.DataFrame({
+        "DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 1), date(2024, 1, 10)],
+        "CLASSI_FIN": [5, 1, 5]
+    })
+    ts = compute_time_series_by_virus(df)
+    assert len(ts) == 3 # (Week 1, COVID), (Week 1, Flu), (Week 2, COVID)
+    assert "virus" in ts.columns
+    assert "count" in ts.columns

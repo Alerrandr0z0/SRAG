@@ -1,17 +1,8 @@
-import pandas as pd
 import numpy as np
-from srag.models.forecasting import predict_next_weeks, compute_moving_average
+import pandas as pd
 
-def test_compute_moving_average():
-    values = np.array([10, 20, 30, 40, 50])
-    # window=3, center=True, min_periods=1
-    ma = compute_moving_average(values, window=3)
-    assert len(ma) == 5
-    assert ma[0] == 15.0
-    assert ma[1] == 20.0
-    assert ma[2] == 30.0
-    assert ma[3] == 40.0
-    assert ma[4] == 45.0
+from srag.models.forecasting import predict_next_weeks
+
 
 def test_predict_next_weeks_empty():
     df = pd.DataFrame(columns=["epi_week", "total"])
@@ -23,7 +14,7 @@ def test_predict_next_weeks_insufficient_data():
         "epi_week": [f"2024-{i:02d}" for i in range(1, 6)],
         "total": [10] * 5
     })
-    # Prophet needs >= 10 points in my refactored implementation
+    # Prophet needs at least 12 points in current implementation
     result = predict_next_weeks(df, weeks_to_predict=2)
     assert result["status"] == "insufficient_data"
 
@@ -35,12 +26,12 @@ def test_predict_next_weeks_prophet_success():
     })
     result = predict_next_weeks(df, weeks_to_predict=4)
     assert result["status"] == "success"
-    assert result["model_type"] == "prophet_seasonal"
+    assert result["model_type"] == "prophet_stable_seasonal"
     assert len(result["forecast"]) == 4
     for f in result["forecast"]:
-        assert "predicted_cases" in f
-        assert "predicted_cases_lower" in f
-        assert "predicted_cases_upper" in f
+        assert isinstance(f["predicted_cases"], int)
+        assert isinstance(f["predicted_cases_lower"], int)
+        assert isinstance(f["predicted_cases_upper"], int)
         assert f["is_forecast"] is True
 
 def test_predict_next_weeks_no_negative():

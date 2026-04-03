@@ -3,7 +3,7 @@
 from datetime import date
 from enum import IntEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ClassiFin(IntEnum):
@@ -151,10 +151,9 @@ class SragCase(BaseModel):
     ANTIVIRAL: int | None = Field(alias="ANTIVIRAL", default=None)
     TRAT_COV: int | None = Field(alias="TRAT_COV", default=None)
 
-    class Config:
-        """Pydantic model configuration."""
-
-        populate_by_name = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
 
     @field_validator(
         "DT_NOTIFIC",

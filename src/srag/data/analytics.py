@@ -1,8 +1,7 @@
 """Core analytics and aggregation for Mossoró SRAG data."""
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from lifelines import KaplanMeierFitter
 
 from srag.utils.epi_weeks import format_epi_week, get_epi_week
@@ -218,6 +217,78 @@ def categorize_age(age: float) -> str:
     return "60+ anos"
 
 
+def compute_time_series_by_virus(df: pd.DataFrame) -> pd.DataFrame:
+    """Group cases by epidemiological week and virus classification for segmented trends.
+
+    Returns:
+        DataFrame with columns: epi_week, virus, count.
+    """
+    if df.empty:
+        return pd.DataFrame(columns=["epi_week", "virus", "count"])
+
+    out = df.copy()
+
+    # Reutilizar lógica de mapeamento de vírus para consistência
+    virus_map = {
+        1: "Influenza",
+        2: "Outros Vírus",
+        3: "Outro Agente",
+        4: "Não Especificada",
+        5: "COVID-19",
+        None: "Em Investigação",
+    }
+
+    # Identificar VSR via colunas laboratoriais se disponíveis
+    has_vsr_cols = {"PCR_VSR", "AN_VSR"}.intersection(set(out.columns))
+    vsr_positive = pd.Series(False, index=out.index)
+    if has_vsr_cols:
+        pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")
+        an_vsr = pd.to_numeric(out.get("AN_VSR"), errors="coerce")
+        vsr_positive = (pcr_vsr == 1) | (an_vsr == 1)
+
+    out["virus"] = out["CLASSI_FIN"].map(virus_map).fillna("Não Especificada")
+    out.loc[vsr_positive, "virus"] = "VSR"
+
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+
+    ts = out.groupby(["epi_week", "virus"]).size().reset_index(name="count")
+    return ts.sort_values(["epi_week", "count"], ascending=[True, False])
+
+
+def compute_alert_thresholds(df: pd.DataFrame) -> dict[str, int]:
+    """Calculate historical alert thresholds (percentiles) for Mossoró.
+    
+    Logic based on InfoGripe: uses historical weekly volumes to define
+    intensity levels (Medium, High, Very High).
+    """
+    if df.empty:
+        return {"medium": 0, "high": 0, "very_high": 0}
+
+    # Agrupar por semana para obter a distribuição de volumes semanais
+    out = df.copy()
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+
+    weekly_volumes = out.groupby("epi_week").size()
+
+    if len(weekly_volumes) < 4:
+        return {"medium": 10, "high": 20, "very_high": 30} # Valores default mínimos
+
+    # Calculamos percentis 75, 90 e 95
+    thresholds = {
+        "medium": int(np.percentile(weekly_volumes, 75)),
+        "high": int(np.percentile(weekly_volumes, 90)),
+        "very_high": int(np.percentile(weekly_volumes, 95)),
+    }
+
+    # Garantir progressão mínima
+    if thresholds["high"] <= thresholds["medium"]: thresholds["high"] = thresholds["medium"] + 5
+    if thresholds["very_high"] <= thresholds["high"]: thresholds["very_high"] = thresholds["high"] + 5
+
+    return thresholds
+
+
 def compute_time_series(df: pd.DataFrame) -> pd.DataFrame:
     """Group cases by epidemiological week for trend analysis.
 
@@ -231,11 +302,12 @@ def compute_time_series(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["epi_week", "total"])
 
     # Calculate SE for each case based on date of symptoms (DT_SIN_PRI)
-    df["se_year_week"] = df["DT_SIN_PRI"].apply(get_epi_week)
-    df["epi_week"] = df["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out = df.copy()
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
 
     # Aggregate
-    ts = df.groupby("epi_week").size().reset_index(name="total")
+    ts = out.groupby("epi_week").size().reset_index(name="total")
     return ts.sort_values("epi_week")
 
 
@@ -606,10 +678,10 @@ def _age_years(df: pd.DataFrame) -> pd.Series:
     idade_anos = idade_anos.mask(tp == 3, idade_bruta)
     idade_anos = idade_anos.mask(tp == 2, idade_bruta / 12.0)
     idade_anos = idade_anos.mask(tp == 1, idade_bruta / 365.25)
-    
+
     # Se TP_IDADE for nulo, assumimos Anos se idade > 0
     idade_anos = idade_anos.mask(tp.isna(), idade_bruta)
-    
+
     return pd.to_numeric(idade_anos, errors="coerce").fillna(0)
 
 
@@ -760,7 +832,7 @@ def compute_symptoms_signature(df: pd.DataFrame, profile_type: str = "all") -> d
     pathogens = {
         "covid": (classi == 5).reindex(out.index, fill_value=False).fillna(False),
         "gripe": (classi == 1).reindex(out.index, fill_value=False).fillna(False),
-        "vsr": ((pd.to_numeric(out.get("PCR_VSR"), errors="coerce") == 1) | 
+        "vsr": ((pd.to_numeric(out.get("PCR_VSR"), errors="coerce") == 1) |
                 (pd.to_numeric(out.get("AN_VSR"), errors="coerce") == 1)).reindex(out.index, fill_value=False).fillna(False)
     }
 
@@ -771,7 +843,7 @@ def compute_symptoms_signature(df: pd.DataFrame, profile_type: str = "all") -> d
     for p_key, p_mask in pathogens.items():
         matrix = []
         p_df = out[p_mask]
-        
+
         for field_id, _ in symptom_fields:
             row = []
             for b_mask in band_masks:
@@ -779,11 +851,11 @@ def compute_symptoms_signature(df: pd.DataFrame, profile_type: str = "all") -> d
                 # We need to slice the mask to match p_df index
                 current_band_mask = b_mask.loc[p_df.index]
                 subset = p_df[current_band_mask]
-                
+
                 if subset.empty:
                     row.append([0.0, 0])
                     continue
-                
+
                 has_symptom = (pd.to_numeric(subset.get(field_id), errors="coerce") == 1).sum()
                 prevalence = round((has_symptom / len(subset)) * 100, 1)
                 row.append([prevalence, int(has_symptom)])
@@ -793,7 +865,7 @@ def compute_symptoms_signature(df: pd.DataFrame, profile_type: str = "all") -> d
 
     # 5. Sort symptoms by average frequency
     sorted_symptoms = sorted(symptom_fields, key=lambda x: symptom_avg_freq[x[0]], reverse=True)
-    
+
     # Reorder matrices based on sorted symptoms
     for p_key in matrices:
         reordered = []
@@ -865,7 +937,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     return {
         "labs": grouped.head(15).to_dict(orient="records"),
         "overall": {
-            "tested_cases": int(len(tested)),
+            "tested_cases": len(tested),
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
         },
@@ -883,10 +955,10 @@ def compute_citizen_pyramid(df: pd.DataFrame) -> list[dict[str, int | str]]:
 
     if age.empty or age.isna().all():
         return []
-    
+
     min_age = int(age.min())
     max_age = int(age.max())
-    
+
     # Define dynamic bins
     if max_age - min_age <= 15:
         bins = np.arange(min_age, max_age + 2, 2)
@@ -898,10 +970,10 @@ def compute_citizen_pyramid(df: pd.DataFrame) -> list[dict[str, int | str]]:
     if bins[-1] >= 80: labels[-1] = f"{int(bins[-2])}+"
 
     out["age_bin"] = pd.cut(age, bins=bins, labels=labels, right=False)
-    
+
     pyramid = []
     counts = out.groupby(["age_bin", "CS_SEXO"], observed=False).size().unstack(fill_value=0)
-    
+
     for label in labels:
         male = int(counts.loc[label].get("M", 0)) if label in counts.index else 0
         female = int(counts.loc[label].get("F", 0)) if label in counts.index else 0
@@ -910,7 +982,7 @@ def compute_citizen_pyramid(df: pd.DataFrame) -> list[dict[str, int | str]]:
             "male": male,
             "female": female
         })
-            
+
     return pyramid
 
 
@@ -939,12 +1011,12 @@ def compute_race_profile(df: pd.DataFrame) -> list[dict[str, int | str]]:
 
     result: list[dict[str, int | str]] = []
     for row in grouped.itertuples(index=False):
-        code = int(getattr(row, "cs_raca_num"))
+        code = int(row.cs_raca_num)
         result.append(
             {
                 "code": code,
                 "label": labels[code],
-                "count": int(getattr(row, "count") or 0),
+                "count": int(row.count or 0),
             }
         )
     return result
@@ -1086,3 +1158,25 @@ def compute_symptoms_heatmap(df: pd.DataFrame) -> dict[str, object]:
         matrix.append(row_vals)
 
     return {"labels": labels, "matrix": matrix}
+
+
+def compute_time_series(df: pd.DataFrame) -> pd.DataFrame:
+    """Group cases by epidemiological week for trend analysis.
+
+    Args:
+        df: The cleaned SRAG DataFrame.
+
+    Returns:
+        DataFrame with columns: epi_week, total.
+    """
+    if df.empty:
+        return pd.DataFrame(columns=["epi_week", "total"])
+
+    # Calculate SE for each case based on date of symptoms (DT_SIN_PRI)
+    out = df.copy()
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+
+    # Aggregate
+    ts = out.groupby("epi_week").size().reset_index(name="total")
+    return ts.sort_values("epi_week")
