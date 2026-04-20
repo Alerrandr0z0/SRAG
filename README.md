@@ -1,75 +1,131 @@
-# SRAG Mossoró/RN
+# 🦠 SRAG Mossoró/RN
 
-Sistema de vigilância epidemiológica municipal para Mossoró/RN, projetado para automatizar a análise de dados do SIVEP-Gripe e oferecer inteligência geoespacial e preditiva para apoio à decisão em saúde pública.
+> Sistema de vigilância epidemiológica municipal para Mossoró/RN — automatizando a análise do SIVEP-Gripe com inteligência geoespacial e preditiva para apoio à decisão em saúde pública.
 
-##  Visão Geral
+---
 
-O projeto consolidou a análise de dados epidemiológicos em uma plataforma integrada de alta performance, substituindo planilhas manuais por um fluxo automatizado:
+## 📊 Visão Geral
 
-1.  **Motor de Ingestão Universal:** Processamento ultrarrápido de arquivos Parquet e CSV via DuckDB com desduplicação global.
-2.  **Backend Científico:** API FastAPI com modelos de previsão sazonais (Facebook Prophet) e análise de sobrevivência (Kaplan-Meier).
-3.  **Suíte de Testes:** 30 testes unitários e de integração garantindo 100% de confiabilidade nos cálculos epidemiológicos.
-4.  **Dashboard Inteligente:** Visualização dinâmica em React com mapas geoespaciais e fluxogramas clínicos.
+O projeto transforma o processo de vigilância epidemiológica, substituindo planilhas manuais por uma **plataforma integrada de alta performance**:
 
-##  Arquitetura e Estrutura de Dados
+| Componente | Descrição |
+|---|---|
+| 🔄 **Motor de Ingestão** | Processamento ultrarrápido de Parquet e CSV via DuckDB com desduplicação global |
+| 🧪 **Backend Científico** | API FastAPI com previsão sazonal (Facebook Prophet) e análise de sobrevivência (Kaplan-Meier) |
+| ✅ **Suíte de Testes** | 30 testes unitários e de integração — 100% de confiabilidade nos cálculos epidemiológicos |
+| 🗺️ **Dashboard Inteligente** | Visualização em React (Vite) com mapas geoespaciais e fluxogramas clínicos interativos |
 
-O projeto segue uma estrutura organizada para garantir a integridade e escalabilidade dos dados:
+---
+
+## 🏗️ Arquitetura e Estrutura de Dados
+
+A pipeline segue o modelo **Medalhão (Bronze → Silver → Gold)** para garantir integridade e rastreabilidade dos dados:
 
 ```text
+srag-mossoro/
 ├── data/
-│   ├── raw/           # Fontes brutas (Bronze): Parquets e CSVs originais
-│   ├── processed/     # Dados estruturados (Silver): Banco SQLite e limites municipais
-│   ├── geojson/       # Dados prontos para consumo (Gold): Polígonos para o dashboard
+│   ├── raw/           # 🥉 Bronze — Fontes brutas: Parquets e CSVs originais
+│   ├── processed/     # 🥈 Silver — Dados estruturados: SQLite e limites municipais
+│   ├── geojson/       # 🥇 Gold  — Prontos para consumo: Polígonos para o dashboard
 │   └── external/      # Bases de terceiros (IBGE, áreas urbanizadas)
-├── src/srag/          # Código fonte do backend e lógica de dados
+├── src/srag/          # Código-fonte do backend e lógica de dados
 ├── frontend/          # Dashboard web (React + TypeScript + Vite)
 ├── scripts/           # Ferramentas operacionais (Ingestão e Geração de Mapas)
-└── tests/             # Suíte de testes unitários e integração
+└── tests/             # Suíte de testes unitários e de integração
 ```
 
-##  Requisitos e Instalação
+---
+
+## ⚙️ Requisitos
 
 - **Python >= 3.14**
-- **Node.js (npm)**
-- **uv** (gerenciador de pacotes Python recomendado)
+- **Node.js** com npm
+- **[uv](https://docs.astral.sh/uv/)** — gerenciador de pacotes Python recomendado
+
+---
+
+## 🚀 Instalação e Execução
+
+### 1. Configurar o ambiente
 
 ```bash
-# Instalar dependências e preparar ambiente
+# Instalar dependências Python
 uv sync
+
+# Instalar dependências do frontend
 cd frontend && npm install
 ```
 
-##  Como Executar
+### 2. Obter os dados brutos
 
-### 1. Ingestão de Dados (Motor Master)
-Para atualizar o banco de dados com novos arquivos ou reconstruí-lo do zero:
+Antes de rodar o sistema, baixe os dados abertos do Ministério da Saúde:
+
+1. Acesse o portal **[Dados Abertos do SUS — SRAG](https://dados.gov.br)**
+2. Baixe o arquivo `.csv` do ano desejado (ex: `INFLUD24.csv` para 2024)
+3. Coloque o arquivo **sem alterar a extensão** dentro de `data/raw/`
+
+### 3. Executar a pipeline de ingestão
+
 ```bash
+# Limpa e ingere os dados do CSV para o SQLite
 uv run scripts/ingest_data.py
+
+# Roda o motor de vigilância (gera o JSON preditivo)
+uv run python main.py weekly-update data/raw
 ```
 
-### 2. Garantia de Qualidade (Testes)
-Execute a suíte de testes completa antes de cada deploy:
+### 4. Iniciar o backend (API)
+
+```bash
+uv run uvicorn srag.api.main:app --reload --port 8000
+```
+
+Acesse a documentação interativa em: **`http://localhost:8000/docs`**
+
+> ⚠️ **Nota sobre Logfire:** Se a API falhar com `LogfireConfigError`, autentique com `uv run logfire auth`. Para rodar localmente sem telemetria, comente a linha `logfire.configure()` em `src/srag/api/main.py`.
+
+### 5. Iniciar o frontend (Dashboard)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Acesse o dashboard em: **`http://localhost:5173`**
+
+> 💡 **Atalho para Linux/Mac:** Suba toda a stack de uma vez com `./scripts/port_control.sh start` na raiz do projeto.
+
+---
+
+## 🧪 Testes
+
+Execute a suíte completa antes de qualquer deploy para validar a lógica epidemiológica:
+
 ```bash
 uv run pytest
 ```
 
-### 3. Iniciar o Sistema (Full Stack)
-```bash
-./scripts/port_control.sh start
-```
-- **Dashboard:** `http://localhost:5173`
-- **API Docs:** `http://localhost:8000/docs`
+> ⚠️ **Usuários Windows:** Um aviso `[WinError 32]` pode aparecer na limpeza final do banco SQLite de testes. Se todos os testes estiverem `PASSED` (verdes), esse aviso pode ser ignorado com segurança.
 
-##  Inteligência Geoespacial e Preditiva
+---
 
-- **Previsão Avançada:** Utiliza o **Facebook Prophet** para capturar a sazonalidade real de Mossoró, oferecendo intervalos de confiança de 80% para planejamento de carga hospitalar.
-- **Mapa Territorial:** Divisão precisa em quadrantes cardeais para a zona rural e coroplético por bairro para a zona urbana, com legendas dinâmicas e seleção múltipla.
+## 🧠 Inteligência Geoespacial e Preditiva
 
-##  Principais Endpoints
+**Previsão Avançada com Prophet**
+Utiliza o Facebook Prophet para capturar a sazonalidade real de Mossoró, gerando intervalos de confiança de 80% — essencial para o planejamento antecipado de carga hospitalar.
 
-- `GET /vaccine_survival`: Curvas Kaplan-Meier de proteção vacinal.
-- `GET /trends`: Histórico e previsão sazonal via Prophet.
-- `GET /citizen_bootstrap`: Perfis demográficos e assinaturas de sintomas.
-- `GET /clinical_flow`: Jornada clínica completa via Sankey.
+**Mapa Territorial Inteligente**
+Combina divisão por quadrantes cardeais na zona rural com visualização coroplética por bairro na zona urbana. Legendas dinâmicas e seleção múltipla para análise granular.
+
+---
+
+## 🔌 Principais Endpoints da API
+
+| Endpoint | Descrição |
+|---|---|
+| `GET /vaccine_survival` | Curvas Kaplan-Meier de proteção vacinal |
+| `GET /trends` | Histórico epidemiológico e previsão sazonal via Prophet |
+| `GET /citizen_bootstrap` | Perfis demográficos e assinaturas de sintomas |
+| `GET /clinical_flow` | Jornada clínica completa visualizada via diagrama Sankey |
 
 ---

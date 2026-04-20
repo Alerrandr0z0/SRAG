@@ -38,8 +38,8 @@ from srag.models.forecasting import predict_next_weeks
 # --- Configuração e Otimização ---
 
 app = FastAPI(title="SRAG Mossoró API")
-logfire.configure()
-logfire.instrument_fastapi(app)
+#logfire.configure()
+#logfire.instrument_fastapi(app)
 logfire.instrument_pydantic()
 logfire.instrument_sqlalchemy(engine := create_engine(DB_URL, pool_pre_ping=True))
 
