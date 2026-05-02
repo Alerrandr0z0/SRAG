@@ -911,5 +911,3 @@ Essencial VG_CODDEST responsável pelo preenchimento Nacional de
 Estabelecimento de Saúde (CNES).
 
                                                                                                SIVEP Gripe- Sistema de Informação da Vigilância Epidemiológica da Gripe.   Página 28
-
-

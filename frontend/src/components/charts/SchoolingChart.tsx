@@ -28,16 +28,38 @@ const SchoolingChart: React.FC<SchoolingChartProps> = ({ data }) => {
         type: 'bar',
         data: {
           labels: data.map((x) => x.label),
-          datasets: [{ 
-            data: data.map((x) => x.count), 
-            backgroundColor: COLORS.PRIMARY, 
-            borderRadius: 7 
+          datasets: [{
+            data: data.map((x) => x.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7
           }],
         },
-        options: { 
-          indexAxis: 'y', 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          layout: {
+            padding: { left: 10, right: 20 }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c: any) => `Casos: ${c.raw}`
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { display: false } },
+            y: {
+              ticks: {
+                font: { size: 10 },
+                callback: function(value: any) {
+                  const label = this.getLabelForValue(value);
+                  return label.length > 15 ? label.substr(0, 15) + '...' : label;
+                }
+              }
+            }
+          }
         },
       });
     }

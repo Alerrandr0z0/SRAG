@@ -102,7 +102,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
               const isSelected = selectedSectors.includes(sector);
               const fillColor = SECTOR_FILL[sector] || '#cbd5e1';
-              
+
               // Usando o dourado (#f59e0b) para os contornos selecionados
               const strokeColor = isSelected ? '#f59e0b' : '#334155';
 

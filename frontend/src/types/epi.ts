@@ -1,12 +1,34 @@
+export interface SummaryData {
+  uti_rate: number;
+  uti_total?: number;
+  death_rate: number;
+  total: number;
+  available_years?: number[];
+}
+
+export interface VirusData {
+  virus: string;
+  count: number;
+  percentage?: number;
+  trend?: 'up' | 'down' | 'stable';
+}
+
+export interface EpiWeekData {
+  epi_week: string;
+  total: number;
+}
+
+export interface ForecastEntry {
+  epi_week: string;
+  predicted_cases: number;
+  predicted_cases_lower: number;
+  predicted_cases_upper: number;
+  is_forecast: boolean;
+}
+
 export interface TrendsData {
-  history: Array<{ epi_week: string; total: number }>;
-  forecast: Array<{ 
-    epi_week: string; 
-    predicted_cases: number; 
-    predicted_cases_lower: number; 
-    predicted_cases_upper: number;
-    is_forecast: boolean;
-  }>;
+  history: EpiWeekData[];
+  forecast: ForecastEntry[];
   thresholds?: { medium: number; high: number; very_high: number };
   composition?: Array<{ epi_week: string; virus: string; count: number }>;
   base_cumulative?: number;
@@ -20,15 +42,40 @@ export interface VirusStats {
 }
 
 export interface UnitStats {
-  ID_UNIDADE: string;
+  id_unidade: string;
   count: number;
   uti_rate: number;
   death_rate: number;
 }
 
+export interface NeighborhoodStats {
+  bairro: string;
+  count: number;
+  percentage?: number;
+}
+
+export interface ZoneStats {
+  zona: string;
+  count: number;
+  percentage?: number;
+}
+
 export interface TerritoryDistribution {
-  bairros: Array<{ BAIRRO_REF: string; count: number; percentage: number }>;
-  zonas: Array<{ ZONA: string; count: number; percentage: number }>;
+  bairros: NeighborhoodStats[];
+  zonas: ZoneStats[];
+}
+
+export interface TerritoryBootstrap {
+  territory: TerritoryDistribution;
+  boundary: any;
+  choropleth: {
+    available: boolean;
+    feature_collection: any;
+  };
+  territory_entities: {
+    urban_bairros: Array<{ name: string; count: number }>;
+    rural_comunidades: Array<{ name: string; count: number }>;
+  };
 }
 
 export interface ClinicalFlow {
@@ -56,12 +103,34 @@ export interface IcuBottleneckRecord {
 export type TemporalGrouping = 'year' | 'month' | 'week';
 
 export interface LaboratoryNetwork {
-  labs: Array<{ lab_ref?: string; tested_cases: number }>;
+  labs: Array<{ lab_ref?: string; tested_cases: number; positive_count?: number; positive_rate?: number }>;
   overall: {
     tested_cases: number;
     positive_rate: number;
-    avg_turnaround_days: number;
+    median_turnaround_days: number;
   };
+  positivity_trend: Array<{ epi_week: string; tested: number; positive: number; positivity_rate: number }>;
+  influenza_subtypes: Array<{ label: string; count: number }>;
+  antiviral_usage: { adherence_rate: number; total_indicated: number; treated: number };
+  closure_criteria: Array<{ label: string; count: number }>;
+  notification_delay: Array<{ epi_week: string; median_delay: number }>;
+  mortality_by_treatment_agent?: Array<{ treatment: string; agent: string; deaths: number }>;
+  genomic_variants?: {
+    weeks: string[];
+    variants: Record<string, number[]>;
+  };
+  virus_trends?: Array<{ epi_week: string; virus: string; count: number }>;
+  imaging_profile?: {
+    raiox: Array<{ label: string; count: number }>;
+    tomo: Array<{ label: string; count: number }>;
+  };
+  serology_profile?: {
+    types: Array<{ label: string; count: number }>;
+    igg: Array<{ label: string; count: number }>;
+    igm: Array<{ label: string; count: number }>;
+  };
+  antiviral_types?: Array<{ label: string; count: number }>;
+  virus_ranking?: Array<{ label: string; count: number }>;
 }
 
 export interface PyramidRow {
@@ -107,5 +176,18 @@ export interface CitizenBootstrap {
   race_profile: Array<{ label: string; count: number }>;
   schooling_profile: Array<{ label: string; count: number }>;
   symptoms_signature: SymptomSignature;
+  symptoms_heatmap: { labels: string[]; matrix: number[][] };
   risk_factors_full: Array<{ factor: string; count: number; percentage: number }>;
+  maternal_profile?: {
+    maternal_outcomes: Array<{
+      group: string;
+      cure: number;
+      icu: number;
+      death: number;
+      total: number;
+    }>;
+    gestantes_total: number;
+    puerperas_total: number;
+    maternal_cases: number;
+  };
 }

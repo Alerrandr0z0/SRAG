@@ -9,7 +9,19 @@ interface CoreDataState {
   laboratoryNetwork?: Epi.LaboratoryNetwork;
 }
 
-export function useCoreData(weeksWindow: string, lookback: string, virusDetail: string) {
+export function useCoreData(
+  weeksWindow: string,
+  lookback: string,
+  virusDetail: string,
+  profile?: string[],
+  raceFilter?: string[],
+  genderFilter?: string[],
+  zoneFilter?: string[],
+  bairroFilter?: string[],
+  unitFilter?: string[],
+  years?: number[],
+  agents?: string[]
+) {
   const [data, setData] = useState<CoreDataState | null>(null);
   const [status, setStatus] = useState('Conectando...');
   const [lastUpdate, setLastUpdate] = useState('--');
@@ -24,21 +36,21 @@ export function useCoreData(weeksWindow: string, lookback: string, virusDetail: 
         setStatus('Carregando...');
 
         const [summary, trends, virus, lab] = await Promise.all([
-          api.fetchSummary(),
-          api.fetchTrends(weeksWindow, lookback),
-          api.fetchVirus(virusDetail),
-          api.fetchLaboratoryNetwork()
+          api.fetchSummary(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
+          api.fetchTrends(weeksWindow, lookback, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
+          api.fetchVirus(virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
+          api.fetchLaboratoryNetwork(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents)
         ]);
 
         if (!active) return;
-        
+
         setData({
           summary,
           trends,
           virus,
           laboratoryNetwork: lab
         });
-        
+
         setStatus('Conectada');
         setLastUpdate(new Date().toLocaleString('pt-BR'));
       } catch (e) {
@@ -50,7 +62,7 @@ export function useCoreData(weeksWindow: string, lookback: string, virusDetail: 
 
     loadCore();
     return () => { active = false; };
-  }, [weeksWindow, lookback, virusDetail]);
+  }, [weeksWindow, lookback, virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents]);
 
   return { data, setData, status, setStatus, lastUpdate, error, setError };
 }

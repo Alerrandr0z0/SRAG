@@ -12,11 +12,17 @@ const KaplanMeierChart: React.FC<KaplanMeierChartProps> = ({ survivalData }) => 
     const covid = survivalData.covid || {};
     const gripe = survivalData.gripe || {};
     const mapCoords = (timeline: number[], values: number[]) => (timeline || []).map((t, i) => [t, values[i]]);
-    
+
     return {
       tooltip: { trigger: 'axis' },
-      legend: { bottom: 10 },
-      grid: { top: 40, left: 60, right: 30, bottom: 80 },
+      legend: {
+        show: true,
+        top: 0,
+        left: 'center',
+        data: ['COVID-19', 'Gripe'],
+        textStyle: { fontSize: 13, color: '#334155' }
+      },
+      grid: { top: 60, left: 60, right: 30, bottom: 60 },
       xAxis: { type: 'value', min: 0, max: 24, name: 'Meses após última dose', nameLocation: 'middle', nameGap: 35 },
       yAxis: { type: 'value', name: 'Probabilidade (%)', min: 0, max: 100 },
       series: [
@@ -32,7 +38,15 @@ const KaplanMeierChart: React.FC<KaplanMeierChartProps> = ({ survivalData }) => 
 
   const { chartRef } = useEcharts(option, [survivalData]);
 
-  return <div ref={chartRef} className="echart-host" style={{ width: '100%', height: '100%' }} />;
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div ref={chartRef} className="echart-host" style={{ width: '100%', flex: 1 }} />
+      <p className="meta" style={{ textAlign: 'center', marginTop: '8px', fontSize: '11px' }}>
+        Representa a probabilidade estimada de evitar hospitalização grave ao longo do tempo.
+        As áreas claras indicam o intervalo de confiança estatística.
+      </p>
+    </div>
+  );
 };
 
 export default KaplanMeierChart;

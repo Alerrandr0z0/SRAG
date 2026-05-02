@@ -33,15 +33,15 @@ const BarChart: React.FC<BarChartProps> = ({ labels, data, horizontal = true, co
         type: 'bar',
         data: {
           labels,
-          datasets: [{ 
-            data, 
-            backgroundColor: color, 
-            borderRadius: 7 
+          datasets: [{
+            data,
+            backgroundColor: color,
+            borderRadius: 7
           }],
         },
-        options: { 
-          indexAxis: horizontal ? 'y' : 'x', 
-          maintainAspectRatio: false, 
+        options: {
+          indexAxis: horizontal ? 'y' : 'x',
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             x: { beginAtZero: true },

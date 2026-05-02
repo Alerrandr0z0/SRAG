@@ -27,16 +27,16 @@ const ZonesChart: React.FC<ZonesChartProps> = ({ data }) => {
       chartInstance.current = new Chart(canvasRef.current, {
         type: 'bar',
         data: {
-          labels: data.map((z) => z.ZONA),
-          datasets: [{ 
-            data: data.map((z) => z.count), 
-            backgroundColor: COLORS.PRIMARY, 
-            borderRadius: 7 
+          labels: data.map((z) => z.zona),
+          datasets: [{
+            data: data.map((z) => z.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7
           }],
         },
-        options: { 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         },
       });
     }

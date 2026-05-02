@@ -15,6 +15,7 @@ interface UnitsPanelProps {
   icuBottleneck: Epi.IcuBottleneckRecord[];
   swimmerVirus: "covid" | "gripe";
   setSwimmerVirus: (v: "covid" | "gripe") => void;
+  dashboardYear?: number[];
 }
 
 const UnitsPanel: React.FC<UnitsPanelProps> = ({
@@ -26,8 +27,17 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
   icuBottleneck = [],
   swimmerVirus,
   setSwimmerVirus,
+  dashboardYear = [],
 }) => {
+  const isYearSelected = dashboardYear.length > 0;
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>("year");
+
+  // Ajuste automático: Se um ano for selecionado e o modo estiver como "ano", muda para "mês"
+  React.useEffect(() => {
+    if (isYearSelected && icuGroupBy === "year") {
+      setIcuGroupBy("month");
+    }
+  }, [isYearSelected, icuGroupBy]);
 
   const icuSummary = useMemo(() => {
     if (!icuBottleneck || !icuBottleneck.length) return null;
@@ -71,12 +81,17 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
             <h3>Gargalo de Acesso à UTI</h3>
             <p className="meta">Análise de eficiência na admissão crítica</p>
           </div>
-          <div className="filters">
+           <div className="filters">
             <div
               className="tab-row"
-              style={{ gridTemplateColumns: "repeat(3, 80px)", gap: "4px" }}
+              style={{
+                gridTemplateColumns: `repeat(${isYearSelected ? 2 : 3}, 80px)`,
+                gap: "4px"
+              }}
             >
-              {(["year", "month", "week"] as const).map((mode) => (
+              {(["year", "month", "week"] as const)
+                .filter(mode => !(isYearSelected && mode === 'year'))
+                .map((mode) => (
                 <button
                   key={mode}
                   className={`tab-btn ${icuGroupBy === mode ? "active" : ""}`}

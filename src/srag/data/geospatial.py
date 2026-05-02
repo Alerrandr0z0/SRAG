@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING, Any
 import requests
 
 from srag.data.analytics import compute_territory_distribution
+from srag.data.references import MOSSORO_IBGE_CODE
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import pandas as pd
 
-MOSSORO_IBGE_CODE = "2408003"
 MUNICIPALITY_GEO_URL = (
     "https://servicodados.ibge.gov.br/api/v3/malhas/municipios/"
     f"{MOSSORO_IBGE_CODE}?formato=application/vnd.geo+json"
@@ -37,7 +39,7 @@ def _norm_bairro_name(value: str | None) -> str:
     return " ".join(text.split())
 
 
-def _iter_coords(value: Any):
+def _iter_coords(value: object) -> Iterator[tuple[float, float]]:
     """Yield coordinate pairs from nested GeoJSON coordinate arrays."""
     if isinstance(value, (list, tuple)):
         if len(value) >= 2 and all(isinstance(v, (int, float)) for v in value[:2]):
@@ -171,7 +173,7 @@ def get_municipality_boundary() -> dict[str, Any]:
         _BOUNDARY_MEMO = payload
         _BOUNDARY_MEMO_MTIME_NS = BOUNDARY_CACHE_PATH.stat().st_mtime_ns
         return payload
-    except (requests.RequestException, ValueError, json.JSONDecodeError):
+    except requests.RequestException, ValueError, json.JSONDecodeError:
         fallback = _boundary_from_bairros_bbox(BAIRROS_GEOJSON_FALLBACK_PATH)
         if fallback is not None:
             _BOUNDARY_MEMO = fallback
@@ -235,7 +237,7 @@ def build_bairros_choropleth(
             **feature,
             "properties": {
                 **props,
-                "BAIRRO_REF": key,
+                "bairro": key,
                 "count": count,
             },
         }
@@ -314,69 +316,34 @@ def build_macrosector_heatpoints(
 
     territory = compute_territory_distribution(work, min_cases=min_cases)
     count_map = {
-        _norm_bairro_name(getattr(row, "BAIRRO_REF", None)): int(getattr(row, "count", 0) or 0)
+        _norm_bairro_name(getattr(row, "bairro", None)): int(getattr(row, "count", 0) or 0)
         for row in territory.itertuples(index=False)
     }
 
     if not count_map:
-        work = work.copy()
-        age = work.get("idade_anos")
-        if age is None:
-            work["idade_anos"] = 0
-        work["idade_anos"] = work["idade_anos"].fillna(0)
-        work["sector"] = "N"
-        work.loc[work["idade_anos"] < 10, "sector"] = "NE"
-        work.loc[(work["idade_anos"] >= 10) & (work["idade_anos"] < 20), "sector"] = "L"
-        work.loc[(work["idade_anos"] >= 20) & (work["idade_anos"] < 30), "sector"] = "SE"
-        work.loc[(work["idade_anos"] >= 30) & (work["idade_anos"] < 40), "sector"] = "S"
-        work.loc[(work["idade_anos"] >= 40) & (work["idade_anos"] < 50), "sector"] = "SO"
-        work.loc[(work["idade_anos"] >= 50) & (work["idade_anos"] < 60), "sector"] = "O"
-        work.loc[(work["idade_anos"] >= 60), "sector"] = "NO"
-
-        grouped = work.groupby("sector").size().reset_index(name="count")
-        grouped = grouped[grouped["count"] >= min_cases]
-        if grouped.empty or city_centroid is None:
+        if city_centroid is None:
             return {
                 "available": True,
-                "reason": "no_bairro_counts",
+                "reason": "no_bairro_counts_no_centroid",
                 "center": None,
                 "points": [],
             }
 
         cx, cy = city_centroid
-        sector_angles = {
-            "N": 90,
-            "NE": 45,
-            "L": 0,
-            "SE": 315,
-            "S": 270,
-            "SO": 225,
-            "O": 180,
-            "NO": 135,
-        }
-        points: list[dict[str, Any]] = []
-        for row in grouped.itertuples(index=False):
-            sector = row.sector
-            count = int(row.count or 0)
-            theta = math.radians(sector_angles.get(sector, 0))
-            dx = 0.06 * math.cos(theta)
-            dy = 0.04 * math.sin(theta)
-            points.append(
-                {
-                    "sector": sector,
-                    "count": count,
-                    "lat": cy + dy,
-                    "lon": cx + dx,
-                }
-            )
-
-        points = sorted(points, key=lambda p: p["count"], reverse=True)
+        total_unknown = len(work)
         return {
             "available": True,
-            "reason": "fallback_no_bairro",
+            "reason": "no_bairro_counts_centroid_fallback",
             "zone": zone,
             "center": {"lat": cy, "lon": cx},
-            "points": points,
+            "points": [
+                {
+                    "sector": "NAO INFORMADO",
+                    "count": total_unknown,
+                    "lat": cy,
+                    "lon": cx,
+                }
+            ],
         }
 
     centroids: dict[str, tuple[float, float]] = {}
@@ -403,69 +370,26 @@ def build_macrosector_heatpoints(
         if city_centroid is None:
             return {
                 "available": True,
-                "reason": "no_centroids",
-                "center": None,
-                "points": [],
-            }
-
-        work = work.copy()
-        age = work.get("idade_anos")
-        if age is None:
-            work["idade_anos"] = 0
-        work["idade_anos"] = work["idade_anos"].fillna(0)
-        work["sector"] = "N"
-        work.loc[work["idade_anos"] < 10, "sector"] = "NE"
-        work.loc[(work["idade_anos"] >= 10) & (work["idade_anos"] < 20), "sector"] = "L"
-        work.loc[(work["idade_anos"] >= 20) & (work["idade_anos"] < 30), "sector"] = "SE"
-        work.loc[(work["idade_anos"] >= 30) & (work["idade_anos"] < 40), "sector"] = "S"
-        work.loc[(work["idade_anos"] >= 40) & (work["idade_anos"] < 50), "sector"] = "SO"
-        work.loc[(work["idade_anos"] >= 50) & (work["idade_anos"] < 60), "sector"] = "O"
-        work.loc[(work["idade_anos"] >= 60), "sector"] = "NO"
-
-        grouped = work.groupby("sector").size().reset_index(name="count")
-        grouped = grouped[grouped["count"] >= min_cases]
-        if grouped.empty:
-            return {
-                "available": True,
-                "reason": "no_centroids",
+                "reason": "no_centroids_no_city_center",
                 "center": None,
                 "points": [],
             }
 
         cx, cy = city_centroid
-        sector_angles = {
-            "N": 90,
-            "NE": 45,
-            "L": 0,
-            "SE": 315,
-            "S": 270,
-            "SO": 225,
-            "O": 180,
-            "NO": 135,
-        }
-        points: list[dict[str, Any]] = []
-        for row in grouped.itertuples(index=False):
-            sector = row.sector
-            count = int(row.count or 0)
-            theta = math.radians(sector_angles.get(sector, 0))
-            dx = 0.06 * math.cos(theta)
-            dy = 0.04 * math.sin(theta)
-            points.append(
-                {
-                    "sector": sector,
-                    "count": count,
-                    "lat": cy + dy,
-                    "lon": cx + dx,
-                }
-            )
-
-        points = sorted(points, key=lambda p: p["count"], reverse=True)
+        total_unknown = len(work)
         return {
             "available": True,
-            "reason": "fallback_no_centroid_match",
+            "reason": "no_centroids_center_fallback",
             "zone": zone,
             "center": {"lat": cy, "lon": cx},
-            "points": points,
+            "points": [
+                {
+                    "sector": "NAO LOCALIZADO",
+                    "count": total_unknown,
+                    "lat": cy,
+                    "lon": cx,
+                }
+            ],
         }
 
     center_x = sum(x for x, _ in centroid_values) / len(centroid_values)
