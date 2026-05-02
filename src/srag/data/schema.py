@@ -5,6 +5,8 @@ from enum import IntEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from srag.data.references import MOSSORO_IBGE_CODES, MOSSORO_NAMES
+
 
 class ClassiFin(IntEnum):
     """Final classification of the SRAG case."""
@@ -148,8 +150,29 @@ class SragCase(BaseModel):
     DOS_RE_BI: date | None = Field(alias="DOS_RE_BI", default=None)
     VACINA: int | None = Field(alias="VACINA", default=None)
     DT_UT_DOSE: date | None = Field(alias="DT_UT_DOSE", default=None)
+    DT_1_DOSE: date | None = Field(alias="DT_1_DOSE", default=None)
+    DT_2_DOSE: date | None = Field(alias="DT_2_DOSE", default=None)
+    DT_DOSEUNI: date | None = Field(alias="DT_DOSEUNI", default=None)
+    MAE_VAC: int | None = Field(alias="MAE_VAC", default=None)
+    DT_VAC_MAE: date | None = Field(alias="DT_VAC_MAE", default=None)
     ANTIVIRAL: int | None = Field(alias="ANTIVIRAL", default=None)
+    TP_ANTIVIR: int | None = Field(alias="TP_ANTIVIR", default=None)
+    DT_ANTIVIR: date | None = Field(alias="DT_ANTIVIR", default=None)
     TRAT_COV: int | None = Field(alias="TRAT_COV", default=None)
+    TIPO_TRAT: int | None = Field(alias="TIPO_TRAT", default=None)
+
+    # Vigilância Genômica e Outros
+    VG_OMS: int | None = Field(alias="VG_OMS", default=None)
+    VG_LIN: str | None = Field(alias="VG_LIN", default=None)
+    VG_MET: int | None = Field(alias="VG_MET", default=None)
+    VG_REINF: int | None = Field(alias="VG_REINF", default=None)
+    CO_DETEC: int | None = Field(alias="CO_DETEC", default=None)
+    TP_SOR: int | None = Field(alias="TP_SOR", default=None)
+    RES_IGG: int | None = Field(alias="RES_IGG", default=None)
+    RES_IGM: int | None = Field(alias="RES_IGM", default=None)
+    RES_IGA: int | None = Field(alias="RES_IGA", default=None)
+    SURTO_SG: int | None = Field(alias="SURTO_SG", default=None)
+    CRITERIO: int | None = Field(alias="CRITERIO", default=None)
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -173,6 +196,11 @@ class SragCase(BaseModel):
         "DOSE_ADIC",
         "DOS_RE_BI",
         "DT_UT_DOSE",
+        "DT_1_DOSE",
+        "DT_2_DOSE",
+        "DT_DOSEUNI",
+        "DT_VAC_MAE",
+        "DT_ANTIVIR",
         mode="before",
     )
     @classmethod
@@ -198,10 +226,9 @@ class SragCase(BaseModel):
 
 def is_mossoro_case(case: SragCase) -> bool:
     """Check if the case is related to Mossoró/RN."""
-    mossoro_codes = ["2408003", "240800"]
-    mossoro_name = "MOSSORO"
-
     id_mun = str(case.ID_MUNICIP).strip().upper()
     id_res = str(case.ID_MN_RESI).strip().upper()
 
-    return any(c in (id_mun, id_res) for c in mossoro_codes) or mossoro_name in (id_mun, id_res)
+    return any(c in (id_mun, id_res) for c in MOSSORO_IBGE_CODES) or any(
+        n in (id_mun, id_res) for n in MOSSORO_NAMES
+    )

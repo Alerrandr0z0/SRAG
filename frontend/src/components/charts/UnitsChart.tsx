@@ -27,17 +27,17 @@ const UnitsChart: React.FC<UnitsChartProps> = ({ data }) => {
       chartInstance.current = new Chart(canvasRef.current, {
         type: 'bar',
         data: {
-          labels: data.map((u) => u.ID_UNIDADE),
-          datasets: [{ 
-            data: data.map((u) => u.count), 
-            backgroundColor: COLORS.PRIMARY, 
-            borderRadius: 7 
+          labels: data.map((u) => u.id_unidade),
+          datasets: [{
+            data: data.map((u) => u.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7
           }],
         },
-        options: { 
-          indexAxis: 'y', 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         },
       });
     }

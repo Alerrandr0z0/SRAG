@@ -1,3 +1,5 @@
+import type { ForecastEntry } from '../types/epi';
+
 /**
  * Computes the cumulative sum of a numeric array.
  */
@@ -12,10 +14,6 @@ export function cumulative(values: number[]): number[] {
 /**
  * Builds confidence bands for forecasting charts.
  */
-export interface ForecastEntry {
-  predicted_cases_lower: number;
-  predicted_cases_upper: number;
-}
 
 export function buildBand(
   labels: string[],

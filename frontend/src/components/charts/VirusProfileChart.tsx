@@ -28,15 +28,15 @@ const VirusProfileChart: React.FC<VirusProfileChartProps> = ({ data }) => {
         type: 'doughnut',
         data: {
           labels: data.map((d) => d.virus),
-          datasets: [{ 
-            data: data.map((d) => d.count), 
-            backgroundColor: COLORS.CHART, 
-            borderWidth: 2 
+          datasets: [{
+            data: data.map((d) => d.count),
+            backgroundColor: COLORS.CHART,
+            borderWidth: 2
           }],
         },
-        options: { 
-          maintainAspectRatio: false, 
-          plugins: { legend: { position: 'bottom' } } 
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } }
         },
       });
     }

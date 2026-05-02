@@ -8,7 +8,7 @@ O projeto consolidou a análise de dados epidemiológicos em uma plataforma inte
 
 1.  **Motor de Ingestão Universal:** Processamento ultrarrápido de arquivos Parquet e CSV via DuckDB com desduplicação global.
 2.  **Backend Científico:** API FastAPI com modelos de previsão sazonais (Facebook Prophet) e análise de sobrevivência (Kaplan-Meier).
-3.  **Suíte de Testes:** 30 testes unitários e de integração garantindo 100% de confiabilidade nos cálculos epidemiológicos.
+3.  **Suíte de Testes:** 79 testes (73 unitários + 15 Hypothesis + 17 benchmarks) garantindo confiabilidade nos cálculos epidemiológicos.
 4.  **Dashboard Inteligente:** Visualização dinâmica em React com mapas geoespaciais e fluxogramas clínicos.
 
 ##  Arquitetura e Estrutura de Dados
@@ -69,7 +69,9 @@ uv run pytest
 
 - `GET /vaccine_survival`: Curvas Kaplan-Meier de proteção vacinal.
 - `GET /trends`: Histórico e previsão sazonal via Prophet.
-- `GET /citizen_bootstrap`: Perfis demográficos e assinaturas de sintomas.
+- `GET /citizen_bootstrap`: Perfis demográficos, assinaturas e heatmap de sintomas.
 - `GET /clinical_flow`: Jornada clínica completa via Sankey.
+- `GET /clinical_timing`: Métricas de fluxo clínico (tempo sintomas→internação, UTI, adesão antiviral).
+- `GET /laboratory_network`: Inteligência laboratorial (positividade, subtipos de influenza, sorologia, variantes genômicas).
 
 ---

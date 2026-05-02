@@ -9,7 +9,7 @@ interface SwimmerPlotProps {
 }
 
 const getCohortLineColor = (d: AggregatedTimeline): string => {
-  const p = d.status_key; 
+  const p = d.status_key;
   if (p === 'nao_vacinado')                               return COLORS.DANGER;
   if (p === 'bivalente' || p === 'reforco_2')             return COLORS.PRIMARY;
   if (p === 'reforco_1' || p === 'completo' || p === 'protegido') return '#14b8a6';
@@ -131,11 +131,11 @@ const AggregatedSwimmerPlot: React.FC<SwimmerPlotProps> = ({ data, mode = 'full'
 
     const showTooltip = (event: any, d: AggregatedTimeline) => {
       const label = friendlyLabels[d.perfil] || d.perfil;
-      
-      const vaxInfo = d.mediana_dose_sintoma 
-        ? `<li>Última dose: <b>${Math.abs(Math.round(d.mediana_dose_sintoma))} dias</b> antes</li>` 
+
+      const vaxInfo = d.mediana_dose_sintoma
+        ? `<li>Última dose: <b>${Math.abs(Math.round(d.mediana_dose_sintoma))} dias</b> antes</li>`
         : '<li>Sem registro de vacina</li>';
-      
+
       const clinicalInfo = mode === 'full' ? `
         <li style="margin-top:5px; border-top:1px solid #eee; padding-top:5px;">Internação: <b>${Math.round(d.mediana_sintoma_internacao)} dias</b> após sintomas</li>
         <li>Desfecho Total: <b>T+${Math.round(d.mediana_sintoma_internacao + d.mediana_internacao_desfecho)} dias</b></li>
@@ -151,7 +151,7 @@ const AggregatedSwimmerPlot: React.FC<SwimmerPlotProps> = ({ data, mode = 'full'
             ${clinicalInfo}
           </ul>
         `);
-      
+
       const [mx, my] = d3.pointer(event, containerRef.current);
       tooltip.style('left', (mx + 20) + 'px').style('top', (my - 40) + 'px');
     };
@@ -236,8 +236,8 @@ const AggregatedSwimmerPlot: React.FC<SwimmerPlotProps> = ({ data, mode = 'full'
 
   return (
     <div ref={containerRef} style={{ width: '100%', position: 'relative', paddingBottom: '20px' }}>
-      <div 
-        ref={tooltipRef} 
+      <div
+        ref={tooltipRef}
         style={{
           position: 'absolute',
           opacity: 0,

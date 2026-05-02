@@ -11,10 +11,10 @@ function loadChart() {
 }
 
 interface PiramideEtariaProps {
-  rows: Epi.PyramidRow[];
+  data: Epi.PyramidRow[];
 }
 
-const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ rows }) => {
+const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ data = [] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<any>(null);
 
@@ -25,8 +25,8 @@ const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ rows }) => {
       const Chart = await loadChart();
       if (cancelled || !canvasRef.current) return;
 
-      const maleValues = rows.map((r) => Number(r.male || 0));
-      const femaleValues = rows.map((r) => Number(r.female || 0));
+      const maleValues = data.map((r) => Number(r.male || 0));
+      const femaleValues = data.map((r) => Number(r.female || 0));
       const maxAbs = Math.max(1, ...maleValues, ...femaleValues) * 1.1;
 
       if (chartInstance.current) chartInstance.current.destroy();
@@ -34,17 +34,17 @@ const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ rows }) => {
       chartInstance.current = new Chart(canvasRef.current, {
         type: 'bar',
         data: {
-          labels: rows.map((r) => r.AGE_BAND || r.age_band),
+          labels: data.map((r) => r.age_band || 'N/A'),
           datasets: [
-            { 
-              label: 'Homem', 
-              data: maleValues.map((v) => -v), 
-              backgroundColor: COLORS.SECONDARY 
+            {
+              label: 'Masculino',
+              data: maleValues.map((v) => -v),
+              backgroundColor: COLORS.SECONDARY
             },
-            { 
-              label: 'Mulher', 
-              data: femaleValues, 
-              backgroundColor: COLORS.ACCENT 
+            {
+              label: 'Feminino',
+              data: femaleValues,
+              backgroundColor: COLORS.ACCENT
             },
           ],
         },
@@ -52,12 +52,23 @@ const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ rows }) => {
           indexAxis: 'y',
           maintainAspectRatio: false,
           responsive: true,
-          plugins: { legend: { position: 'bottom' } },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (context: any) => {
+                  const label = context.dataset.label;
+                  const value = Math.abs(context.raw);
+                  return `${label}: ${value} casos`;
+                }
+              }
+            }
+          },
           scales: {
-            x: { 
-              min: -maxAbs, 
-              max: maxAbs, 
-              ticks: { callback: (value) => Math.abs(Number(value)) } 
+            x: {
+              min: -maxAbs,
+              max: maxAbs,
+              ticks: { callback: (value) => Math.abs(Number(value)) }
             },
             y: { stacked: true },
           },
@@ -70,7 +81,7 @@ const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ rows }) => {
       cancelled = true;
       if (chartInstance.current) chartInstance.current.destroy();
     };
-  }, [rows]);
+  }, [data]);
 
   return <canvas ref={canvasRef} />;
 };

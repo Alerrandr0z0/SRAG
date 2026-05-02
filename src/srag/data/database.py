@@ -21,8 +21,9 @@ class SragRecord(Base):
 
     __tablename__ = "casos_srag"
 
-    # unique_hash: MD5 of (DT_NOTIFIC, ID_MUNICIP, DT_SIN_PRI, NU_IDADE_N, CS_SEXO)
-    # to prevent duplication in re-uploads.
+    # unique_hash: MD5 of stable case fields used to prevent duplication.
+    # The hash intentionally excludes ID_UNIDADE so corrected unit data can
+    # enrich the same case without splitting the series.
     unique_hash = Column(String(32), primary_key=True)
 
     DT_NOTIFIC = Column(Date, nullable=False)
@@ -123,12 +124,43 @@ class SragRecord(Base):
     DT_1_DOSE = Column(Date)
     DT_2_DOSE = Column(Date)
     ANTIVIRAL = Column(Integer)
+    CRITERIO = Column(Integer)
     TRAT_COV = Column(Integer)
+
+    # Vigilância Genômica e Co-detecção
+    VG_OMS = Column(Integer)
+    VG_LIN = Column(String(50))
+    VG_MET = Column(Integer)
+    VG_REINF = Column(Integer)
+    CO_DETEC = Column(Integer)
+
+    # Sorologia e Detalhamento de Tratamento
+    TP_SOR = Column(Integer)
+    RES_IGG = Column(Integer)
+    RES_IGM = Column(Integer)
+    RES_IGA = Column(Integer)
+    TP_ANTIVIR = Column(Integer)
+    DT_ANTIVIR = Column(Date)
+    TIPO_TRAT = Column(Integer)
+    SURTO_SG = Column(Integer)
 
 
 def generate_case_hash(record: dict[str, Any]) -> str:
     """Generate a unique hash for a case to prevent duplicates."""
     # Key fields that identify a case (even after anonymization)
+    key_fields = [
+        str(record.get("DT_NOTIFIC")),
+        str(record.get("ID_MUNICIP")),
+        str(record.get("DT_SIN_PRI")),
+        str(record.get("NU_IDADE_N")),
+        str(record.get("CS_SEXO")),
+    ]
+    hash_input = "|".join(key_fields).encode("utf-8")
+    return hashlib.md5(hash_input).hexdigest()
+
+
+def _generate_legacy_case_hash(record: dict[str, Any]) -> str:
+    """Compatibility hash for older records that included ID_UNIDADE."""
     key_fields = [
         str(record.get("DT_NOTIFIC")),
         str(record.get("ID_MUNICIP")),
@@ -152,34 +184,101 @@ def init_db() -> None:
         col_names = {col[1] for col in cols}
         if "IDADE_ANOS" not in col_names and "idade_anos" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN IDADE_ANOS FLOAT"))
+            col_names.add("IDADE_ANOS")
         if "IDADE_ANOS" not in col_names and "idade_anos" in col_names:
-             conn.execute(text("ALTER TABLE casos_srag RENAME COLUMN idade_anos TO IDADE_ANOS"))
+            conn.execute(text("ALTER TABLE casos_srag RENAME COLUMN idade_anos TO IDADE_ANOS"))
+            col_names.add("IDADE_ANOS")
         if "ID_UNIDADE" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ID_UNIDADE VARCHAR(30)"))
+            col_names.add("ID_UNIDADE")
         if "BAIRRO_REF" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN BAIRRO_REF VARCHAR(80)"))
+            col_names.add("BAIRRO_REF")
         if "NM_BAIRRO" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN NM_BAIRRO VARCHAR(120)"))
+            col_names.add("NM_BAIRRO")
         if "ZONA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ZONA VARCHAR(20)"))
+            col_names.add("ZONA")
         if "CS_ZONA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ZONA INTEGER"))
+            col_names.add("CS_ZONA")
         if "TP_IDADE" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_IDADE INTEGER"))
+            col_names.add("TP_IDADE")
         if "CS_RACA" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_RACA INTEGER"))
+            col_names.add("CS_RACA")
         if "CS_ESCOL_N" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ESCOL_N INTEGER"))
+            col_names.add("CS_ESCOL_N")
         if "MAE_VAC" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN MAE_VAC INTEGER"))
+            col_names.add("MAE_VAC")
         if "DT_VAC_MAE" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_VAC_MAE DATE"))
+            col_names.add("DT_VAC_MAE")
         if "DT_DOSEUNI" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_DOSEUNI DATE"))
+            col_names.add("DT_DOSEUNI")
         if "DT_1_DOSE" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_1_DOSE DATE"))
+            col_names.add("DT_1_DOSE")
         if "DT_2_DOSE" not in col_names:
             conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_2_DOSE DATE"))
+            col_names.add("DT_2_DOSE")
+        if "ANTIVIRAL" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ANTIVIRAL INTEGER"))
+            col_names.add("ANTIVIRAL")
+        if "CRITERIO" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CRITERIO INTEGER"))
+            col_names.add("CRITERIO")
+
+        if "VG_OMS" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_OMS INTEGER"))
+            col_names.add("VG_OMS")
+        if "VG_LIN" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_LIN VARCHAR(50)"))
+            col_names.add("VG_LIN")
+        if "VG_MET" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_MET INTEGER"))
+            col_names.add("VG_MET")
+        if "VG_REINF" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_REINF INTEGER"))
+            col_names.add("VG_REINF")
+        if "CO_DETEC" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CO_DETEC INTEGER"))
+            col_names.add("CO_DETEC")
+
+        if "TP_SOR" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_SOR INTEGER"))
+            col_names.add("TP_SOR")
+        if "RES_IGG" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGG INTEGER"))
+            col_names.add("RES_IGG")
+        if "RES_IGM" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGM INTEGER"))
+            col_names.add("RES_IGM")
+        if "RES_IGA" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGA INTEGER"))
+            col_names.add("RES_IGA")
+        if "TP_ANTIVIR" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_ANTIVIR INTEGER"))
+            col_names.add("TP_ANTIVIR")
+        if "TIPO_TRAT" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TIPO_TRAT INTEGER"))
+            col_names.add("TIPO_TRAT")
+        if "SURTO_SG" not in col_names:
+            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN SURTO_SG INTEGER"))
+            col_names.add("SURTO_SG")
+
+        # Backfill any newly added model columns in older databases.
+        for column in SragRecord.__table__.columns:
+            if column.name == "unique_hash" or column.name in col_names:
+                continue
+            sql_type = column.type.compile(dialect=engine.dialect)
+            conn.execute(text(f"ALTER TABLE casos_srag ADD COLUMN {column.name} {sql_type}"))
+            col_names.add(column.name)
 
 
 def save_cases(cases: list[dict[str, Any]]) -> int:
@@ -189,15 +288,22 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
         The number of NEW cases added.
     """
     engine = create_engine(DB_URL)
-    session_factory = sessionmaker(bind=engine)
+    # expire_on_commit=False previne o erro e3q8 (ObjectDeletedError) ao acessar/atualizar objetos
+    # caso o banco seja alterado por outro processo (ex: DuckDB ingest script)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
 
     new_count = 0
     with session_factory() as session:
         for case_dict in cases:
             case_hash = generate_case_hash(case_dict)
+            legacy_hash = _generate_legacy_case_hash(case_dict)
 
             # Check if exists
-            exists = session.query(SragRecord).filter_by(unique_hash=case_hash).first()
+            exists = (
+                session.query(SragRecord)
+                .filter(SragRecord.unique_hash.in_([case_hash, legacy_hash]))
+                .first()
+            )
             if not exists:
                 record = SragRecord(
                     unique_hash=case_hash,
@@ -299,7 +405,21 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                     DT_1_DOSE=case_dict.get("DT_1_DOSE"),
                     DT_2_DOSE=case_dict.get("DT_2_DOSE"),
                     ANTIVIRAL=case_dict.get("ANTIVIRAL"),
+                    CRITERIO=case_dict.get("CRITERIO"),
                     TRAT_COV=case_dict.get("TRAT_COV"),
+                    VG_OMS=case_dict.get("VG_OMS"),
+                    VG_LIN=case_dict.get("VG_LIN"),
+                    VG_MET=case_dict.get("VG_MET"),
+                    VG_REINF=case_dict.get("VG_REINF"),
+                    CO_DETEC=case_dict.get("CO-DETEC") or case_dict.get("CO_DETEC"),
+                    TP_SOR=case_dict.get("TP_SOR"),
+                    RES_IGG=case_dict.get("RES_IGG"),
+                    RES_IGM=case_dict.get("RES_IGM"),
+                    RES_IGA=case_dict.get("RES_IGA"),
+                    TP_ANTIVIR=case_dict.get("TP_ANTIVIR"),
+                    DT_ANTIVIR=case_dict.get("DT_ANTIVIR"),
+                    TIPO_TRAT=case_dict.get("TIPO_TRAT"),
+                    SURTO_SG=case_dict.get("SURTO_SG"),
                 )
                 session.add(record)
                 new_count += 1
@@ -443,6 +563,8 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                     exists.DT_UT_DOSE = case_dict.get("DT_UT_DOSE")
                 if exists.ANTIVIRAL is None and case_dict.get("ANTIVIRAL") is not None:
                     exists.ANTIVIRAL = case_dict.get("ANTIVIRAL")
+                if exists.CRITERIO is None and case_dict.get("CRITERIO") is not None:
+                    exists.CRITERIO = case_dict.get("CRITERIO")
                 if exists.TRAT_COV is None and case_dict.get("TRAT_COV") is not None:
                     exists.TRAT_COV = case_dict.get("TRAT_COV")
 

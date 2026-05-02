@@ -28,17 +28,17 @@ const BairrosChart: React.FC<BairrosChartProps> = ({ data }) => {
       chartInstance.current = new Chart(canvasRef.current, {
         type: 'bar',
         data: {
-          labels: items.map((b) => b.BAIRRO_REF),
-          datasets: [{ 
-            data: items.map((b) => b.count), 
-            backgroundColor: COLORS.SECONDARY, 
-            borderRadius: 7 
+          labels: items.map((b) => b.bairro),
+          datasets: [{
+            data: items.map((b) => b.count),
+            backgroundColor: COLORS.SECONDARY,
+            borderRadius: 7
           }],
         },
-        options: { 
-          indexAxis: 'y', 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         },
       });
     }
