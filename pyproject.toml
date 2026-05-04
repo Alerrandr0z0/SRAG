@@ -31,6 +31,8 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "pandas-stubs>=2.2",
+    "pre-commit>=4.1",
+    "bandit>=1.8.3",
     "ipykernel>=6.29",
     "jupyter>=1.0",
 ]
@@ -70,6 +72,26 @@ ignore = [
     "D104",  # missing docstring in public package
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"src/srag/api/main.py" = [
+    "ANN001",
+    "ANN201",
+    "ANN202",
+    "B008",
+    "B905",
+    "D103",
+    "E501",
+    "E741",
+    "F841",
+    "N806",
+    "RUF005",
+]
+"tests/integration/test_api.py" = [
+    "ANN001",
+    "ANN201",
+    "D103",
+]
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
@@ -82,14 +104,39 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = ["sklearn.*", "seaborn.*", "matplotlib.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["lifelines.*", "prophet.*", "logfire.*", "requests.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["pre_commit.*", "bandit.*"]
+ignore_missing_imports = true
+
+[tool.pre-commit]
+default_language_version = { python = "python3.14" }
+
+[tool.mutmut]
+paths_to_mutate = ["src"]
+backup = false
+runner = "PYTHONPATH=. uv run pytest -x --ignore=tests/integration"
+diff_line_numbers = true
+global = true
+
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --ignore=tests/integration"
+norecursedirs = ["mutants"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests requiring external data sources",
@@ -98,7 +145,16 @@ markers = [
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
+    "bandit>=1.8.3",
+    "mypy>=1.10",
+    "pandas-stubs>=2.2",
+    "pre-commit>=4.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.14.0",
+    "pytest-benchmark>=4.0.0",
+    "hypothesis>=6.100.0",
+    "mutmut>=3.0.0",
     "ruff>=0.15.5",
 ]

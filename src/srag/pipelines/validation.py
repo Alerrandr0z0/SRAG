@@ -9,7 +9,7 @@ import pandas as pd
 
 def validate_srag_data(df: pd.DataFrame) -> tuple[bool, list[str]]:
     """Perform quality checks on the dataframe before database insertion.
-    
+
     Returns:
         A tuple (is_valid, list_of_warnings).
     """
@@ -24,7 +24,7 @@ def validate_srag_data(df: pd.DataFrame) -> tuple[bool, list[str]]:
     for col in date_cols:
         if col in df.columns:
             # Converter para datetime se ainda não for
-            temp_dt = pd.to_datetime(df[col], errors='coerce')
+            temp_dt = pd.to_datetime(df[col], errors="coerce")
 
             # Checar datas no futuro
             future_cases = (temp_dt.dt.date > today).sum()
@@ -33,11 +33,14 @@ def validate_srag_data(df: pd.DataFrame) -> tuple[bool, list[str]]:
 
     # 2. Consistência Clínica
     if "DT_INTERNA" in df.columns and "DT_EVOLUCA" in df.columns:
-        interna = pd.to_datetime(df["DT_INTERNA"], errors='coerce')
-        evoluca = pd.to_datetime(df["DT_EVOLUCA"], errors='coerce')
+        interna = pd.to_datetime(df["DT_INTERNA"], errors="coerce")
+        evoluca = pd.to_datetime(df["DT_EVOLUCA"], errors="coerce")
         inconsistent_dates = (evoluca < interna).sum()
         if inconsistent_dates > 0:
-            warnings.append(f"Detectados {inconsistent_dates} registros onde o desfecho ocorre antes da internação.")
+            warnings.append(
+                f"Detectados {inconsistent_dates} registros onde o desfecho ocorre antes da "
+                "internação."
+            )
 
     # 3. Validação de Idade
     if "IDADE_ANOS" in df.columns:

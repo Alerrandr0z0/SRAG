@@ -27,7 +27,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   return (
     <div className="stack">
       {loading && <p className="meta">Carregando dados territoriais...</p>}
-      
+
       <h3>Bairros com mais casos</h3>
       <div className="chart-wrap">
         <BairrosChart data={territory?.bairros || []} />
@@ -54,7 +54,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
           </select>
         </label>
       </div>
-      <LeafletMap 
+      <LeafletMap
         boundary={boundary}
         choropleth={choropleth}
         ruralData={ruralData}

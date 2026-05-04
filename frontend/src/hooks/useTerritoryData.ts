@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
-export function useTerritoryData(active: boolean, mapZoneMode: string) {
+export function useTerritoryData(
+  active: boolean,
+  mapZoneMode: string,
+  profile?: string[],
+  raceFilter?: string[],
+  genderFilter?: string[],
+  zoneFilter?: string[],
+  bairroFilter?: string[],
+  unitFilter?: string[],
+  years?: number[]
+) {
   const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({ bairros: [], zonas: [] });
   const [boundary, setBoundary] = useState<any>(null);
   const [choropleth, setChoropleth] = useState<Epi.TerritoryBootstrap['choropleth'] | null>(null);
@@ -14,11 +24,11 @@ export function useTerritoryData(active: boolean, mapZoneMode: string) {
   useEffect(() => {
     if (!active) return;
     let isMounted = true;
-    
+
     async function loadBootstrap() {
       setLoading(true);
       try {
-        const bootstrap = await api.fetchTerritoryBootstrap();
+         const bootstrap = await api.fetchTerritoryBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years);
         if (isMounted) {
           setTerritory(bootstrap.territory);
           setBoundary(bootstrap.boundary);
@@ -33,7 +43,7 @@ export function useTerritoryData(active: boolean, mapZoneMode: string) {
     }
     loadBootstrap();
     return () => { isMounted = false; };
-  }, [active]);
+  }, [active, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years]);
 
   useEffect(() => {
     if (!active) return;

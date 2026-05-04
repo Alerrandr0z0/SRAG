@@ -54,7 +54,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       if (historyLen === 0) return;
 
       let hist = history.map((d) => d.total);
-      
+
       const cumulativeFunc = (values: number[], initial = 0) => {
         let sum = initial;
         return values.map((v) => {
@@ -66,7 +66,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       if (seriesMode === 'cumulative') {
         hist = cumulativeFunc(hist, baseCumulative);
       }
-      
+
       const histLast = hist.length ? hist[hist.length - 1] : 0;
       const band = buildBand(labels, forecast, historyLen, seriesMode, histLast);
 
@@ -272,8 +272,8 @@ const TrendChart: React.FC<TrendChartProps> = ({
                 title: (items) => `Semana: ${items[0].label}`,
                 beforeBody: (items) => {
                   const isForecast = items[0].dataIndex >= historyLen;
-                  
-                  // Lógica inteligente de total: 
+
+                  // Lógica inteligente de total:
                   // No modo acumulado, o total já é o valor do ponto.
                   // No ponto de conexão, evitamos somar o ponto real + o ponto de previsão.
                   let total = 0;
@@ -291,7 +291,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
                       return sum + Number(item.raw || 0);
                     }, 0);
                   }
-                  
+
                   return `${isForecast ? '[PREVISÃO] ' : ''}TOTAL: ${Math.round(total)} CASOS\n-----------------`;
                 },
                 label: (context: any) => {

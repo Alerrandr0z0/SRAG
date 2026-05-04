@@ -49,7 +49,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
     const titles: any[] = [];
 
     pathogens.forEach((p, idx) => {
-      const left = 15 + idx * 28; 
+      const left = 15 + idx * 28;
       const width = 24;
 
       grids.push({
@@ -83,8 +83,8 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         data: labels,
         gridIndex: idx,
         inverse: true,
-        axisLabel: { 
-          show: idx === 0, 
+        axisLabel: {
+          show: idx === 0,
           fontSize: 10,
           color: '#475569',
           width: 130,
@@ -98,7 +98,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
 
       const matrixData = matrices[p.key as keyof typeof matrices];
       const plotData: any[] = [];
-      
+
       if (matrixData) {
           matrixData.forEach((row, yIdx) => {
             row.forEach((cell, xIdx) => {
@@ -114,11 +114,11 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         xAxisIndex: idx,
         yAxisIndex: idx,
         data: plotData,
-        label: { 
-            show: true, 
-            fontSize: 9, 
-            color: '#1e293b', 
-            formatter: (params: any) => params.value[2] > 0 ? `${Math.round(params.value[2])}%` : '' 
+        label: {
+            show: true,
+            fontSize: 9,
+            color: '#1e293b',
+            formatter: (params: any) => params.value[2] > 0 ? `${Math.round(params.value[2])}%` : ''
         },
         itemStyle: {
             borderColor: '#fff',
@@ -142,18 +142,18 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
           const bandIdx = params.value[0];
           const symptom = labels[symptomIdx];
           const band = bands[bandIdx];
-          
+
           let res = `<div style="font-weight:bold;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${symptom} <span style="font-weight:normal;color:#64748b;">(${band})</span></div>`;
-          
+
           pathogens.forEach(p => {
             const m = matrices[p.key as keyof typeof matrices];
             const cell = m ? m[symptomIdx][bandIdx] : [0, 0];
             const prevalence = cell[0];
             const count = cell[1];
-            
+
             const color = p.key === 'covid' ? '#0f766e' : (p.key === 'gripe' ? '#1d4ed8' : '#b45309');
             const bullet = `<span style="display:inline-block;margin-right:8px;border-radius:2px;width:10px;height:10px;background-color:${color};"></span>`;
-            
+
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:2px;">
                         <span>${bullet} ${p.title}</span>
                         <span><b style="font-size:12px;">${prevalence}%</b> <span style="color:#64748b;font-size:10px;">(${count} casos)</span></span>

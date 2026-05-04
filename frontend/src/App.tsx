@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import './App.css';
 
 // Hooks
@@ -9,6 +9,9 @@ import { useCitizenData } from './hooks/useCitizenData';
 
 // UI Components
 import KpiCard from './components/ui/KpiCard';
+import CitizenFilterBar from './components/ui/CitizenFilterBar';
+import TerritoryFilterBar from './components/ui/TerritoryFilterBar';
+import UnitsFilterBar from './components/ui/UnitsFilterBar';
 
 // Charts
 import TrendChart from './components/charts/TrendChart';
@@ -20,12 +23,6 @@ import UnitsPanel from './components/panels/UnitsPanel';
 import CitizenPanel from './components/panels/CitizenPanel';
 import VigilancePanel from './components/panels/VigilancePanel';
 
-// Services
-import { api } from './services/api';
-
-// Types
-import * as Epi from './types/epi';
-
 function App() {
   // Config State
   const [panel, setPanel] = useState('territorio');
@@ -33,79 +30,52 @@ function App() {
   const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [virusDetail, setVirusDetail] = useState('summary');
-  
+  const [dashboardYear, setDashboardYear] = useState<number[]>([]);
+
   // Citizen State
   const [citizenTab, setCitizenTab] = useState<string[]>([]);
   const [raceFilter, setRaceFilter] = useState<string[]>([]);
+  const [genderFilter, setGenderFilter] = useState<string[]>([]);
+  const [zoneFilter, setZoneFilter] = useState<string[]>([]);
+  const [bairroFilter, setBairroFilter] = useState<string[]>([]);
+  const [unitFilter, setUnitFilter] = useState<string[]>([]);
+  const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
+  const [vigilanceYears, setVigilanceYears] = useState<number[]>([]);
 
   // Core Data Hook
-  const { data, status, lastUpdate, error } = useCoreData(weeksWindow, lookback, virusDetail);
+  const { data, status, lastUpdate, error } = useCoreData(
+    weeksWindow,
+    lookback,
+    virusDetail,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+  );
 
   // Lazy Loaded Data Hooks
-  const territoryData = useTerritoryData(panel === 'territorio', 'Urbana'); 
-  const unitsData = useUnitsData(panel === 'unidades');
-  const citizenData = useCitizenData(panel === 'cidadao', citizenTab, raceFilter);
+  const territoryData = useTerritoryData(panel === 'territorio', 'Urbana', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear);
+  const unitsData = useUnitsData(panel === 'unidades', swimmerVirus, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear);
+  const citizenData = useCitizenData(panel === 'cidadao', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear);
   const vigilanceLoading = panel === 'vigilancia' && !data?.laboratoryNetwork;
-
-  // Helper to toggle multi-select items
-  const toggleFilter = (list: string[], item: string) => {
-    return list.includes(item) ? list.filter(i => i !== item) : [...list, item];
-  };
-
-  // Context Trends State
-  const [territoryTrendZone, setTerritoryTrendZone] = useState('macro');
-  const [territoryTrendEntity, setTerritoryTrendEntity] = useState('ALL');
-  const [contextTrends, setContextTrends] = useState<Epi.TrendsData | null>(null);
 
   // KPIs Memo
   const kpis = useMemo(() => {
     if (!data?.summary) {
       return { total: 0, uti: '0%', death: '0%', next: '--' };
     }
-    const trends = contextTrends || data.trends;
     return {
       total: data.summary.total ?? 0,
-      uti: `${data.summary.uti_rate ?? 0}%`,
+      uti: data.summary.uti_total ?? 0,
       death: `${data.summary.death_rate ?? 0}%`,
-      next: trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
+      next: data.trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
     };
-  }, [data, contextTrends]);
+  }, [data]);
 
-  // Sync entity options when territory zone changes
-  useEffect(() => {
-    setTerritoryTrendEntity('ALL');
-  }, [territoryTrendZone]);
-
-  const territoryEntityOptions = useMemo(() => {
-    if (territoryTrendZone === 'macro') return [];
-    return territoryTrendZone === 'urbana' 
-      ? (territoryData.entities?.urban_bairros || []) 
-      : (territoryData.entities?.rural_comunidades || []);
-  }, [territoryData.entities, territoryTrendZone]);
-
-  // Load Territory Specific Trends
-  useEffect(() => {
-    let cancelled = false;
-    async function loadTrend() {
-      if (panel !== 'territorio' || territoryTrendZone === 'macro') {
-        setContextTrends(null);
-        return;
-      }
-      const zoneLabel = territoryTrendZone === 'urbana' ? 'Urbana' : 'Rural';
-      const key = territoryTrendEntity === 'ALL' 
-          ? `ZONA::${zoneLabel}` 
-          : `BAIRRO::${territoryTrendEntity}`;
-      
-      try {
-        const payload = await api.fetchContextTrends(key, weeksWindow, lookback);
-        if (!cancelled) setContextTrends(payload);
-      } catch {
-        if (!cancelled) setContextTrends(null);
-      }
-    }
-    loadTrend();
-    return () => { cancelled = true; };
-  }, [panel, territoryTrendZone, territoryTrendEntity, weeksWindow, lookback]);
+  const availableYears = data?.summary?.available_years || [];
 
   const panelButtons = [
     { key: 'territorio', label: 'Território' },
@@ -114,41 +84,77 @@ function App() {
     { key: 'vigilancia', label: 'Vigilância' }
   ];
 
-  const orderedCitizenTabs = [
-    { key: 'crianca', label: 'Criança' },
-    { key: 'adolescente', label: 'Adolescente' },
-    { key: 'adulto', label: 'Adulto' },
-    { key: 'idoso', label: 'Idoso' },
+  const currentTrends = data?.trends;
+
+  const activeFilters = [
+    ...citizenTab.map(f => ({ type: 'Perfil', val: f, remover: () => setCitizenTab(citizenTab.filter(i => i !== f)) })),
+    ...raceFilter.map(f => ({ type: 'Raça', val: f, remover: () => setRaceFilter(raceFilter.filter(i => i !== f)) })),
+    ...genderFilter.map(f => ({ type: 'Gênero', val: f, remover: () => setGenderFilter(genderFilter.filter(i => i !== f)) })),
+    ...zoneFilter.map(f => ({ type: 'Zona', val: f, remover: () => setZoneFilter(zoneFilter.filter(i => i !== f)) })),
+    ...bairroFilter.map(f => ({ type: 'Bairro', val: f, remover: () => setBairroFilter(bairroFilter.filter(i => i !== f)) })),
+    ...unitFilter.map(f => ({ type: 'Unid', val: f, remover: () => setUnitFilter(unitFilter.filter(i => i !== f)) }))
   ];
 
-  const currentTrends = contextTrends || data?.trends;
+  const clearAllFilters = () => {
+    setCitizenTab([]);
+    setRaceFilter([]);
+    setGenderFilter([]);
+    setZoneFilter([]);
+    setBairroFilter([]);
+    setUnitFilter([]);
+  };
 
   return (
     <main className="app-shell">
       <section className="panel header-panel">
-        <div>
+        <div style={{ flex: 1 }}>
           <h1>Painel SRAG - Mossoró/RN</h1>
-          <p className="sub">Monitoramento de gravidade e perfil viral.</p>
+          {activeFilters.length === 0 ? (
+            <p className="sub">Monitoramento de gravidade e perfil viral.</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginRight: '4px', letterSpacing: '0.05em' }}>FILTROS ATIVOS:</span>
+              {activeFilters.map(f => (
+                <div key={`${f.type}-${f.val}`} className="global-filter-chip">
+                  <span style={{ opacity: 0.6, marginRight: '3px' }}>{f.type}:</span>
+                  <strong>{f.val}</strong>
+                  <button onClick={f.remover} className="global-filter-close">
+                    <svg viewBox="0 0 14 14" width="12" height="12"><path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ))}
+              <button onClick={clearAllFilters} className="global-filter-clear">Limpar Tudo</button>
+            </div>
+          )}
         </div>
-        <div className="status-grid">
+        <div className="status-grid status-grid--wide">
           <div><p>Sincronização</p><strong>{status === 'online' ? 'BANCO ATIVO' : 'OFFLINE'}</strong></div>
           <div><p>Atualização</p><strong>{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</strong></div>
+          <div className="status-year">
+            <p>Ano</p>
+            <select value={dashboardYear[0] ? String(dashboardYear[0]) : ''} onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}>
+              <option value="">Todos</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </section>
 
       <section className="kpi-grid">
-        <KpiCard label="Total Notificado" value={kpis.total} />
-        <KpiCard label="Taxa de UTI" value={kpis.uti} />
+        <KpiCard label="Total Internações" value={kpis.total} />
+        <KpiCard label="Total UTI" value={kpis.uti} />
         <KpiCard label="Letalidade" value={kpis.death} />
-        <KpiCard label="Projeção (S+1)" value={kpis.next} />
+        <KpiCard label="PROJEÇÃO" value={kpis.next} />
       </section>
 
       <section className="panel tabs-panel">
         <div className="tab-row">
           {panelButtons.map(b => (
-            <button 
-              key={b.key} 
-              className={`tab-btn ${panel === b.key ? 'active' : ''}`} 
+            <button
+              key={b.key}
+              className={`tab-btn ${panel === b.key ? 'active' : ''}`}
               onClick={() => setPanel(b.key)}
             >
               {b.label}
@@ -161,9 +167,7 @@ function App() {
         <article className="panel">
           <div className="section-header">
             <div className="stack" style={{ gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h3 style={{ margin: 0 }}>Tendência</h3>
-              </div>
+              <h3 style={{ margin: 0 }}>Tendência</h3>
               {currentTrends && (
                 <div className="filters" style={{ fontSize: '12px', color: '#64748b', gap: 12 }}>
                   <span>Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b></span>
@@ -172,26 +176,6 @@ function App() {
               )}
             </div>
             <div className="filters">
-              {panel === 'territorio' && (
-                <>
-                  <label>
-                    Zona
-                    <select value={territoryTrendZone} onChange={e => setTerritoryTrendZone(e.target.value)}>
-                      <option value="macro">Macro</option>
-                      <option value="urbana">Urbana</option>
-                      <option value="rural">Rural</option>
-                    </select>
-                  </label>
-                  {territoryTrendZone !== 'macro' && (
-                    <select value={territoryTrendEntity} onChange={e => setTerritoryTrendEntity(e.target.value)}>
-                      <option value="ALL">Todas</option>
-                      {territoryEntityOptions.map((i: any) => (
-                        <option key={i.name} value={i.name}>{i.name}</option>
-                      ))}
-                    </select>
-                  )}
-                </>
-              )}
               <div className="pill-group">
                 {[
                   { v: '0', l: 'Tudo' },
@@ -217,7 +201,7 @@ function App() {
           </div>
           <div className="chart-wrap">
             {currentTrends && (
-              <TrendChart 
+              <TrendChart
                 history={currentTrends.history}
                 forecast={currentTrends.forecast}
                 thresholds={currentTrends.thresholds}
@@ -230,40 +214,40 @@ function App() {
         </article>
       </section>
 
-      {panel === 'cidadao' && (
-        <>
-          <section className="panel tabs-panel citizen-switch-panel">
-            <div className="tab-row citizen-tab-row">
-              {orderedCitizenTabs.map(t => (
-                <button 
-                  key={t.key} 
-                  className={`tab-btn ${citizenTab.includes(t.key) ? 'active' : ''}`} 
-                  onClick={() => setCitizenTab(prev => toggleFilter(prev, t.key))}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </section>
+      {/* FILTROS GLOBAIS (Cards Próprios) */}
+      {panel === 'territorio' && (
+        <section className="main-grid">
+          <article className="panel">
+            <TerritoryFilterBar
+              zoneFilter={zoneFilter} setZoneFilter={setZoneFilter}
+              bairroFilter={bairroFilter} setBairroFilter={setBairroFilter}
+              bairrosList={territoryData.entities?.urban_bairros || []}
+            />
+          </article>
+        </section>
+      )}
 
-          <section className="panel tabs-panel citizen-switch-panel">
-            <div className="tab-row race-tab-row">
-              {['Branca', 'Preta', 'Amarela', 'Parda', 'Indígena'].map(label => {
-                const active = raceFilter.includes(label);
-                const count = citizenData.raceProfile.find(r => r.label === label)?.count || 0;
-                return (
-                  <button 
-                    key={label} 
-                    className={`tab-btn ${active ? 'active' : ''}`} 
-                    onClick={() => setRaceFilter(prev => toggleFilter(prev, label))}
-                  >
-                    {label} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        </>
+      {panel === 'unidades' && (
+        <section className="main-grid">
+          <article className="panel">
+            <UnitsFilterBar
+              unitFilter={unitFilter} setUnitFilter={setUnitFilter}
+              unitsList={unitsData.units || []}
+            />
+          </article>
+        </section>
+      )}
+
+      {panel === 'cidadao' && (
+        <section className="main-grid">
+          <article className="panel">
+            <CitizenFilterBar
+              citizenTab={citizenTab} setCitizenTab={setCitizenTab}
+              raceFilter={raceFilter} setRaceFilter={setRaceFilter}
+              genderFilter={genderFilter} setGenderFilter={setGenderFilter}
+            />
+          </article>
+        </section>
       )}
 
       <section className="secondary-grid">
@@ -284,7 +268,7 @@ function App() {
           <h3>Resumo operacional</h3>
           {error ? <p className="error-box">{error}</p> : (
             <ul className="list">
-              <li><span>Taxa de UTI</span><span>{kpis.uti}</span></li>
+              <li><span>Total UTI</span><span>{kpis.uti}</span></li>
               <li><span>Taxa de óbito</span><span>{kpis.death}</span></li>
               <li><span>Projeção próxima semana</span><span>{kpis.next}</span></li>
             </ul>
@@ -295,7 +279,7 @@ function App() {
       <section className="main-grid">
         {panel === 'territorio' && (
           <article className="panel">
-            <TerritoryPanel 
+            <TerritoryPanel
               loading={territoryData.loading}
               territory={territoryData.territory}
               boundary={territoryData.boundary}
@@ -308,40 +292,40 @@ function App() {
 
         {panel === 'unidades' && (
           <article className="panel">
-            <UnitsPanel 
+            <UnitsPanel
               loading={unitsData.loading}
               units={unitsData.units}
               hospitalization={unitsData.hospitalization}
               clinicalFlow={unitsData.clinicalFlow}
               timelineData={unitsData.timelineData}
               icuBottleneck={unitsData.icuBottleneck}
-              swimmerVirus={unitsData.swimmerVirus}
-              setSwimmerVirus={unitsData.setSwimmerVirus}
+              swimmerVirus={swimmerVirus}
+              setSwimmerVirus={setSwimmerVirus}
+              dashboardYear={dashboardYear}
             />
           </article>
         )}
 
         {panel === 'cidadao' && (
           <article className="panel">
-            <CitizenPanel 
+            <CitizenPanel
               loading={citizenData.loading}
               pyramid={citizenData.pyramid}
-              raceProfile={citizenData.raceProfile}
               schooling={citizenData.schooling}
               symptomsSignature={citizenData.symptomsSignature}
               riskFactors={citizenData.riskFactors}
+              maternalProfile={citizenData.maternalProfile}
               vaccination={citizenData.vaccination}
               survival={citizenData.survival}
-              timelineData={citizenData.timelineData}
+              genderFilter={genderFilter}
             />
           </article>
         )}
 
         {panel === 'vigilancia' && (
           <article className="panel">
-            <VigilancePanel 
+            <VigilancePanel
               loading={vigilanceLoading}
-              kpis={{ total: kpis.total, uti: kpis.uti, death: kpis.death, next: kpis.next }}
               laboratoryNetwork={data?.laboratoryNetwork}
             />
           </article>

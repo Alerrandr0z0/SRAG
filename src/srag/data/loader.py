@@ -36,6 +36,7 @@ COLUMN_ALIASES = {
     "CO_MUN_NOT": "ID_MUNICIP",
     "CO_MUN_RES": "ID_MN_RESI",
     "CO_UNI_NOT": "ID_UNIDADE",
+    "CO-DETEC": "CO_DETEC",
 }
 
 RURAL_KEYWORDS = [
@@ -64,41 +65,41 @@ def _normalize_bairro_name(value: str | None) -> str | None:
     return text
 
 
-def _infer_zone_from_bairro(BAIRRO_REF: str | None) -> str | None:
+def _infer_zone_from_bairro(bairro_ref: str | None) -> str | None:
     """Infer territorial zone from bairro text using simple heuristics."""
-    if BAIRRO_REF is None:
+    if bairro_ref is None:
         return None
 
-    if any(keyword in BAIRRO_REF for keyword in RURAL_KEYWORDS):
+    if any(keyword in bairro_ref for keyword in RURAL_KEYWORDS):
         return "Rural"
     return "Urbana"
 
 
-def _normalize_zone(CS_ZONA: int | None) -> str | None:
+def _normalize_zone(cs_zona: int | None) -> str | None:
     """Map official CS_ZONA coding to human-readable labels."""
     zone_map = {
         1: "Urbana",
         2: "Rural",
         3: "Periurbana",
     }
-    return zone_map.get(CS_ZONA)
+    return zone_map.get(cs_zona)
 
 
-def _normalize_age_to_years(NU_IDADE_N: int | None, TP_IDADE: int | None) -> float | None:
+def _normalize_age_to_years(nu_idade_n: int | None, tp_idade: int | None) -> float | None:
     """Convert SIVEP age representation into decimal years.
 
     SIVEP stores age value (NU_IDADE_N) with a separate type code (TP_IDADE):
     1=days, 2=months, 3=years.
     """
-    if NU_IDADE_N is None or NU_IDADE_N < 0:
+    if nu_idade_n is None or nu_idade_n < 0:
         return None
 
-    if TP_IDADE == 1:
-        return round(NU_IDADE_N / 365.25, 4)
-    if TP_IDADE == 2:
-        return round(NU_IDADE_N / 12.0, 4)
-    if TP_IDADE == 3 or TP_IDADE is None:
-        return float(NU_IDADE_N)
+    if tp_idade == 1:
+        return round(nu_idade_n / 365.25, 4)
+    if tp_idade == 2:
+        return round(nu_idade_n / 12.0, 4)
+    if tp_idade == 3 or tp_idade is None:
+        return float(nu_idade_n)
 
     return None
 

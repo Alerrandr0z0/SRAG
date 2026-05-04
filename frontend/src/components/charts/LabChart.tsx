@@ -29,16 +29,16 @@ const LabChart: React.FC<LabChartProps> = ({ data }) => {
         type: 'bar',
         data: {
           labels: items.map((l) => l.LAB_REF || l.lab_ref),
-          datasets: [{ 
-            data: items.map((l) => l.tested_cases), 
-            backgroundColor: COLORS.SECONDARY, 
-            borderRadius: 8 
+          datasets: [{
+            data: items.map((l) => l.tested_cases),
+            backgroundColor: COLORS.SECONDARY,
+            borderRadius: 8
           }],
         },
-        options: { 
-          indexAxis: 'y', 
-          maintainAspectRatio: false, 
-          plugins: { legend: { display: false } } 
+        options: {
+          indexAxis: 'y',
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         },
       });
     }

@@ -119,6 +119,9 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
         validKeys = validKeys.slice(-maxGroups);
       }
 
+      // Ordem decrescente (mais recentes no topo)
+      validKeys.reverse();
+
       const filteredAll = enriched.filter((d) =>
         validKeys.includes(d.groupKey),
       );
@@ -155,14 +158,12 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
       const ridgeData = filteredAll.filter((d) => d.wait_days > 0);
       if (ridgeData.length === 0) return;
 
-      // ── 4. Dynamic X axis (P95) ─────────────────────────────────────────
+      // ── 4. Fixed X axis (10 days) ──────────────────────────────────────
       const allWaits = ridgeData.map((d) => d.wait_days);
-      const p95 =
-        d3.quantile(allWaits.sort(d3.ascending), 0.95) ?? 5;
-      const xMax = Math.max(Math.ceil(p95), ACCEPTABLE_LIMIT + 1);
+      const xMax = 10;
 
       // ── 5. KDE per group ────────────────────────────────────────────────
-      const numBins = Math.max(120, Math.ceil(xMax * 10));
+      const numBins = 100;
       const xThresholds = d3.range(0, xMax + 0.01, xMax / numBins);
 
       const globalStddev = d3.deviation(allWaits) ?? 1;
@@ -192,12 +193,17 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
           .filter((d) => d.groupKey === key)
           .map((d) => d.wait_days);
         const stats = statsByKey.get(key)!;
+
+        // Remove totalmente do gráfico períodos com 0 casos aguardando
+        if (values.length === 0) continue;
+
         const density = kde(values, xThresholds, bw);
-        const maxDensity = d3.max(density, (d) => d.y) ?? 1;
+        const maxDensity = d3.max(density, (d) => d.y) || 0;
         const normDensity = density.map((pt) => ({
           x: pt.x,
-          y: pt.y / maxDensity,
+          y: maxDensity > 0 ? pt.y / maxDensity : 0,
         }));
+
         groups.push({
           key,
           label: labelMap[key],
@@ -443,7 +449,8 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
               ? cur
               : prev,
           );
-          return -y(nearestPt.y * 0.96);
+          const yVal = -y(nearestPt.y * 0.96);
+          return isNaN(yVal) ? 0 : yVal;
         })
         .attr("r", 3.5)
         .attr("fill", (d) => getRidgeColor(d.median))
@@ -460,7 +467,8 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
               ? cur
               : prev,
           );
-          return -y(nearestPt.y * 0.96) - 9;
+          const yVal = -y(nearestPt.y * 0.96) - 9;
+          return isNaN(yVal) ? -9 : yVal;
         })
         .attr("text-anchor", "middle")
         .attr("fill", (d) => getRidgeColor(d.median))
@@ -612,7 +620,7 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
       </div>
 
       <div
-        style={{ width: "100%", overflowX: "auto", position: "relative" }}
+        style={{ width: "100%", position: "relative" }}
       >
         <svg
           ref={svgRef}

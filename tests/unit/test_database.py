@@ -12,10 +12,12 @@ from srag.data.database import SragRecord, generate_case_hash, init_db, save_cas
 TEST_DB_FILE = "test_srag_temp.db"
 TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
 
+
 @pytest.fixture
 def test_db_setup(monkeypatch):
     # Patch DB_URL in database.py
     import srag.data.database
+
     monkeypatch.setattr(srag.data.database, "DB_URL", TEST_DB_URL)
 
     # Initialize DB
@@ -27,6 +29,7 @@ def test_db_setup(monkeypatch):
     if os.path.exists(TEST_DB_FILE):
         os.remove(TEST_DB_FILE)
 
+
 def test_generate_case_hash():
     record = {
         "DT_NOTIFIC": date(2024, 5, 1),
@@ -34,12 +37,13 @@ def test_generate_case_hash():
         "DT_SIN_PRI": date(2024, 4, 25),
         "NU_IDADE_N": 30,
         "CS_SEXO": "M",
-        "ID_UNIDADE": "UPA"
+        "ID_UNIDADE": "UPA",
     }
     h1 = generate_case_hash(record)
     h2 = generate_case_hash(record)
     assert h1 == h2
     assert len(h1) == 32
+
 
 def test_save_cases_deduplication(test_db_setup):
     cases = [
@@ -51,7 +55,7 @@ def test_save_cases_deduplication(test_db_setup):
             "NU_IDADE_N": 30,
             "CS_SEXO": "M",
             "ID_UNIDADE": "UPA",
-            "CLASSI_FIN": 5
+            "CLASSI_FIN": 5,
         }
     ]
 
@@ -63,6 +67,7 @@ def test_save_cases_deduplication(test_db_setup):
     added_again = save_cases(cases)
     assert added_again == 0
 
+
 def test_save_cases_enrichment(test_db_setup):
     base_case = {
         "DT_NOTIFIC": date(2024, 5, 1),
@@ -73,7 +78,7 @@ def test_save_cases_enrichment(test_db_setup):
         "CS_SEXO": "M",
         "ID_UNIDADE": "UPA",
         "CLASSI_FIN": None,
-        "TP_IDADE": None
+        "TP_IDADE": None,
     }
 
     save_cases([base_case])
