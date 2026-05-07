@@ -79,7 +79,7 @@ def test_is_not_mossoro_case():
 
 
 def test_project_death_override_keeps_code_2_only():
-    assert DEATH_OUTCOMES == {2}
+    assert {2} == DEATH_OUTCOMES
 
 
 def test_is_mossoro_case_by_residence():
@@ -101,6 +101,7 @@ def test_is_mossoro_case_by_residence():
     )
     assert is_mossoro_case(case) is True
 
+
 def test_is_mossoro_case_empty_values():
     case = SragCase(
         DT_NOTIFIC="20/05/2024",
@@ -118,6 +119,7 @@ def test_is_mossoro_case_empty_values():
         SG_UF="RN",
     )
     assert is_mossoro_case(case) is False
+
 
 def test_mossoro_reference_codes_include_ibge_primary_code():
     assert MOSSORO_IBGE_CODES[0] == "2408003"

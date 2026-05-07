@@ -60,24 +60,12 @@ def main(
         "DOSE_ADIC",
         "DOS_RE_BI",
         "DT_UT_DOSE",
+        "DT_1_DOSE",
+        "DT_2_DOSE",
+        "DT_DOSEUNI",
+        "DT_VAC_MAE",
+        "DT_ANTIVIR",
     }
-
-    # Adicionando colunas de Vigilância Genômica e Clínica ao target para garantir ingestão dinâmica
-    genomic_cols = [
-        "VG_OMS",
-        "VG_LIN",
-        "VG_MET",
-        "VG_REINF",
-        "CO_DETEC",
-        "TP_SOR",
-        "RES_IGG",
-        "RES_IGM",
-        "RES_IGA",
-        "TP_ANTIVIR",
-        "TIPO_TRAT",
-        "SURTO_SG",
-    ]
-    target_cols.extend([col for col in genomic_cols if col not in target_cols])
 
     # Tabela temporária para consolidação
     con.execute("CREATE TABLE temp_cases AS SELECT * FROM sqlite_db.casos_srag WHERE 1=0;")
@@ -106,7 +94,7 @@ def main(
             ]
             file_cols = {c.upper(): c for c in file_cols_raw}
 
-            def get_col(name):
+            def get_col(name: str) -> str:
                 return file_cols.get(name.upper(), "NULL")
 
             source_mun = (
@@ -115,21 +103,19 @@ def main(
             source_res = (
                 get_col("CO_MUN_RES") if get_col("CO_MUN_RES") != "NULL" else get_col("ID_MN_RESI")
             )
-            source_unit = (
-                get_col("CO_UNI_NOT") if get_col("CO_UNI_NOT") != "NULL" else get_col("ID_UNIDADE")
-            )
 
             select_parts = []
             for col in target_cols:
                 col_up = col.upper()
                 if col == "unique_hash":
+                    # Hash logic MUST match srag.data.database.generate_case_hash
+                    # Identifiers: DT_NOTIFIC, ID_MUNICIP, DT_SIN_PRI, NU_IDADE_N, CS_SEXO
                     select_parts.append(f"""
                         md5(COALESCE(CAST({get_col("DT_NOTIFIC")} AS VARCHAR), '') || '|' ||
                             COALESCE(CAST({source_mun} AS VARCHAR), '') || '|' ||
                             COALESCE(CAST({get_col("DT_SIN_PRI")} AS VARCHAR), '') || '|' ||
                             COALESCE(CAST({get_col("NU_IDADE_N")} AS VARCHAR), '') || '|' ||
-                            COALESCE(CAST({get_col("CS_SEXO")} AS VARCHAR), '') || '|' ||
-                            COALESCE(CAST({source_unit} AS VARCHAR), ''))
+                            COALESCE(CAST({get_col("CS_SEXO")} AS VARCHAR), ''))
                     """)
                 elif col in ["BAIRRO_REF", "ZONA"]:
                     select_parts.append("NULL")
@@ -156,6 +142,20 @@ def main(
                         get_col("CO-DETEC")
                         if get_col("CO-DETEC") != "NULL"
                         else get_col("CO_DETEC")
+                    )
+                    select_parts.append(orig)
+                elif col_up == "FAB_COV1":
+                    orig = (
+                        get_col("FAB_COV_1")
+                        if get_col("FAB_COV_1") != "NULL"
+                        else get_col("FAB_COV1")
+                    )
+                    select_parts.append(orig)
+                elif col_up == "FAB_COV2":
+                    orig = (
+                        get_col("FAB_COV_2")
+                        if get_col("FAB_COV_2") != "NULL"
+                        else get_col("FAB_COV2")
                     )
                     select_parts.append(orig)
                 else:

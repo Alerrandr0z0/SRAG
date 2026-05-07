@@ -1,7 +1,7 @@
+from datetime import date
+
 import numpy as np
 import pandas as pd
-import pytest
-from datetime import date
 
 from srag.api.core import apply_surveillance_filters, sanitize_data
 
@@ -39,9 +39,7 @@ class TestSanitizeData:
 
 class TestApplySurveillanceFilters:
     def test_filter_by_years(self):
-        df = pd.DataFrame(
-            {"DT_SIN_PRI": [date(2023, 1, 1), date(2024, 1, 1), date(2025, 1, 1)]}
-        )
+        df = pd.DataFrame({"DT_SIN_PRI": [date(2023, 1, 1), date(2024, 1, 1), date(2025, 1, 1)]})
         result = apply_surveillance_filters(df, years=[2024])
         assert len(result) == 1
         assert result.iloc[0]["DT_SIN_PRI"] == date(2024, 1, 1)

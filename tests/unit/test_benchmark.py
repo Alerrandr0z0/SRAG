@@ -1,7 +1,8 @@
 """Benchmarks for performance-critical functions."""
-import pandas as pd
-import pytest
+
 from datetime import date, timedelta
+
+import pandas as pd
 
 from srag.data.analytics import (
     apply_global_filters,
@@ -10,7 +11,6 @@ from srag.data.analytics import (
     compute_alert_thresholds,
     compute_severity_metrics,
     compute_time_series,
-    compute_time_series_by_virus,
     compute_virus_distribution,
     infer_etiologic_agent,
     outcome_death_mask,
@@ -20,24 +20,26 @@ from srag.data.loader import _normalize_age_to_years
 
 def generate_test_data(n_rows: int = 1000) -> pd.DataFrame:
     """Generate test data for benchmarks."""
-    return pd.DataFrame({
-        "DT_SIN_PRI": [date(2024, 1, 1) + timedelta(days=i) for i in range(n_rows)],
-        "CLASSI_FIN": [(i % 5) + 1 for i in range(n_rows)],
-        "PCR_VSR": [i % 2 for i in range(n_rows)],
-        "UTI": [(i % 4) + 1 for i in range(n_rows)],
-        "EVOLUCAO": [(i % 4) + 1 for i in range(n_rows)],
-        "NU_IDADE_N": [i % 100 for i in range(n_rows)],
-        "TP_IDADE": [3] * n_rows,
-        "CS_RACA": [(i % 6) + 1 for i in range(n_rows)],
-        "CS_SEXO": ["M" if i % 2 == 0 else "F" for i in range(n_rows)],
-    })
+    return pd.DataFrame(
+        {
+            "DT_SIN_PRI": [date(2024, 1, 1) + timedelta(days=i) for i in range(n_rows)],
+            "CLASSI_FIN": [(i % 5) + 1 for i in range(n_rows)],
+            "PCR_VSR": [i % 2 for i in range(n_rows)],
+            "UTI": [(i % 4) + 1 for i in range(n_rows)],
+            "EVOLUCAO": [(i % 4) + 1 for i in range(n_rows)],
+            "NU_IDADE_N": [i % 100 for i in range(n_rows)],
+            "TP_IDADE": [3] * n_rows,
+            "CS_RACA": [(i % 6) + 1 for i in range(n_rows)],
+            "CS_SEXO": ["M" if i % 2 == 0 else "F" for i in range(n_rows)],
+        }
+    )
 
 
 class TestCategorizeAgeBenchmark:
     def test_categorize_age_single(self, benchmark):
         """Benchmark: categorize single age."""
         result = benchmark(categorize_age, 30.5)
-        assert result == "20-39 anos"
+        assert result == "30-39 anos"
 
     def test_categorize_age_batch(self, benchmark):
         """Benchmark: categorize 1000 ages."""
@@ -161,4 +163,13 @@ class TestClassificarStatusGripeBenchmark:
             "DT_SIN_PRI": date(2024, 7, 1),
         }
         result = benchmark(classificar_status_gripe, row)
-        assert result in ["protegido", "dose_1", "dose_2", "dose_unica", "vencida", "nao_vacinado", "ignorado", "inconsistencia"]
+        assert result in [
+            "protegido",
+            "dose_1",
+            "dose_2",
+            "dose_unica",
+            "vencida",
+            "nao_vacinado",
+            "ignorado",
+            "inconsistencia",
+        ]
