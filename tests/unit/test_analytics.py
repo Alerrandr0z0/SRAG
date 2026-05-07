@@ -9,6 +9,7 @@ from srag.data.analytics import (
     compute_alert_thresholds,
     compute_clinical_timing_metrics,
     compute_severity_metrics,
+    compute_symptoms_signature,
     compute_time_series_by_virus,
     compute_time_series,
     compute_virus_distribution,
@@ -23,10 +24,11 @@ def test_categorize_age():
     assert categorize_age(1.9) == "0-1 ano"
     assert categorize_age(2) == "2-4 anos"
     assert categorize_age(5) == "5-9 anos"
-    assert categorize_age(15) == "10-19 anos"
-    assert categorize_age(30) == "20-39 anos"
-    assert categorize_age(50) == "40-59 anos"
-    assert categorize_age(70) == "60+ anos"
+    assert categorize_age(15) == "15-19 anos"
+    assert categorize_age(30) == "30-39 anos"
+    assert categorize_age(50) == "50-59 anos"
+    assert categorize_age(70) == "70-79 anos"
+    assert categorize_age(85) == "80+ anos"
 
 
 def test_compute_virus_distribution_empty():
@@ -159,9 +161,7 @@ def test_classificar_status_gripe():
 
 
 def test_compute_time_series():
-    df = pd.DataFrame(
-        {"DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 5), date(2024, 1, 15)]}
-    )
+    df = pd.DataFrame({"DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 5), date(2024, 1, 15)]})
     ts = compute_time_series(df)
     assert len(ts) >= 1
     assert "epi_week" in ts.columns
@@ -188,3 +188,27 @@ def test_compute_clinical_timing_metrics():
     assert metrics["cases_with_hospital_date"] == 2
     assert metrics["median_days_symptom_to_hospital"] == 1.5  # (1 + 2) / 2
     assert metrics["protocol_48h_adherence_rate"] == 50.0  # 1 de 2 casos tratados é aderente
+
+
+def test_compute_symptoms_signature():
+    df = pd.DataFrame(
+        {
+            "NU_IDADE_N": [30, 30, 30],
+            "TP_IDADE": [3, 3, 3],
+            "CLASSI_FIN": [5, 1, 4],  # COVID, Flu, Other
+            "FEBRE": [1, 1, 0],
+            "TOSSE": [1, 0, 1],
+        }
+    )
+    result = compute_symptoms_signature(df)
+    assert "labels" in result
+    assert "matrices" in result
+    assert "covid" in result["matrices"]
+    assert "gripe" in result["matrices"]
+    # Check if we have data (matrices are list of lists of [prev, count])
+    covid_matrix = result["matrices"]["covid"]
+    assert len(covid_matrix) > 0
+    # The 'Adulto' band (age 30) is the 3rd band in the 'all' view
+    # Matrix structure: matrix[symptom_idx][band_idx] -> [prevalence, count]
+    found_prev = any(symptom_row[2][0] == 100.0 for symptom_row in covid_matrix)
+    assert found_prev

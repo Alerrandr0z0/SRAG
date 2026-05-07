@@ -1,9 +1,10 @@
 """Hypothesis-based tests for SIVEP-Gripe business rules."""
-from datetime import date, timedelta as td
+
+from datetime import date
 
 import pandas as pd
 import pytest
-from hypothesis import given, settings, assume, example, HealthCheck
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from srag.data.analytics import (
@@ -14,16 +15,19 @@ from srag.data.analytics import (
 )
 from srag.data.loader import _normalize_age_to_years
 
-
 # Strategies baseadas nas regras do dicionário SIVEP-Gripe
 
 valid_evolucao = st.sampled_from([1, 2, 3, 9])  # 1=Cura, 2=Óbito, 3=Óbito outra causa, 9=Ignorado
 valid_tp_idade = st.sampled_from([1, 2, 3])  # 1=Dias, 2=Meses, 3=Anos
 valid_zona = st.sampled_from([1, 2, 3, 9])  # 1=Urbana, 2=Rural, 3=Periurbana, 9=Ignorado
-valid_classi_fin = st.sampled_from([1, 2, 3, 4, 5])  # Influenza, Outro Vírus, Outro Agente, Não Especificada, COVID-19
+valid_classi_fin = st.sampled_from(
+    [1, 2, 3, 4, 5]
+)  # Influenza, Outro Vírus, Outro Agente, Não Especificada, COVID-19
 valid_sexo = st.sampled_from(["M", "F", "I"])  # Masculino, Feminino, Ignorado
 valid_vacina = st.sampled_from([1, 2, 9])  # Sim, Não, Ignorado
-valid_raca = st.sampled_from([1, 2, 3, 4, 5, 9])  # Branca, Preta, Amarela, Parda, Indígena, Ignorado
+valid_raca = st.sampled_from(
+    [1, 2, 3, 4, 5, 9]
+)  # Branca, Preta, Amarela, Parda, Indígena, Ignorado
 
 
 class TestCategorizeAgeHypothesis:
@@ -55,28 +59,22 @@ class TestCategorizeAgeHypothesis:
     @given(age=st.floats(min_value=60, max_value=150, allow_nan=False, allow_infinity=False))
     @settings(max_examples=50)
     def test_categorize_age_elderly(self, age):
-        """Idade >= 60 deve ser categorizada como '60+ anos'."""
+        """Idade >= 60 deve ser categorizada como '60-69 anos', '70-79 anos' ou '80+ anos'."""
         result = categorize_age(age)
-        assert result == "60+ anos"
+        assert result in ["60-69 anos", "70-79 anos", "80+ anos"]
 
 
 class TestNormalizeAgeHypothesis:
     """Testes para normalização de idade baseado nas regras SIVEP."""
 
-    @given(
-        nu_idade=st.integers(min_value=0, max_value=1000),
-        tp_idade=st.sampled_from([1, 2, 3])
-    )
+    @given(nu_idade=st.integers(min_value=0, max_value=1000), tp_idade=st.sampled_from([1, 2, 3]))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.differing_executors])
     def test_normalize_age_never_fails(self, nu_idade, tp_idade):
         """Normalização de idade não deve falhar para valores válidos."""
         result = _normalize_age_to_years(nu_idade, tp_idade)
         assert result is None or isinstance(result, (int, float))
 
-    @given(
-        nu_idade=st.integers(min_value=1, max_value=365),
-        tp_idade=st.just(1)
-    )
+    @given(nu_idade=st.integers(min_value=1, max_value=365), tp_idade=st.just(1))
     @settings(max_examples=30)
     def test_normalize_age_days_to_years(self, nu_idade, tp_idade):
         """Conversão de dias para anos deve estar no intervalo válido."""
@@ -84,10 +82,7 @@ class TestNormalizeAgeHypothesis:
         if result is not None:
             assert 0 < result < 2  # Menos de 2 anos
 
-    @given(
-        nu_idade=st.integers(min_value=1, max_value=120),
-        tp_idade=st.just(2)
-    )
+    @given(nu_idade=st.integers(min_value=1, max_value=120), tp_idade=st.just(2))
     @settings(max_examples=30)
     def test_normalize_age_months_to_years(self, nu_idade, tp_idade):
         """Conversão de meses para anos deve estar no intervalo válido."""
@@ -95,10 +90,7 @@ class TestNormalizeAgeHypothesis:
         if result is not None:
             assert 0 < result < 11  # Menos de 11 anos
 
-    @given(
-        nu_idade=st.integers(min_value=1, max_value=150),
-        tp_idade=st.just(3)
-    )
+    @given(nu_idade=st.integers(min_value=1, max_value=150), tp_idade=st.just(3))
     @settings(max_examples=30)
     def test_normalize_age_years(self, nu_idade, tp_idade):
         """Conversão de anos deve manter o valor."""
@@ -113,14 +105,7 @@ class TestNormalizeAgeHypothesis:
 class TestOutcomeDeathMaskHypothesis:
     """Testes para mascara de morte baseado nas regras SIVEP."""
 
-    @given(
-        evolucion_values=st.lists(
-            valid_evolucao,
-            min_size=1,
-            max_size=20,
-            unique=False
-        )
-    )
+    @given(evolucion_values=st.lists(valid_evolucao, min_size=1, max_size=20, unique=False))
     @settings(max_examples=50)
     def test_outcome_death_mask_only_counts_code_2(self, evolucion_values):
         """Apenas EVOLUCAO == 2 deve ser considerada morte."""
@@ -134,14 +119,7 @@ class TestOutcomeDeathMaskHypothesis:
             else:
                 assert mask.iloc[i] == False
 
-    @given(
-        evolucion_values=st.lists(
-            valid_evolucao,
-            min_size=1,
-            max_size=20,
-            unique=False
-        )
-    )
+    @given(evolucion_values=st.lists(valid_evolucao, min_size=1, max_size=20, unique=False))
     @settings(max_examples=50)
     def test_outcome_death_mask_respects_rule_3_not_death(self, evolucion_values):
         """EVOLUCAO == 3 (Óbito por outra causa) NÃO conta como morte SRAG."""
@@ -166,7 +144,9 @@ class TestClassificarStatusGripeHypothesis:
         dt_sin_pri=st.dates(min_value=date(2020, 1, 1), max_value=date(2025, 12, 31)),
     )
     @settings(max_examples=30, deadline=5000)
-    def test_classificar_status_gripe_valid_inputs(self, dt_ut_dose, dt_1_dose, dt_2_dose, vacinacao, tp_idade, nu_idade_n, dt_sin_pri):
+    def test_classificar_status_gripe_valid_inputs(
+        self, dt_ut_dose, dt_1_dose, dt_2_dose, vacinacao, tp_idade, nu_idade_n, dt_sin_pri
+    ):
         """Testa que a função não falha com inputs válidos do SIVEP."""
         row = {
             "DT_UT_DOSE": dt_ut_dose,
@@ -182,8 +162,14 @@ class TestClassificarStatusGripeHypothesis:
         try:
             result = classificar_status_gripe(row)
             assert result in [
-                "protegido", "dose_1", "dose_2", "dose_unica",
-                "vencida", "nao_vacinado", "ignorado", "inconsistencia"
+                "protegido",
+                "dose_1",
+                "dose_2",
+                "dose_unica",
+                "vencida",
+                "nao_vacinado",
+                "ignorado",
+                "inconsistencia",
             ]
         except Exception:
             pytest.fail("classificar_status_gripe falhou com input válido do SIVEP")
@@ -243,10 +229,12 @@ class TestApplyGlobalFiltersHypothesis:
     def test_apply_global_filters_with_profiles(self, n_cases, profile):
         """Testa filtros por perfil demográfico."""
         ages = [5, 25, 70, 8, 65, 3]  # crianca, adulto, idoso
-        df = pd.DataFrame({
-            "NU_IDADE_N": ages * (n_cases // 6 + 1),
-            "TP_IDADE": [3] * len(ages * (n_cases // 6 + 1)),
-        })
+        df = pd.DataFrame(
+            {
+                "NU_IDADE_N": ages * (n_cases // 6 + 1),
+                "TP_IDADE": [3] * len(ages * (n_cases // 6 + 1)),
+            }
+        )
 
         result = apply_global_filters(df, profiles=profile)
         assert len(result) >= 0

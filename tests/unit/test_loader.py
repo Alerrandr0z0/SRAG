@@ -1,10 +1,12 @@
 import pytest
+
 from srag.data.loader import (
-    _normalize_bairro_name,
     _infer_zone_from_bairro,
-    _normalize_zone,
     _normalize_age_to_years,
+    _normalize_bairro_name,
+    _normalize_zone,
 )
+
 
 def test_normalize_bairro_name():
     assert _normalize_bairro_name("CENTRO") == "CENTRO"
@@ -16,6 +18,7 @@ def test_normalize_bairro_name():
     assert _normalize_bairro_name("SEM INFORMACAO") is None
     assert _normalize_bairro_name("  ") is None
 
+
 def test_infer_zone_from_bairro():
     assert _infer_zone_from_bairro("CENTRO") == "Urbana"
     assert _infer_zone_from_bairro("ZONA RURAL") == "Rural"
@@ -23,12 +26,14 @@ def test_infer_zone_from_bairro():
     assert _infer_zone_from_bairro("FAZENDA FELIZ") == "Rural"
     assert _infer_zone_from_bairro(None) is None
 
+
 def test_normalize_zone():
     assert _normalize_zone(1) == "Urbana"
     assert _normalize_zone(2) == "Rural"
     assert _normalize_zone(3) == "Periurbana"
     assert _normalize_zone(9) is None
     assert _normalize_zone(None) is None
+
 
 def test_normalize_age_to_years():
     # tp_idade: 1=days, 2=months, 3=years
