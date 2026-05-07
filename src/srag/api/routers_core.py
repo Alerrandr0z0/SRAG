@@ -8,7 +8,6 @@ import pandas as pd
 
 from fastapi import APIRouter, Query
 
-from srag.api import main as api
 from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
 
 router = APIRouter()
@@ -30,6 +29,8 @@ def get_summary(
     years: list[int] | None = Query(None),
     agents: list[str] | None = Query(None),
 ) -> SummaryResponse:
+    from srag.api import main as api
+
     df_all = api.get_df()
     available_years: list[int] = []
     if not df_all.empty and "DT_SIN_PRI" in df_all.columns:
@@ -39,7 +40,13 @@ def get_summary(
     df = api.apply_global_filters(df_all, profile, race, gender, zonas, bairros, unidades)
     df = api.apply_surveillance_filters(df, years, agents)
     if df.empty:
-        return {"uti_rate": 0.0, "death_rate": 0.0, "total": 0, "available_years": available_years}
+        return {
+            "uti_rate": 0.0,
+            "uti_total": 0,
+            "death_rate": 0.0,
+            "total": 0,
+            "available_years": available_years,
+        }
 
     total = len(df)
     hospital_col = df.get("HOSPITAL")
@@ -70,11 +77,19 @@ def get_trends(
     years: list[int] | None = Query(None),
     agents: list[str] | None = Query(None),
 ) -> TrendsResponse:
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     df = api.apply_surveillance_filters(df, years, agents)
     if df.empty:
-        return {"history": [], "forecast": [], "thresholds": {}, "composition": [], "base_cumulative": 0}
+        return {
+            "history": [],
+            "forecast": [],
+            "thresholds": {},
+            "composition": [],
+            "base_cumulative": 0,
+        }
 
     ts = api.compute_time_series(df)
     result = api.predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
@@ -92,7 +107,7 @@ def get_trends(
         result["base_cumulative"] = 0
         result["history"] = full_history
 
-    return api.sanitize_data(result)
+    return api.sanitize_data(result)  # type: ignore[return-value]
 
 
 @router.get("/virus")
@@ -105,6 +120,8 @@ def get_virus(
     bairros: list[str] | None = Query(None),
     unidades: list[str] | None = Query(None),
 ) -> list[VirusDistributionItem]:
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:

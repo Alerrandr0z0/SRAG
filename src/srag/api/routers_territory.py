@@ -9,8 +9,6 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-from srag.api import main as api
-
 router = APIRouter()
 
 
@@ -20,6 +18,8 @@ def territory_bootstrap(
     entities_min_cases: int = 3,
     entities_limit: int = 40,
 ) -> Any:
+    from srag.api import main as api
+
     df = api.get_df()
     if df.empty:
         return {}
@@ -64,6 +64,8 @@ def territory_bootstrap(
 
 @router.get("/units")
 def get_units(min_cases: int = 3) -> Any:
+    from srag.api import main as api
+
     df = api.get_df()
     if df.empty:
         return []

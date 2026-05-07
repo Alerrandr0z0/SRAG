@@ -23,7 +23,7 @@ MUNICIPALITY_GEO_URL = (
     f"{MOSSORO_IBGE_CODE}?formato=application/vnd.geo+json"
 )
 BOUNDARY_CACHE_PATH = Path("data/processed/mossoro_municipality_boundary.geojson")
-BAIRROS_GEOJSON_FALLBACK_PATH = Path("data/mossoro_bairros.geojson")
+BAIRROS_GEOJSON_FALLBACK_PATH = Path("data/geojson/mossoro_bairros.geojson")
 _BOUNDARY_MEMO: dict[str, Any] | None = None
 _BOUNDARY_MEMO_MTIME_NS: int | None = None
 
