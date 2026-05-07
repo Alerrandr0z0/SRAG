@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReinfectionTrendChart > matches snapshot with empty data 1`] = `
+<div>
+  <div
+    style="height: 100%; display: flex; align-items: center; justify-content: center; color: rgb(148, 163, 184);"
+  >
+    <p>
+      Nenhum caso de reinfecção registrado no período.
+    </p>
+  </div>
+</div>
+`;
