@@ -3,14 +3,15 @@ import BairrosChart from '../charts/BairrosChart';
 import ZonesChart from '../charts/ZonesChart';
 import LeafletMap from '../charts/LeafletMap';
 import * as Epi from '../../types/epi';
+import type { FeatureCollection } from 'geojson';
 
 interface TerritoryPanelProps {
   loading: boolean;
   territory: Epi.TerritoryBootstrap['territory'];
-  boundary: any;
+  boundary: FeatureCollection | null;
   choropleth: Epi.TerritoryBootstrap['choropleth'] | null;
-  ruralData: { sectors: any[]; points: any[]; center: any } | null;
-  ruralSectorsGeo: any;
+  ruralData: { sectors: Array<{ sector: string; count: number }>; points: unknown[]; center: { lat: number; lon: number } } | null;
+  ruralSectorsGeo: FeatureCollection;
 }
 
 const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
@@ -56,12 +57,12 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
       </div>
       <LeafletMap
         boundary={boundary}
-        choropleth={choropleth}
+        choropleth={choropleth as { feature_collection?: FeatureCollection } | null}
         ruralData={ruralData}
         ruralSectorsGeo={ruralSectorsGeo}
         mapZoneMode={mapZoneMode}
         selectedSectors={selectedSectors}
-        onSectorSelect={(sectors: any) => setSelectedSectors(sectors)}
+        onSectorSelect={(sectors: string[]) => setSelectedSectors(sectors)}
       />
     </div>
   );

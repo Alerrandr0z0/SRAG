@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import echarts from '../lib/echarts-heatmap';
 
-export function useEcharts(option: any, dependencies: any[] = []) {
+export function useEcharts(opt: unknown, dependencies: unknown[] = []) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<any>(null);
+  const chartInstance = useRef<{ setOption: (_option: unknown) => void; resize: () => void; dispose: () => void } | null>(null);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -12,8 +12,11 @@ export function useEcharts(option: any, dependencies: any[] = []) {
       chartInstance.current = echarts.init(chartRef.current);
     }
 
-    if (option) {
-      chartInstance.current.setOption(option, true);
+    const instance = chartInstance.current;
+    if (!instance) return;
+
+    if (opt) {
+      instance.setOption(opt);
     }
 
     const handleResize = () => {
@@ -25,7 +28,7 @@ export function useEcharts(option: any, dependencies: any[] = []) {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [option, ...dependencies]);
+  }, [opt, ...dependencies]);
 
   useEffect(() => {
     return () => {

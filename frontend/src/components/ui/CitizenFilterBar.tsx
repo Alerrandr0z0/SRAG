@@ -65,7 +65,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
     if (raceFilter.length) parts.push(raceFilter.map(k => racaOptions.find(o => o.key === k)?.label).join(', '));
     if (genderFilter.length) parts.push(genderFilter.map(k => generoOptions.find(o => o.key === k)?.label).join(', '));
     return parts.join(' · ');
-  }, [citizenTab, raceFilter, genderFilter]);
+  }, [citizenTab, raceFilter, genderFilter, perfilOptions, racaOptions, generoOptions]);
 
   return (
     <div className="fb">
