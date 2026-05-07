@@ -16,6 +16,9 @@ export function useCitizenData(
   const [pyramid, setPyramid] = useState<Epi.PyramidRow[]>([]);
   const [raceProfile, setRaceProfile] = useState<Epi.CitizenBootstrap['race_profile']>([]);
   const [schooling, setSchooling] = useState<Epi.CitizenBootstrap['schooling_profile']>([]);
+  const [occupation, setOccupation] = useState<Epi.CitizenBootstrap['occupation_profile']>([]);
+  const [animalContact, setAnimalContact] = useState<Epi.CitizenBootstrap['animal_contact']>([]);
+  const [traditionalCommunities, setTraditionalCommunities] = useState<Epi.CitizenBootstrap['traditional_communities']>([]);
   const [symptomsSignature, setSymptomsSignature] = useState<Epi.SymptomSignature | null>(null);
   const [riskFactors, setRiskFactors] = useState<Epi.CitizenBootstrap['risk_factors_full']>([]);
   const [maternalProfile, setMaternalProfile] = useState<Epi.CitizenBootstrap['maternal_profile'] | null>(null);
@@ -44,6 +47,9 @@ export function useCitizenData(
           setPyramid(bootstrap.citizen_pyramid || []);
           setRaceProfile(bootstrap.race_profile || []);
           setSchooling(bootstrap.schooling_profile || []);
+          setOccupation(bootstrap.occupation_profile || []);
+          setAnimalContact(bootstrap.animal_contact || []);
+          setTraditionalCommunities(bootstrap.traditional_communities || []);
           setSymptomsSignature(bootstrap.symptoms_signature || null);
           setRiskFactors(bootstrap.risk_factors_full || []);
           setMaternalProfile(bootstrap.maternal_profile || null);
@@ -62,7 +68,7 @@ export function useCitizenData(
   }, [active, profile, raceFilter, genderFilter, swimmerVirus, zoneFilter, bairroFilter, unitFilter, years]);
 
   return {
-    profiles, pyramid, raceProfile, schooling,
+    profiles, pyramid, raceProfile, schooling, occupation, animalContact, traditionalCommunities,
     symptomsSignature, riskFactors, maternalProfile, vaccination, survival,
     timelineData, swimmerVirus, setSwimmerVirus, loading
   };

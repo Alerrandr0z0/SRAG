@@ -53,7 +53,7 @@ export function useCoreData(
 
         setStatus('Conectada');
         setLastUpdate(new Date().toLocaleString('pt-BR'));
-      } catch (e) {
+      } catch {
         if (!active) return;
         setStatus('Indisponível');
         setError('Falha ao consultar API');

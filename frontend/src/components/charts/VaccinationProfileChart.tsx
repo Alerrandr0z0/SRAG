@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import * as Epi from '../../types/epi';
 
+type TooltipParam = { axisValue?: string; value?: number; marker?: string; seriesName?: string };
+
 interface VaccinationProfileChartProps {
   vaccinationData: Epi.VaccinationProfile | null;
 }
@@ -16,15 +18,15 @@ const VaccinationProfileChart: React.FC<VaccinationProfileChartProps> = ({ vacci
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: (params: any[]) => {
+        formatter: (params: TooltipParam[]) => {
             if (!params.length) return '';
             const axisValue = params[0].axisValue; // 'Gripe' ou 'COVID-19'
             let res = `<div style="font-weight:bold;margin-bottom:5px;border-bottom:1px solid #eee;padding-bottom:3px;">${axisValue}</div>`;
 
             // Filtrar apenas os itens que pertencem a esta barra e possuem valor > 0
             const items = params
-                .filter(p => p.value !== 0 && p.value !== undefined)
-                .sort((a, b) => b.value - a.value);
+                .filter((p) => p.value !== 0 && p.value !== undefined)
+                .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
             if (items.length === 0) return `${axisValue}: Sem dados`;
 

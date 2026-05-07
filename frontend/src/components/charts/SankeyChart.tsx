@@ -50,8 +50,8 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
 
       return {
         name: n.name,
-        value: nodeVolume, // Volume guardado aqui para o tooltip
-        nodePct: nodePct, // % guardada aqui para o tooltip
+        value: nodeVolume,
+        nodePct,
         itemStyle: {
           color: colorMap[n.name] || "#ccc",
           opacity: isNoise ? 0.4 : 1,
@@ -83,35 +83,34 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         borderColor: "#e2e8f0",
         borderWidth: 1,
         textStyle: { color: "#334155" },
-        formatter: (params: any) => {
-          if (params.dataType === "node") {
-            const d = params.data;
+        formatter: (params: unknown) => {
+          const p = params as { dataType: string; name: string; data: { nodePct?: number; value: number; source: string; target: string; pct?: number } };
+          if (p.dataType === "node") {
             const isNoise =
-              params.name.includes("(Ignorado)") || params.name === "Em Aberto";
+              p.name.includes("(Ignorado)") || p.name === "Em Aberto";
             return `
                     <div style="font-size:10px; color:#64748b; margin-bottom:4px;">
                         ${isNoise ? "QUALIDADE DE DADO" : "MARCO CLÍNICO"}
                     </div>
-                    <b style="font-size:14px; color:#1e293b;">${params.name}</b><br/>
+                    <b style="font-size:14px; color:#1e293b;">${p.name}</b><br/>
                     <div style="margin-top:8px; display:flex; justify-content:space-between; gap:20px;">
-                        <span>Volume:</span> <b>${params.value} casos</b>
+                        <span>Volume:</span> <b>${p.data.value} casos</b>
                     </div>
                     <div style="display:flex; justify-content:space-between; gap:20px;">
-                        <span>Representatividade:</span> <b>${d.nodePct}%</b>
+                        <span>Representatividade:</span> <b>${p.data.nodePct}%</b>
                     </div>
                 `;
           }
-          const data = params.data;
           return `
                 <div style="font-size:10px; color:#64748b; margin-bottom:4px;">FLUXO DE PACIENTES</div>
                 <div style="margin-bottom:8px;">
-                    <b style="color:#1e293b;">${data.source}</b> ➔ <b style="color:#1e293b;">${data.target}</b>
+                    <b style="color:#1e293b;">${p.data.source}</b> ➔ <b style="color:#1e293b;">${p.data.target}</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
-                    <span>Volume:</span> <b>${data.value} casos</b>
+                    <span>Volume:</span> <b>${p.data.value} casos</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
-                    <span>Proporção na Origem:</span> <b style="color:#1e3a8a;">${data.pct}%</b>
+                    <span>Proporção na Origem:</span> <b style="color:#1e3a8a;">${p.data.pct}%</b>
                 </div>
             `;
         },

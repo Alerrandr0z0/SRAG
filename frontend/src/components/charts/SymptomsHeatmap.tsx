@@ -2,6 +2,9 @@ import React, { useMemo } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import * as Epi from '../../types/epi';
 
+type HeatmapPoint = [number, number, number];
+type HeatmapTooltip = { value: HeatmapPoint };
+
 interface SymptomsHeatmapProps {
   labels: Epi.CitizenBootstrap['symptoms_heatmap']['labels'];
   matrix: Epi.CitizenBootstrap['symptoms_heatmap']['matrix'];
@@ -9,7 +12,7 @@ interface SymptomsHeatmapProps {
 
 const SymptomsHeatmap: React.FC<SymptomsHeatmapProps> = ({ labels, matrix }) => {
   const option = useMemo(() => {
-    const plotData: any[] = [];
+    const plotData: HeatmapPoint[] = [];
     let maxVal = 1;
     for (let y = 0; y < labels.length; y += 1) {
       for (let x = 0; x < labels.length; x += 1) {
@@ -22,7 +25,7 @@ const SymptomsHeatmap: React.FC<SymptomsHeatmapProps> = ({ labels, matrix }) => 
     return {
       tooltip: {
         position: 'top',
-        formatter: (params: any) => `${labels[params.value[1]]} x ${labels[params.value[0]]}: ${params.value[2]}`
+        formatter: (params: HeatmapTooltip) => `${labels[params.value[1]]} x ${labels[params.value[0]]}: ${params.value[2]}`
       },
       grid: { top: 40, left: 150, right: 20, bottom: 60 },
       xAxis: {

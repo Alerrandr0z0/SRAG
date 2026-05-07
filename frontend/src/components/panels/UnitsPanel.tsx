@@ -16,6 +16,7 @@ interface UnitsPanelProps {
   swimmerVirus: "covid" | "gripe";
   setSwimmerVirus: (v: "covid" | "gripe") => void;
   dashboardYear?: number[];
+  chartDebug?: boolean;
 }
 
 const UnitsPanel: React.FC<UnitsPanelProps> = ({
@@ -28,6 +29,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
   swimmerVirus,
   setSwimmerVirus,
   dashboardYear = [],
+  chartDebug = import.meta.env.DEV,
 }) => {
   const isYearSelected = dashboardYear.length > 0;
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>("year");
@@ -70,7 +72,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
       <h3>Fluxo da Jornada Clínica</h3>
       <div className="chart-wrap" style={{ height: "450px" }}>
         {clinicalFlow?.nodes && clinicalFlow?.links && (
-          <SankeyChart nodes={clinicalFlow.nodes} links={clinicalFlow.links} />
+              <SankeyChart nodes={clinicalFlow.nodes as Array<{ name: string }>} links={clinicalFlow.links as Array<{ source: string; target: string; value: number; pct?: number }>} />
         )}
       </div>
 
@@ -256,7 +258,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
           <div className="filters">
             <select
               value={swimmerVirus}
-              onChange={(e) => setSwimmerVirus(e.target.value as any)}
+              onChange={(e) => setSwimmerVirus(e.target.value as 'covid' | 'gripe')}
               style={{ padding: "4px 8px", borderRadius: "6px" }}
             >
               <option value="covid">Visão COVID-19</option>
@@ -265,7 +267,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
           </div>
         </div>
         <div style={{ marginTop: "20px" }}>
-          <AggregatedSwimmerPlot data={timelineData} />
+          <AggregatedSwimmerPlot data={timelineData} debug={chartDebug} />
         </div>
       </article>
     </div>

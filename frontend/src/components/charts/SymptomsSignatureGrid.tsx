@@ -42,11 +42,11 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
     });
     if (globalMax === 0) globalMax = 100;
 
-    const grids: any[] = [];
-    const xAxes: any[] = [];
-    const yAxes: any[] = [];
-    const series: any[] = [];
-    const titles: any[] = [];
+    const grids: Array<Record<string, unknown>> = [];
+    const xAxes: Array<Record<string, unknown>> = [];
+    const yAxes: Array<Record<string, unknown>> = [];
+    const series: Array<Record<string, unknown>> = [];
+    const titles: Array<Record<string, unknown>> = [];
 
     pathogens.forEach((p, idx) => {
       const left = 15 + idx * 28;
@@ -97,7 +97,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
       });
 
       const matrixData = matrices[p.key as keyof typeof matrices];
-      const plotData: any[] = [];
+      const plotData: Array<[number, number, number, number]> = [];
 
       if (matrixData) {
           matrixData.forEach((row, yIdx) => {
@@ -115,18 +115,21 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         yAxisIndex: idx,
         data: plotData,
         label: {
-            show: true,
-            fontSize: 9,
-            color: '#1e293b',
-            formatter: (params: any) => params.value[2] > 0 ? `${Math.round(params.value[2])}%` : ''
+          show: true,
+          fontSize: 9,
+          color: '#1e293b',
+          formatter: (params: { value: unknown[] }) => {
+            const pr = params.value as [number, number, number, number];
+            return pr[2] > 0 ? `${Math.round(pr[2])}%` : '';
+          },
         },
         itemStyle: {
-            borderColor: '#fff',
-            borderWidth: 1
+          borderColor: '#fff',
+          borderWidth: 1,
         },
         emphasis: {
-          itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' }
-        }
+          itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' },
+        },
       });
     });
 
@@ -137,9 +140,10 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         borderWidth: 1,
         borderColor: '#e2e8f0',
         textStyle: { color: '#1e293b' },
-        formatter: (params: any) => {
-          const symptomIdx = params.value[1];
-          const bandIdx = params.value[0];
+        formatter: (params: { value: unknown[] }) => {
+          const p = params.value as [number, number, number, number];
+          const symptomIdx = p[1];
+          const bandIdx = p[0];
           const symptom = labels[symptomIdx];
           const band = bands[bandIdx];
 
@@ -182,7 +186,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
       yAxis: yAxes,
       series: series
     };
-  }, [signature]);
+  }, [labels, bands, matrices]);
 
   const { chartRef } = useEcharts(option, [signature]);
 

@@ -5,6 +5,27 @@ interface FilterOption {
   label: string;
 }
 
+const PERFIL_OPTIONS: FilterOption[] = [
+  { key: 'crianca', label: 'Criança' },
+  { key: 'adolescente', label: 'Adolescente' },
+  { key: 'adulto', label: 'Adulto' },
+  { key: 'idoso', label: 'Idoso' },
+];
+
+const RACA_OPTIONS: FilterOption[] = [
+  { key: 'Branca', label: 'Branca' },
+  { key: 'Preta', label: 'Preta' },
+  { key: 'Amarela', label: 'Amarela' },
+  { key: 'Parda', label: 'Parda' },
+  { key: 'Indígena', label: 'Indígena' },
+];
+
+const GENERO_OPTIONS: FilterOption[] = [
+  { key: 'M', label: 'Masculino' },
+  { key: 'F', label: 'Feminino' },
+  { key: 'I', label: 'Ignorado' },
+];
+
 interface CitizenFilterBarProps {
   citizenTab: string[];
   setCitizenTab: (tabs: string[]) => void;
@@ -22,27 +43,6 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
   genderFilter,
   setGenderFilter,
 }) => {
-  const perfilOptions: FilterOption[] = [
-    { key: 'crianca', label: 'Criança' },
-    { key: 'adolescente', label: 'Adolescente' },
-    { key: 'adulto', label: 'Adulto' },
-    { key: 'idoso', label: 'Idoso' },
-  ];
-
-  const racaOptions: FilterOption[] = [
-    { key: 'Branca', label: 'Branca' },
-    { key: 'Preta', label: 'Preta' },
-    { key: 'Amarela', label: 'Amarela' },
-    { key: 'Parda', label: 'Parda' },
-    { key: 'Indígena', label: 'Indígena' },
-  ];
-
-  const generoOptions: FilterOption[] = [
-    { key: 'M', label: 'Masculino' },
-    { key: 'F', label: 'Feminino' },
-    { key: 'I', label: 'Ignorado' },
-  ];
-
   const toggle = (list: string[], key: string, setter: (val: string[]) => void) => {
     if (list.includes(key)) {
       setter(list.filter((i) => i !== key));
@@ -61,18 +61,18 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
 
   const summaryText = useMemo(() => {
     const parts: string[] = [];
-    if (citizenTab.length) parts.push(citizenTab.map(k => perfilOptions.find(o => o.key === k)?.label).join(', '));
-    if (raceFilter.length) parts.push(raceFilter.map(k => racaOptions.find(o => o.key === k)?.label).join(', '));
-    if (genderFilter.length) parts.push(genderFilter.map(k => generoOptions.find(o => o.key === k)?.label).join(', '));
+    if (citizenTab.length) parts.push(citizenTab.map(k => PERFIL_OPTIONS.find(o => o.key === k)?.label).join(', '));
+    if (raceFilter.length) parts.push(raceFilter.map(k => RACA_OPTIONS.find(o => o.key === k)?.label).join(', '));
+    if (genderFilter.length) parts.push(genderFilter.map(k => GENERO_OPTIONS.find(o => o.key === k)?.label).join(', '));
     return parts.join(' · ');
-  }, [citizenTab, raceFilter, genderFilter, perfilOptions, racaOptions, generoOptions]);
+  }, [citizenTab, raceFilter, genderFilter]);
 
   return (
     <div className="fb">
       <div style={{ overflowX: 'auto', paddingBottom: '2px' }}>
         <div className="fb-bar">
           <span className="fb-label">Perfil</span>
-          {perfilOptions.map((opt) => (
+          {PERFIL_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               className={`pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
@@ -85,7 +85,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
           <div className="fb-sep"></div>
 
           <span className="fb-label">Raça</span>
-          {racaOptions.map((opt) => (
+          {RACA_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               className={`pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
@@ -98,7 +98,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
           <div className="fb-sep"></div>
 
           <span className="fb-label">Gênero</span>
-          {generoOptions.map((opt) => (
+          {GENERO_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               className={`pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
