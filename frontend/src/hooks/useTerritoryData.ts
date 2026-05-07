@@ -14,10 +14,10 @@ export function useTerritoryData(
   years?: number[]
 ) {
   const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({ bairros: [], zonas: [] });
-  const [boundary, setBoundary] = useState<any>(null);
+  const [boundary, setBoundary] = useState<unknown>(null);
   const [choropleth, setChoropleth] = useState<Epi.TerritoryBootstrap['choropleth'] | null>(null);
-  const [ruralData, setRuralData] = useState<{ sectors: any[]; center: any } | null>(null);
-  const [ruralSectorsGeo, setRuralSectorsGeo] = useState<any>(null);
+  const [ruralData, setRuralData] = useState<{ sectors: Array<{ sector: string; count: number }>; points: unknown[]; center: { lat: number; lon: number } } | null>(null);
+  const [ruralSectorsGeo, setRuralSectorsGeo] = useState<unknown>(null);
   const [entities, setEntities] = useState<Epi.TerritoryBootstrap['territory_entities']>({ urban_bairros: [], rural_comunidades: [] });
   const [loading, setLoading] = useState(false);
 
@@ -55,10 +55,14 @@ export function useTerritoryData(
            api.fetchRuralHeatpoints(),
            api.fetchRuralSectorsGeo(),
          ]);
-         if (isMounted) {
-           setRuralData(points);
-           setRuralSectorsGeo(geo);
-         }
+          if (isMounted) {
+            setRuralData({
+              sectors: points.sectors,
+              points: [],
+              center: points.center,
+            });
+            setRuralSectorsGeo(geo);
+          }
       } catch (e) {
         console.error("Failed to load rural data", e);
         if (isMounted) {

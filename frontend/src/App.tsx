@@ -40,7 +40,6 @@ function App() {
   const [bairroFilter, setBairroFilter] = useState<string[]>([]);
   const [unitFilter, setUnitFilter] = useState<string[]>([]);
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
-  const [vigilanceYears, setVigilanceYears] = useState<number[]>([]);
 
   // Core Data Hook
   const { data, status, lastUpdate, error } = useCoreData(
@@ -221,7 +220,7 @@ function App() {
             <TerritoryFilterBar
               zoneFilter={zoneFilter} setZoneFilter={setZoneFilter}
               bairroFilter={bairroFilter} setBairroFilter={setBairroFilter}
-              bairrosList={territoryData.entities?.urban_bairros || []}
+              bairrosList={(territoryData.entities?.urban_bairros || []).map((item) => ({ name: item.label, count: item.count }))}
             />
           </article>
         </section>
@@ -232,7 +231,7 @@ function App() {
           <article className="panel">
             <UnitsFilterBar
               unitFilter={unitFilter} setUnitFilter={setUnitFilter}
-              unitsList={unitsData.units || []}
+              unitsList={(unitsData.units || []).map((item) => ({ id_unidade: item.id_unidade, count: item.count }))}
             />
           </article>
         </section>
@@ -282,10 +281,10 @@ function App() {
             <TerritoryPanel
               loading={territoryData.loading}
               territory={territoryData.territory}
-              boundary={territoryData.boundary}
+              boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
               choropleth={territoryData.choropleth}
               ruralData={territoryData.ruralData}
-              ruralSectorsGeo={territoryData.ruralSectorsGeo}
+              ruralSectorsGeo={territoryData.ruralSectorsGeo as import('geojson').FeatureCollection}
             />
           </article>
         )}
@@ -312,11 +311,12 @@ function App() {
               loading={citizenData.loading}
               pyramid={citizenData.pyramid}
               schooling={citizenData.schooling}
+              occupation={citizenData.occupation}
+              animalContact={citizenData.animalContact}
               symptomsSignature={citizenData.symptomsSignature}
               riskFactors={citizenData.riskFactors}
               maternalProfile={citizenData.maternalProfile}
               vaccination={citizenData.vaccination}
-              survival={citizenData.survival}
               genderFilter={genderFilter}
             />
           </article>

@@ -39,7 +39,6 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
     if (val && !bairroFilter.includes(val)) {
       setBairroFilter([...bairroFilter, val]);
     }
-    e.target.value = ""; // Reset select
   };
 
   const clearAll = () => {
@@ -54,7 +53,7 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
     if (zoneFilter.length) parts.push(zoneFilter.map(k => zonaOptions.find(o => o.key === k)?.label || k).join(', '));
     if (bairroFilter.length) parts.push(bairroFilter.join(', '));
     return parts.join(' · ');
-  }, [zoneFilter, bairroFilter]);
+  }, [zoneFilter, bairroFilter, zonaOptions]);
 
   return (
     <div className="fb">
@@ -84,10 +83,10 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
               {b} &times;
             </button>
           ))}
-          
-          <select 
-            onChange={addBairro} 
-            className="pill" 
+
+          <select
+            onChange={addBairro}
+            className="pill"
             style={{ appearance: 'none', cursor: 'pointer', outline: 'none', background: 'transparent' }}
           >
             <option value="">+ Adicionar local...</option>

@@ -1,21 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
+import type { FeatureCollection } from 'geojson';
+import type * as L from 'leaflet';
 
-let leafletLoader: Promise<any>;
-function loadLeaflet() {
-  if (!leafletLoader) {
-    leafletLoader = Promise.all([
-      import('leaflet'),
-      import('leaflet/dist/leaflet.css')
-    ]).then(([mod]) => mod);
-  }
-  return leafletLoader;
+interface ChoroplethType {
+  feature_collection?: FeatureCollection;
 }
 
 interface LeafletMapProps {
-  boundary: any;
-  choropleth: any;
-  ruralData: { sectors: any[]; center: any } | null;
-  ruralSectorsGeo: any;
+  boundary: FeatureCollection | null;
+  choropleth: ChoroplethType | null;
+  ruralData: { sectors: Array<{ sector: string; count: number }>; center: { lat: number; lon: number } } | null;
+  ruralSectorsGeo: FeatureCollection;
   mapZoneMode: string;
   selectedSectors?: string[];
   onSectorSelect?: (sectors: string[]) => void;
@@ -41,17 +36,26 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   ruralSectorsGeo,
   mapZoneMode,
   selectedSectors = [],
-  onSectorSelect = () => {},
+  onSectorSelect,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const boundaryLayer = useRef<any>(null);
-  const overlayLayer = useRef<any>(null);
+  const mapInstance = useRef<L.Map | null>(null);
+  const boundaryLayer = useRef<L.GeoJSON | null>(null);
+  const overlayLayer = useRef<L.LayerGroup | null>(null);
+
+  const handleSectorClick = useCallback((sector: string) => {
+    if (!onSectorSelect) return;
+    const next = selectedSectors.includes(sector)
+      ? selectedSectors.filter(s => s !== sector)
+      : [...selectedSectors, sector];
+    onSectorSelect(next);
+  }, [selectedSectors, onSectorSelect]);
 
   useEffect(() => {
     let cancelled = false;
     async function renderMap() {
-      const L = await loadLeaflet();
+      const L = await import('leaflet');
+      await import('leaflet/dist/leaflet.css');
       if (cancelled || !mapRef.current) return;
 
       if (!mapInstance.current) {
@@ -75,16 +79,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
       if (mapZoneMode === 'Urbana' && choropleth?.feature_collection?.features?.length) {
         overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
-          style: (f: any) => ({
-            color: '#0f172a',
-            weight: 1,
-            fillColor: f.properties.count > 0 ? '#14b8a6' : '#e2e8f0',
-            fillOpacity: 0.85,
-          }),
-          onEachFeature: (feature: any, layer: any) => {
-            if (feature.properties?.bairro) {
+          style: (f) => {
+            const feature = f as { properties?: { bairro?: string; count?: number } };
+            const count = feature.properties && (feature.properties as { count?: number }).count;
+            return {
+              color: '#0f172a',
+              weight: 1,
+              fillColor: count != null && count > 0 ? '#14b8a6' : '#e2e8f0',
+              fillOpacity: 0.85,
+            };
+          },
+          onEachFeature: (feature, layer) => {
+            const feat = feature as { properties?: { bairro?: string } };
+            if (feat.properties?.bairro) {
               layer.bindTooltip(
-                `<strong>${feature.properties.bairro}</strong><br/>${feature.properties.count || 0} casos`,
+                `<strong>${feat.properties.bairro}</strong><br/>${feature.properties?.count || 0} casos`,
                 { sticky: true }
               );
             }
@@ -95,15 +104,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
         if (ruralSectorsGeo?.features) {
           L.geoJSON(ruralSectorsGeo, {
-            style: (f: any) => {
-              const sector = f.properties?.sector;
-              const sectorData = ruralData?.sectors?.find((s: any) => s.sector === sector);
-              const count = sectorData?.count || 0;
+            style: (f) => {
+              const feature = f as { properties?: { sector?: string } };
+              const sector = feature.properties?.sector as string | undefined;
+              const sectorData = ruralData?.sectors?.find((s) => s.sector === sector);
+              void sectorData;
 
-              const isSelected = selectedSectors.includes(sector);
-              const fillColor = SECTOR_FILL[sector] || '#cbd5e1';
-
-              // Usando o dourado (#f59e0b) para os contornos selecionados
+              const isSelected = selectedSectors.includes(sector || '');
+              const fillColor = SECTOR_FILL[sector || ''] || '#cbd5e1';
               const strokeColor = isSelected ? '#f59e0b' : '#334155';
 
               return {
@@ -111,24 +119,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 weight: isSelected ? 4 : 1.2,
                 fillColor,
                 fillOpacity: isSelected ? 0.45 : 0.2,
-                dashArray: isSelected ? '' : '3, 3' // Linha tracejada para setores inativos para suavizar
+                dashArray: isSelected ? '' : '3, 3',
               };
             },
-            onEachFeature: (feature: any, layer: any) => {
-              const sector = feature.properties?.sector;
-              const sectorData = ruralData?.sectors?.find((s: any) => s.sector === sector);
+            onEachFeature: (feature, layer) => {
+              const feat = feature as { properties?: { sector?: string } };
+              const sector = feat.properties?.sector as string | undefined;
+              const sectorData = ruralData?.sectors?.find((s) => s.sector === sector);
               if (sectorData) {
                 layer.bindTooltip(
                   `<strong>Setor ${sectorData.sector}</strong><br/>${sectorData.count} casos`,
                   { sticky: true }
                 );
               }
-              layer.on('click', () => {
-                const next = selectedSectors.includes(sector)
-                  ? selectedSectors.filter(s => s !== sector)
-                  : [...selectedSectors, sector];
-                onSectorSelect(next);
-              });
+              layer.on('click', () => handleSectorClick(sector || ''));
             },
           }).addTo(lg);
         }
@@ -147,7 +151,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
     renderMap();
     return () => { cancelled = true; };
-  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors]);
+  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick]);
 
   useEffect(() => {
     return () => {
@@ -183,9 +187,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             Distribuição Rural
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {['N', 'S', 'L', 'O'].map(s => {
+            {(['N', 'S', 'L', 'O'] as const).map(s => {
               const isSelected = selectedSectors.includes(s);
-              // Se nada estiver selecionado, mostramos todos. Se houver seleção, filtramos.
               if (selectedSectors.length > 0 && !isSelected) return null;
 
               const sectorData = ruralData?.sectors?.find(item => item.sector === s);
@@ -229,12 +232,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             return (
               <button
                 key={s}
-                onClick={() => {
-                  const next = selectedSectors.includes(s)
-                    ? selectedSectors.filter(item => item !== s)
-                    : [...selectedSectors, s];
-                  onSectorSelect(next);
-                }}
+                onClick={() => handleSectorClick(s)}
                 style={{
                   padding: '6px 12px',
                   fontSize: '12px',
@@ -252,7 +250,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           })}
           {selectedSectors.length > 0 && (
             <button
-              onClick={() => onSectorSelect([])}
+              onClick={() => onSectorSelect && onSectorSelect([])}
               style={{
                 padding: '6px 10px',
                 fontSize: '11px',

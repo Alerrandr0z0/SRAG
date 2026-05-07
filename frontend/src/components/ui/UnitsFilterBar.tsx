@@ -24,7 +24,6 @@ const UnitsFilterBar: React.FC<UnitsFilterBarProps> = ({
     if (val && !unitFilter.includes(val)) {
       setUnitFilter([...unitFilter, val]);
     }
-    e.target.value = ""; // Reset select
   };
 
   const clearAll = () => {
@@ -42,7 +41,7 @@ const UnitsFilterBar: React.FC<UnitsFilterBarProps> = ({
       <div style={{ overflowX: 'auto', paddingBottom: '2px' }}>
         <div className="fb-bar">
           <span className="fb-label">Unidade Notificadora</span>
-          
+
           {unitFilter.map((u) => (
             <button
               key={u}
@@ -53,10 +52,10 @@ const UnitsFilterBar: React.FC<UnitsFilterBarProps> = ({
               {u} &times;
             </button>
           ))}
-          
-          <select 
-            onChange={addUnit} 
-            className="pill" 
+
+          <select
+            onChange={addUnit}
+            className="pill"
             style={{ appearance: 'none', cursor: 'pointer', outline: 'none', background: 'transparent' }}
           >
             <option value="">+ Adicionar unidade...</option>
