@@ -11,24 +11,26 @@ import pandas as pd
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
 
-from srag.api import main as api
-
 router = APIRouter()
 
 
 @router.get("/geo/macrosector_heatpoints")
 def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1) -> Any:
+    from srag.api import main as api
     from srag.data.geospatial import build_macrosector_heatpoints
 
     df = api.get_df()
     if df.empty:
         return {"available": False, "points": []}
-    result = build_macrosector_heatpoints(df, "data/geojson/mossoro_bairros.geojson", zone, min_cases)
+    result = build_macrosector_heatpoints(
+        df, "data/geojson/mossoro_bairros.geojson", zone, min_cases
+    )
     return api.sanitize_data(result)
 
 
 @router.get("/geo/rural_heatpoints")
 def rural_heatpoints(min_cases: int = 1) -> Any:
+    from srag.api import main as api
     from srag.data.geospatial import _feature_centroid, get_municipality_boundary
 
     df = api.get_df()
@@ -39,11 +41,12 @@ def rural_heatpoints(min_cases: int = 1) -> Any:
     if "ZONA" not in work.columns and "CS_ZONA" not in work.columns:
         return {"available": False, "sectors": [], "center": None}
 
-    zona_col = work.get("ZONA") or work.get("CS_ZONA")
+    zona_col = work.get("ZONA")
+    if zona_col is None:
+        zona_col = work.get("CS_ZONA")
+
     if zona_col is not None:
-        work["zona_norm"] = zona_col.map(
-            lambda v: str(v).strip().upper() if pd.notna(v) else ""
-        )
+        work["zona_norm"] = zona_col.map(lambda v: str(v).strip().upper() if pd.notna(v) else "")
     else:
         work["zona_norm"] = ""
     work = work[work["zona_norm"] == "RURAL"]
@@ -62,11 +65,17 @@ def rural_heatpoints(min_cases: int = 1) -> Any:
         except Exception:
             bbox_center = None
 
-    city_centroid = bbox_center or (_feature_centroid(center_features[0]) if center_features else None) or (-37.34, -5.18)
+    city_centroid = (
+        bbox_center
+        or (_feature_centroid(center_features[0]) if center_features else None)
+        or (-37.34, -5.18)
+    )
     cx, cy = city_centroid
 
     if total_rural < min_cases:
-        return api.sanitize_data({"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}})
+        return api.sanitize_data(
+            {"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}}
+        )
 
     base = total_rural // 4
     remainder = total_rural % 4
@@ -77,7 +86,13 @@ def rural_heatpoints(min_cases: int = 1) -> Any:
         count = base + (1 if idx < remainder else 0)
         sectors.append({"sector": sec, "count": count})
 
-    return api.sanitize_data({"available": True, "center": {"lat": round(cy, 6), "lon": round(cx, 6)}, "sectors": sectors})
+    return api.sanitize_data(
+        {
+            "available": True,
+            "center": {"lat": round(cy, 6), "lon": round(cx, 6)},
+            "sectors": sectors,
+        }
+    )
 
 
 @router.get("/geo/municipality_boundary")
@@ -128,10 +143,30 @@ def get_rural_sectors() -> Any:
         return {"type": "Polygon", "coordinates": [[list(pt) for pt in pts + [pts[0]]]]}
 
     sectors = [
-        {"sector": "N", "geometry": triangle([(cx, cy), (min_x - dx_far, max_y + dy_far), (max_x + dx_far, max_y + dy_far)])},
-        {"sector": "S", "geometry": triangle([(cx, cy), (min_x - dx_far, min_y - dy_far), (max_x + dx_far, min_y - dy_far)])},
-        {"sector": "L", "geometry": triangle([(cx, cy), (max_x + dx_far, max_y + dy_far), (max_x + dx_far, min_y - dy_far)])},
-        {"sector": "O", "geometry": triangle([(cx, cy), (min_x - dx_far, max_y + dy_far), (min_x - dx_far, min_y - dy_far)])},
+        {
+            "sector": "N",
+            "geometry": triangle(
+                [(cx, cy), (min_x - dx_far, max_y + dy_far), (max_x + dx_far, max_y + dy_far)]
+            ),
+        },
+        {
+            "sector": "S",
+            "geometry": triangle(
+                [(cx, cy), (min_x - dx_far, min_y - dy_far), (max_x + dx_far, min_y - dy_far)]
+            ),
+        },
+        {
+            "sector": "L",
+            "geometry": triangle(
+                [(cx, cy), (max_x + dx_far, max_y + dy_far), (max_x + dx_far, min_y - dy_far)]
+            ),
+        },
+        {
+            "sector": "O",
+            "geometry": triangle(
+                [(cx, cy), (min_x - dx_far, max_y + dy_far), (min_x - dx_far, min_y - dy_far)]
+            ),
+        },
     ]
 
     feature_collection = {

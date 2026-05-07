@@ -8,8 +8,6 @@ import pandas as pd
 
 from fastapi import APIRouter, Query
 
-from srag.api import main as api
-
 router = APIRouter()
 
 
@@ -23,6 +21,8 @@ def clinical_flow(
     unidades: list[str] | None = Query(None),
 ) -> Any:
     """Analisa a jornada clínica completa para o gráfico Sankey com porcentagens."""
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:
@@ -30,12 +30,14 @@ def clinical_flow(
 
     df = df.copy()
     df["S_ORIGEM"] = (
-        df["NOSOCOMIAL"].map({1: "Infecção Hospitalar", 2: "Comunitária"}).fillna("Origem (Ignorado)")
+        df["NOSOCOMIAL"]
+        .map({1: "Infecção Hospitalar", 2: "Comunitária"})
+        .fillna("Origem (Ignorado)")
     )
     df["S_UTI"] = (
-        df["UTI"].map({1: "Internado em UTI", 2: "Internado em Enfermaria"}).fillna(
-            "Internação (Ignorado)"
-        )
+        df["UTI"]
+        .map({1: "Internado em UTI", 2: "Internado em Enfermaria"})
+        .fillna("Internação (Ignorado)")
     )
     df["S_VENT"] = (
         df["SUPORT_VEN"]
@@ -83,6 +85,8 @@ def hospitalization_duration(
     unidades: list[str] | None = Query(None),
 ) -> list[float]:
     """Calcula a distribuição de dias de internação (DT_EVOLUCA - DT_INTERNA)."""
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:
@@ -108,6 +112,8 @@ def vaccination_profile(
     unidades: list[str] | None = Query(None),
 ) -> Any:
     """Analisa o esquema vacinal detalhado de COVID-19 e Influenza com filtros."""
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:
@@ -125,7 +131,9 @@ def vaccination_profile(
         "ignorado": "Ignorado",
         "inconsistencia": "Inconsistência",
     }
-    gripe_schema_readable: dict[str, int] = {label_map.get(str(k), str(k)): int(v) for k, v in gripe_schema.items()}
+    gripe_schema_readable: dict[str, int] = {
+        label_map.get(str(k), str(k)): int(v) for k, v in gripe_schema.items()
+    }
     for label in label_map.values():
         if label not in gripe_schema_readable:
             gripe_schema_readable[label] = 0
@@ -146,8 +154,15 @@ def vaccination_profile(
         return "Ignorado"
 
     covid_schema = df.apply(get_last_dose, axis=1).value_counts().to_dict()
+    manufacturers = api.compute_vaccine_manufacturer_distribution(df)
 
-    return api.sanitize_data({"gripe": gripe_schema_readable, "covid_detailed": covid_schema})
+    return api.sanitize_data(
+        {
+            "gripe": gripe_schema_readable,
+            "covid_detailed": covid_schema,
+            "manufacturers": manufacturers,
+        }
+    )
 
 
 @router.get("/citizen_bootstrap")
@@ -160,6 +175,8 @@ def citizen_bootstrap(
     unidades: list[str] | None = Query(None),
 ) -> Any:
     """Bootstrap de dados do cidadão com filtros hierárquicos e multi-seleção."""
+    from srag.api import main as api
+
     df = api.get_df()
     df_filtered = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
 
@@ -172,6 +189,9 @@ def citizen_bootstrap(
             "citizen_pyramid": api.compute_citizen_pyramid(df_filtered),
             "race_profile": api.compute_race_profile(df_filtered),
             "schooling_profile": api.compute_schooling_profile(df_filtered),
+            "occupation_profile": api.compute_occupation_profile(df_filtered),
+            "animal_contact": api.compute_animal_contact_distribution(df_filtered),
+            "traditional_communities": api.compute_traditional_community_distribution(df_filtered),
             "symptoms_signature": api.compute_symptoms_signature(df_filtered, heatmap_profile),
             "symptoms_heatmap": api.compute_symptoms_heatmap(df_filtered),
             "risk_factors_full": api.compute_risk_factors_full_profile(df_filtered),
@@ -192,6 +212,8 @@ def clinical_timing(
     agents: list[str] | None = Query(None),
 ) -> Any:
     """Métricas de fluxo clínico: tempo sintomas→internação, internação→UTI, adesão ao protocolo antiviral."""
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     df = api.apply_surveillance_filters(df, years, agents)
@@ -211,6 +233,8 @@ def vaccine_survival(
     unidades: list[str] | None = Query(None),
 ) -> Any:
     """Calcula as curvas de sobrevivência Kaplan-Meier com filtros."""
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:

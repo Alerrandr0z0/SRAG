@@ -8,8 +8,6 @@ import pandas as pd
 
 from fastapi import APIRouter, Query
 
-from srag.api import main as api
-
 router = APIRouter()
 
 
@@ -24,6 +22,8 @@ def laboratory_network(
     years: list[int] | None = Query(None),
     agents: list[str] | None = Query(None),
 ) -> Any:
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     df = api.apply_surveillance_filters(df, years, agents)
@@ -31,10 +31,44 @@ def laboratory_network(
         return {}
 
     base_summary = api.compute_laboratory_network_summary(df)
+    timing_metrics = api.compute_clinical_timing_metrics(df)
+
+    # Adiciona a taxa de adesão 48h ao resumo geral
+    base_summary["overall"]["protocol_48h_adherence_rate"] = timing_metrics[
+        "protocol_48h_adherence_rate"
+    ]  # type: ignore[index]
+
+    # Novos indicadores de qualidade e tratamento (Blocos 3 e 6)
+    quality_metrics = {
+        "testing_coverage": api.compute_testing_coverage(df),
+        "sample_type_distribution": api.compute_sample_type_distribution(df),
+        "diagnostic_latency": api.compute_diagnostic_latency(df),
+    }
+
+    treatment_metrics = {
+        "antiviral_latency": api.compute_antiviral_latency(df),
+        "antiviral_outcome_impact": api.compute_antiviral_outcome_impact(df),
+    }
+
+    # Cálculo de Sobrevivência Vacinal (KM)
+    # Reutiliza a lógica para COVID e Gripe
+    dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
+    df_km = df.copy()
+    df_km["LAST_COV_DATE"] = df_km[dose_cols].apply(pd.to_datetime, errors="coerce").max(axis=1)
+
+    vaccine_survival = {
+        "covid": api.compute_vaccine_survival(df_km, "LAST_COV_DATE"),
+        "gripe": api.compute_vaccine_survival(df_km, "DT_UT_DOSE"),
+    }
 
     return api.sanitize_data(
         {
             **base_summary,
+            "quality_metrics": quality_metrics,
+            "treatment_metrics": treatment_metrics,
+            "vaccine_survival": vaccine_survival,
+            "agent_lethality_heatmap": api.compute_lethality_heatmap(df),
+            "codetection_matrix": api.compute_codetection_matrix(df),
             "positivity_trend": api.compute_positivity_trend(df),
             "influenza_subtypes": api.compute_influenza_subtypes(df),
             "antiviral_usage": api.compute_antiviral_usage(df),
@@ -66,6 +100,7 @@ def context_trends(
     bairros: list[str] | None = Query(None),
     unidades: list[str] | None = Query(None),
 ) -> Any:
+    from srag.api import main as api
     from srag.models.forecasting import predict_next_weeks
 
     df = api.get_df()
@@ -107,6 +142,8 @@ def timeline_agg(
     bairros: list[str] | None = Query(None),
     unidades: list[str] | None = Query(None),
 ) -> Any:
+    from srag.api import main as api
+
     df = api.get_df()
     df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
     if df.empty:
@@ -128,6 +165,8 @@ def icu_bottleneck(
     agents: list[str] | None = Query(None),
 ) -> Any:
     """Calcula o tempo de espera (em dias) entre a internação e a entrada na UTI por mês."""
+    from srag.api import main as api
+
     try:
         df = api.get_df()
         df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades, years)

@@ -41,6 +41,8 @@ class SragRecord(Base):
     CS_SEXO = Column(String(1))
     CS_RACA = Column(Integer)
     CS_ESCOL_N = Column(Integer)
+    PAC_DSCBO = Column(String(150))
+    AVE_SUINO = Column(Integer)
     CLASSI_FIN = Column(Integer)
     PCR_VSR = Column(Integer)
     AN_VSR = Column(Integer)
@@ -109,6 +111,8 @@ class SragRecord(Base):
     NOSOCOMIAL = Column(Integer)
     CS_GESTANT = Column(Integer)
     PUERPERA = Column(Integer)
+    POV_CT = Column(Integer)
+    TP_POV_CT = Column(String(150))
     VACINA_COV = Column(Integer)
     DOSE_1_COV = Column(Date)
     DOSE_2_COV = Column(Date)
@@ -126,6 +130,14 @@ class SragRecord(Base):
     ANTIVIRAL = Column(Integer)
     CRITERIO = Column(Integer)
     TRAT_COV = Column(Integer)
+
+    # Fabricantes de Vacina
+    FAB_COV1 = Column(String(100))
+    FAB_COV2 = Column(String(100))
+    FAB_COVRF = Column(String(100))
+    FAB_COVRF2 = Column(String(100))
+    FAB_ADIC = Column(String(100))
+    FAB_RE_BI = Column(String(100))
 
     # Vigilância Genômica e Co-detecção
     VG_OMS = Column(Integer)
@@ -174,115 +186,26 @@ def _generate_legacy_case_hash(record: dict[str, Any]) -> str:
 
 
 def init_db() -> None:
-    """Initialize the SQLite database and create tables."""
+    """Initialize the SQLite database and create tables with automated migrations."""
     engine = create_engine(DB_URL)
     Base.metadata.create_all(engine)
 
-    # Lightweight migration for existing local databases
+    # Automated migration for any newly added model columns
     with engine.begin() as conn:
         cols = conn.execute(text("PRAGMA table_info(casos_srag)")).fetchall()
-        col_names = {col[1] for col in cols}
-        if "IDADE_ANOS" not in col_names and "idade_anos" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN IDADE_ANOS FLOAT"))
-            col_names.add("IDADE_ANOS")
-        if "IDADE_ANOS" not in col_names and "idade_anos" in col_names:
-            conn.execute(text("ALTER TABLE casos_srag RENAME COLUMN idade_anos TO IDADE_ANOS"))
-            col_names.add("IDADE_ANOS")
-        if "ID_UNIDADE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ID_UNIDADE VARCHAR(30)"))
-            col_names.add("ID_UNIDADE")
-        if "BAIRRO_REF" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN BAIRRO_REF VARCHAR(80)"))
-            col_names.add("BAIRRO_REF")
-        if "NM_BAIRRO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN NM_BAIRRO VARCHAR(120)"))
-            col_names.add("NM_BAIRRO")
-        if "ZONA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ZONA VARCHAR(20)"))
-            col_names.add("ZONA")
-        if "CS_ZONA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ZONA INTEGER"))
-            col_names.add("CS_ZONA")
-        if "TP_IDADE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_IDADE INTEGER"))
-            col_names.add("TP_IDADE")
-        if "CS_RACA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_RACA INTEGER"))
-            col_names.add("CS_RACA")
-        if "CS_ESCOL_N" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CS_ESCOL_N INTEGER"))
-            col_names.add("CS_ESCOL_N")
-        if "MAE_VAC" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN MAE_VAC INTEGER"))
-            col_names.add("MAE_VAC")
-        if "DT_VAC_MAE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_VAC_MAE DATE"))
-            col_names.add("DT_VAC_MAE")
-        if "DT_DOSEUNI" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_DOSEUNI DATE"))
-            col_names.add("DT_DOSEUNI")
-        if "DT_1_DOSE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_1_DOSE DATE"))
-            col_names.add("DT_1_DOSE")
-        if "DT_2_DOSE" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN DT_2_DOSE DATE"))
-            col_names.add("DT_2_DOSE")
-        if "ANTIVIRAL" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN ANTIVIRAL INTEGER"))
-            col_names.add("ANTIVIRAL")
-        if "CRITERIO" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CRITERIO INTEGER"))
-            col_names.add("CRITERIO")
+        col_names = {col[1].upper() for col in cols}
 
-        if "VG_OMS" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_OMS INTEGER"))
-            col_names.add("VG_OMS")
-        if "VG_LIN" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_LIN VARCHAR(50)"))
-            col_names.add("VG_LIN")
-        if "VG_MET" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_MET INTEGER"))
-            col_names.add("VG_MET")
-        if "VG_REINF" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN VG_REINF INTEGER"))
-            col_names.add("VG_REINF")
-        if "CO_DETEC" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN CO_DETEC INTEGER"))
-            col_names.add("CO_DETEC")
-
-        if "TP_SOR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_SOR INTEGER"))
-            col_names.add("TP_SOR")
-        if "RES_IGG" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGG INTEGER"))
-            col_names.add("RES_IGG")
-        if "RES_IGM" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGM INTEGER"))
-            col_names.add("RES_IGM")
-        if "RES_IGA" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN RES_IGA INTEGER"))
-            col_names.add("RES_IGA")
-        if "TP_ANTIVIR" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TP_ANTIVIR INTEGER"))
-            col_names.add("TP_ANTIVIR")
-        if "TIPO_TRAT" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN TIPO_TRAT INTEGER"))
-            col_names.add("TIPO_TRAT")
-        if "SURTO_SG" not in col_names:
-            conn.execute(text("ALTER TABLE casos_srag ADD COLUMN SURTO_SG INTEGER"))
-            col_names.add("SURTO_SG")
-
-        # Backfill any newly added model columns in older databases.
         for column in SragRecord.__table__.columns:
-            if column.name == "unique_hash" or column.name in col_names:
+            name = column.name
+            if name.upper() == "UNIQUE_HASH" or name.upper() in col_names:
                 continue
+
             sql_type = column.type.compile(dialect=engine.dialect)
-            conn.execute(text(f"ALTER TABLE casos_srag ADD COLUMN {column.name} {sql_type}"))
-            col_names.add(column.name)
+            conn.execute(text(f"ALTER TABLE casos_srag ADD COLUMN {name} {sql_type}"))
 
 
 def save_cases(cases: list[dict[str, Any]]) -> int:
-    """Save a list of cases to the database, skipping duplicates.
+    """Save a list of cases to the database, skipping duplicates with automated mapping.
 
     Returns:
         The number of NEW cases added.
@@ -291,6 +214,9 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
     # expire_on_commit=False previne o erro e3q8 (ObjectDeletedError) ao acessar/atualizar objetos
     # caso o banco seja alterado por outro processo (ex: DuckDB ingest script)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    # Get model columns for automated mapping (excluding primary key)
+    model_columns = {c.name for c in SragRecord.__table__.columns if c.name != "unique_hash"}
 
     new_count = 0
     with session_factory() as session:
@@ -304,269 +230,25 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                 .filter(SragRecord.unique_hash.in_([case_hash, legacy_hash]))
                 .first()
             )
+
             if not exists:
-                record = SragRecord(
-                    unique_hash=case_hash,
-                    DT_NOTIFIC=case_dict.get("DT_NOTIFIC"),
-                    ID_MUNICIP=case_dict.get("ID_MUNICIP"),
-                    ID_MN_RESI=case_dict.get("ID_MN_RESI"),
-                    DT_SIN_PRI=case_dict.get("DT_SIN_PRI"),
-                    ID_UNIDADE=case_dict.get("ID_UNIDADE"),
-                    BAIRRO_REF=case_dict.get("BAIRRO_REF"),
-                    NM_BAIRRO=case_dict.get("NM_BAIRRO"),
-                    ZONA=case_dict.get("ZONA"),
-                    CS_ZONA=case_dict.get("CS_ZONA"),
-                    NU_IDADE_N=case_dict.get("NU_IDADE_N"),
-                    TP_IDADE=case_dict.get("TP_IDADE"),
-                    IDADE_ANOS=case_dict.get("IDADE_ANOS"),
-                    CS_SEXO=case_dict.get("CS_SEXO"),
-                    CS_RACA=case_dict.get("CS_RACA"),
-                    CS_ESCOL_N=case_dict.get("CS_ESCOL_N"),
-                    CLASSI_FIN=case_dict.get("CLASSI_FIN"),
-                    PCR_VSR=case_dict.get("PCR_VSR"),
-                    AN_VSR=case_dict.get("AN_VSR"),
-                    PCR_SARS2=case_dict.get("PCR_SARS2"),
-                    AN_SARS2=case_dict.get("AN_SARS2"),
-                    TP_FLU_PCR=case_dict.get("TP_FLU_PCR"),
-                    TP_FLU_AN=case_dict.get("TP_FLU_AN"),
-                    PCR_RESUL=case_dict.get("PCR_RESUL"),
-                    RES_AN=case_dict.get("RES_AN"),
-                    DT_PCR=case_dict.get("DT_PCR"),
-                    DT_RES_AN=case_dict.get("DT_RES_AN"),
-                    DT_COLETA=case_dict.get("DT_COLETA"),
-                    LAB_AN=case_dict.get("LAB_AN"),
-                    CO_LAB_AN=case_dict.get("CO_LAB_AN"),
-                    POS_PCRFLU=case_dict.get("POS_PCRFLU"),
-                    PCR_FLUASU=case_dict.get("PCR_FLUASU"),
-                    PCR_FLUBLI=case_dict.get("PCR_FLUBLI"),
-                    PCR_RINO=case_dict.get("PCR_RINO"),
-                    PCR_METAP=case_dict.get("PCR_METAP"),
-                    PCR_ADENO=case_dict.get("PCR_ADENO"),
-                    PCR_PARA1=case_dict.get("PCR_PARA1"),
-                    PCR_PARA2=case_dict.get("PCR_PARA2"),
-                    PCR_PARA3=case_dict.get("PCR_PARA3"),
-                    PCR_PARA4=case_dict.get("PCR_PARA4"),
-                    POS_AN_OUT=case_dict.get("POS_AN_OUT"),
-                    AN_ADENO=case_dict.get("AN_ADENO"),
-                    AN_PARA1=case_dict.get("AN_PARA1"),
-                    AN_PARA2=case_dict.get("AN_PARA2"),
-                    AN_PARA3=case_dict.get("AN_PARA3"),
-                    DT_INTERNA=case_dict.get("DT_INTERNA"),
-                    DT_ENTUTI=case_dict.get("DT_ENTUTI"),
-                    DT_SAIDUTI=case_dict.get("DT_SAIDUTI"),
-                    EVOLUCAO=case_dict.get("EVOLUCAO"),
-                    DT_EVOLUCA=case_dict.get("DT_EVOLUCA"),
-                    UTI=case_dict.get("UTI"),
-                    HOSPITAL=case_dict.get("HOSPITAL"),
-                    SUPORT_VEN=case_dict.get("SUPORT_VEN"),
-                    RAIOX_RES=case_dict.get("RAIOX_RES"),
-                    TOMO_RES=case_dict.get("TOMO_RES"),
-                    ASMA=case_dict.get("ASMA"),
-                    HEMATOLOGI=case_dict.get("HEMATOLOGI"),
-                    SIND_DOWN=case_dict.get("SIND_DOWN"),
-                    HEPATICA=case_dict.get("HEPATICA"),
-                    NEUROLOGIC=case_dict.get("NEUROLOGIC"),
-                    PNEUMOPATI=case_dict.get("PNEUMOPATI"),
-                    IMUNODEPRE=case_dict.get("IMUNODEPRE"),
-                    RENAL=case_dict.get("RENAL"),
-                    DIABETES=case_dict.get("DIABETES"),
-                    OBESIDADE=case_dict.get("OBESIDADE"),
-                    TABAG=case_dict.get("TABAG"),
-                    OUT_MORBI=case_dict.get("OUT_MORBI"),
-                    CARDIOPATI=case_dict.get("CARDIOPATI"),
-                    FEBRE=case_dict.get("FEBRE"),
-                    TOSSE=case_dict.get("TOSSE"),
-                    GARGANTA=case_dict.get("GARGANTA"),
-                    DISPNEIA=case_dict.get("DISPNEIA"),
-                    DESC_RESP=case_dict.get("DESC_RESP"),
-                    SATURACAO=case_dict.get("SATURACAO"),
-                    DIARREIA=case_dict.get("DIARREIA"),
-                    VOMITO=case_dict.get("VOMITO"),
-                    DOR_ABD=case_dict.get("DOR_ABD"),
-                    FADIGA=case_dict.get("FADIGA"),
-                    PERD_OLFT=case_dict.get("PERD_OLFT"),
-                    PERD_PALA=case_dict.get("PERD_PALA"),
-                    OUTRO_SIN=case_dict.get("OUTRO_SIN"),
-                    NOSOCOMIAL=case_dict.get("NOSOCOMIAL"),
-                    CS_GESTANT=case_dict.get("CS_GESTANT"),
-                    PUERPERA=case_dict.get("PUERPERA"),
-                    VACINA_COV=case_dict.get("VACINA_COV"),
-                    DOSE_1_COV=case_dict.get("DOSE_1_COV"),
-                    DOSE_2_COV=case_dict.get("DOSE_2_COV"),
-                    DOSE_REF=case_dict.get("DOSE_REF"),
-                    DOSE_2REF=case_dict.get("DOSE_2REF"),
-                    DOSE_ADIC=case_dict.get("DOSE_ADIC"),
-                    DOS_RE_BI=case_dict.get("DOS_RE_BI"),
-                    VACINA=case_dict.get("VACINA"),
-                    DT_UT_DOSE=case_dict.get("DT_UT_DOSE"),
-                    MAE_VAC=case_dict.get("MAE_VAC"),
-                    DT_VAC_MAE=case_dict.get("DT_VAC_MAE"),
-                    DT_DOSEUNI=case_dict.get("DT_DOSEUNI"),
-                    DT_1_DOSE=case_dict.get("DT_1_DOSE"),
-                    DT_2_DOSE=case_dict.get("DT_2_DOSE"),
-                    ANTIVIRAL=case_dict.get("ANTIVIRAL"),
-                    CRITERIO=case_dict.get("CRITERIO"),
-                    TRAT_COV=case_dict.get("TRAT_COV"),
-                    VG_OMS=case_dict.get("VG_OMS"),
-                    VG_LIN=case_dict.get("VG_LIN"),
-                    VG_MET=case_dict.get("VG_MET"),
-                    VG_REINF=case_dict.get("VG_REINF"),
-                    CO_DETEC=case_dict.get("CO-DETEC") or case_dict.get("CO_DETEC"),
-                    TP_SOR=case_dict.get("TP_SOR"),
-                    RES_IGG=case_dict.get("RES_IGG"),
-                    RES_IGM=case_dict.get("RES_IGM"),
-                    RES_IGA=case_dict.get("RES_IGA"),
-                    TP_ANTIVIR=case_dict.get("TP_ANTIVIR"),
-                    DT_ANTIVIR=case_dict.get("DT_ANTIVIR"),
-                    TIPO_TRAT=case_dict.get("TIPO_TRAT"),
-                    SURTO_SG=case_dict.get("SURTO_SG"),
-                )
+                # Map dict to model automatically based on column names
+                data = {k: v for k, v in case_dict.items() if k in model_columns}
+
+                # Special handling for common SIVEP hyphenated fields
+                if "CO-DETEC" in case_dict and "CO_DETEC" not in data:
+                    data["CO_DETEC"] = case_dict["CO-DETEC"]
+
+                record = SragRecord(unique_hash=case_hash, **data)
                 session.add(record)
                 new_count += 1
             else:
-                # Lightweight enrichment for already-seen cases.
-                if exists.TP_IDADE is None and case_dict.get("TP_IDADE") is not None:
-                    exists.TP_IDADE = case_dict.get("TP_IDADE")
-                if exists.MAE_VAC is None and case_dict.get("MAE_VAC") is not None:
-                    exists.MAE_VAC = case_dict.get("MAE_VAC")
-                if exists.DT_VAC_MAE is None and case_dict.get("DT_VAC_MAE") is not None:
-                    exists.DT_VAC_MAE = case_dict.get("DT_VAC_MAE")
-                if exists.DT_DOSEUNI is None and case_dict.get("DT_DOSEUNI") is not None:
-                    exists.DT_DOSEUNI = case_dict.get("DT_DOSEUNI")
-                if exists.DT_1_DOSE is None and case_dict.get("DT_1_DOSE") is not None:
-                    exists.DT_1_DOSE = case_dict.get("DT_1_DOSE")
-                if exists.DT_2_DOSE is None and case_dict.get("DT_2_DOSE") is not None:
-                    exists.DT_2_DOSE = case_dict.get("DT_2_DOSE")
-                if exists.PCR_VSR is None and case_dict.get("PCR_VSR") is not None:
-                    exists.PCR_VSR = case_dict.get("PCR_VSR")
-                if exists.AN_VSR is None and case_dict.get("AN_VSR") is not None:
-                    exists.AN_VSR = case_dict.get("AN_VSR")
-                if exists.PCR_SARS2 is None and case_dict.get("PCR_SARS2") is not None:
-                    exists.PCR_SARS2 = case_dict.get("PCR_SARS2")
-                if exists.AN_SARS2 is None and case_dict.get("AN_SARS2") is not None:
-                    exists.AN_SARS2 = case_dict.get("AN_SARS2")
-                if exists.TP_FLU_PCR is None and case_dict.get("TP_FLU_PCR") is not None:
-                    exists.TP_FLU_PCR = case_dict.get("TP_FLU_PCR")
-                if exists.TP_FLU_AN is None and case_dict.get("TP_FLU_AN") is not None:
-                    exists.TP_FLU_AN = case_dict.get("TP_FLU_AN")
-                if exists.PCR_RESUL is None and case_dict.get("PCR_RESUL") is not None:
-                    exists.PCR_RESUL = case_dict.get("PCR_RESUL")
-                if exists.RES_AN is None and case_dict.get("RES_AN") is not None:
-                    exists.RES_AN = case_dict.get("RES_AN")
-                if exists.DT_PCR is None and case_dict.get("DT_PCR") is not None:
-                    exists.DT_PCR = case_dict.get("DT_PCR")
-                if exists.DT_RES_AN is None and case_dict.get("DT_RES_AN") is not None:
-                    exists.DT_RES_AN = case_dict.get("DT_RES_AN")
-                if exists.DT_COLETA is None and case_dict.get("DT_COLETA") is not None:
-                    exists.DT_COLETA = case_dict.get("DT_COLETA")
-                if exists.LAB_AN is None and case_dict.get("LAB_AN") is not None:
-                    exists.LAB_AN = case_dict.get("LAB_AN")
-                if exists.CO_LAB_AN is None and case_dict.get("CO_LAB_AN") is not None:
-                    exists.CO_LAB_AN = case_dict.get("CO_LAB_AN")
-                if exists.ID_UNIDADE is None and case_dict.get("ID_UNIDADE") is not None:
-                    exists.ID_UNIDADE = case_dict.get("ID_UNIDADE")
-                if exists.BAIRRO_REF is None and case_dict.get("BAIRRO_REF") is not None:
-                    exists.BAIRRO_REF = case_dict.get("BAIRRO_REF")
-                if exists.NM_BAIRRO is None and case_dict.get("NM_BAIRRO") is not None:
-                    exists.NM_BAIRRO = case_dict.get("NM_BAIRRO")
-                if exists.ZONA is None and case_dict.get("ZONA") is not None:
-                    exists.ZONA = case_dict.get("ZONA")
-                if exists.CS_ZONA is None and case_dict.get("CS_ZONA") is not None:
-                    exists.CS_ZONA = case_dict.get("CS_ZONA")
-                if exists.CS_RACA is None and case_dict.get("CS_RACA") is not None:
-                    exists.CS_RACA = case_dict.get("CS_RACA")
-                if exists.CS_ESCOL_N is None and case_dict.get("CS_ESCOL_N") is not None:
-                    exists.CS_ESCOL_N = case_dict.get("CS_ESCOL_N")
-                if exists.NOSOCOMIAL is None and case_dict.get("NOSOCOMIAL") is not None:
-                    exists.NOSOCOMIAL = case_dict.get("NOSOCOMIAL")
-                if exists.DOS_RE_BI is None and case_dict.get("DOS_RE_BI") is not None:
-                    exists.DOS_RE_BI = case_dict.get("DOS_RE_BI")
-                if exists.DOSE_1_COV is None and case_dict.get("DOSE_1_COV") is not None:
-                    exists.DOSE_1_COV = case_dict.get("DOSE_1_COV")
-                if exists.DOSE_2_COV is None and case_dict.get("DOSE_2_COV") is not None:
-                    exists.DOSE_2_COV = case_dict.get("DOSE_2_COV")
-                if exists.DOSE_REF is None and case_dict.get("DOSE_REF") is not None:
-                    exists.DOSE_REF = case_dict.get("DOSE_REF")
-                if exists.DOSE_2REF is None and case_dict.get("DOSE_2REF") is not None:
-                    exists.DOSE_2REF = case_dict.get("DOSE_2REF")
-                if exists.DOSE_ADIC is None and case_dict.get("DOSE_ADIC") is not None:
-                    exists.DOSE_ADIC = case_dict.get("DOSE_ADIC")
-                if exists.CS_SEXO is None and case_dict.get("CS_SEXO") is not None:
-                    exists.CS_SEXO = case_dict.get("CS_SEXO")
-                if exists.NU_IDADE_N is None and case_dict.get("NU_IDADE_N") is not None:
-                    exists.NU_IDADE_N = case_dict.get("NU_IDADE_N")
-                if exists.IDADE_ANOS is None and case_dict.get("IDADE_ANOS") is not None:
-                    exists.IDADE_ANOS = case_dict.get("IDADE_ANOS")
-                if exists.CS_GESTANT is None and case_dict.get("CS_GESTANT") is not None:
-                    exists.CS_GESTANT = case_dict.get("CS_GESTANT")
-                if exists.PUERPERA is None and case_dict.get("PUERPERA") is not None:
-                    exists.PUERPERA = case_dict.get("PUERPERA")
-                if exists.ASMA is None and case_dict.get("ASMA") is not None:
-                    exists.ASMA = case_dict.get("ASMA")
-                if exists.IMUNODEPRE is None and case_dict.get("IMUNODEPRE") is not None:
-                    exists.IMUNODEPRE = case_dict.get("IMUNODEPRE")
-                if exists.RENAL is None and case_dict.get("RENAL") is not None:
-                    exists.RENAL = case_dict.get("RENAL")
-                if exists.DIABETES is None and case_dict.get("DIABETES") is not None:
-                    exists.DIABETES = case_dict.get("DIABETES")
-                if exists.OBESIDADE is None and case_dict.get("OBESIDADE") is not None:
-                    exists.OBESIDADE = case_dict.get("OBESIDADE")
-                if exists.HEMATOLOGI is None and case_dict.get("HEMATOLOGI") is not None:
-                    exists.HEMATOLOGI = case_dict.get("HEMATOLOGI")
-                if exists.SIND_DOWN is None and case_dict.get("SIND_DOWN") is not None:
-                    exists.SIND_DOWN = case_dict.get("SIND_DOWN")
-                if exists.HEPATICA is None and case_dict.get("HEPATICA") is not None:
-                    exists.HEPATICA = case_dict.get("HEPATICA")
-                if exists.NEUROLOGIC is None and case_dict.get("NEUROLOGIC") is not None:
-                    exists.NEUROLOGIC = case_dict.get("NEUROLOGIC")
-                if exists.PNEUMOPATI is None and case_dict.get("PNEUMOPATI") is not None:
-                    exists.PNEUMOPATI = case_dict.get("PNEUMOPATI")
-                if exists.TABAG is None and case_dict.get("TABAG") is not None:
-                    exists.TABAG = case_dict.get("TABAG")
-                if exists.OUT_MORBI is None and case_dict.get("OUT_MORBI") is not None:
-                    exists.OUT_MORBI = case_dict.get("OUT_MORBI")
-                if exists.CARDIOPATI is None and case_dict.get("CARDIOPATI") is not None:
-                    exists.CARDIOPATI = case_dict.get("CARDIOPATI")
-                if exists.FEBRE is None and case_dict.get("FEBRE") is not None:
-                    exists.FEBRE = case_dict.get("FEBRE")
-                if exists.TOSSE is None and case_dict.get("TOSSE") is not None:
-                    exists.TOSSE = case_dict.get("TOSSE")
-                if exists.GARGANTA is None and case_dict.get("GARGANTA") is not None:
-                    exists.GARGANTA = case_dict.get("GARGANTA")
-                if exists.DISPNEIA is None and case_dict.get("DISPNEIA") is not None:
-                    exists.DISPNEIA = case_dict.get("DISPNEIA")
-                if exists.DESC_RESP is None and case_dict.get("DESC_RESP") is not None:
-                    exists.DESC_RESP = case_dict.get("DESC_RESP")
-                if exists.SATURACAO is None and case_dict.get("SATURACAO") is not None:
-                    exists.SATURACAO = case_dict.get("SATURACAO")
-                if exists.DIARREIA is None and case_dict.get("DIARREIA") is not None:
-                    exists.DIARREIA = case_dict.get("DIARREIA")
-                if exists.VOMITO is None and case_dict.get("VOMITO") is not None:
-                    exists.VOMITO = case_dict.get("VOMITO")
-                if exists.DOR_ABD is None and case_dict.get("DOR_ABD") is not None:
-                    exists.DOR_ABD = case_dict.get("DOR_ABD")
-                if exists.FADIGA is None and case_dict.get("FADIGA") is not None:
-                    exists.FADIGA = case_dict.get("FADIGA")
-                if exists.PERD_OLFT is None and case_dict.get("PERD_OLFT") is not None:
-                    exists.PERD_OLFT = case_dict.get("PERD_OLFT")
-                if exists.PERD_PALA is None and case_dict.get("PERD_PALA") is not None:
-                    exists.PERD_PALA = case_dict.get("PERD_PALA")
-                if exists.OUTRO_SIN is None and case_dict.get("OUTRO_SIN") is not None:
-                    exists.OUTRO_SIN = case_dict.get("OUTRO_SIN")
-                if exists.SUPORT_VEN is None and case_dict.get("SUPORT_VEN") is not None:
-                    exists.SUPORT_VEN = case_dict.get("SUPORT_VEN")
-                if exists.VACINA_COV is None and case_dict.get("VACINA_COV") is not None:
-                    exists.VACINA_COV = case_dict.get("VACINA_COV")
-                if exists.VACINA is None and case_dict.get("VACINA") is not None:
-                    exists.VACINA = case_dict.get("VACINA")
-                if exists.DT_UT_DOSE is None and case_dict.get("DT_UT_DOSE") is not None:
-                    exists.DT_UT_DOSE = case_dict.get("DT_UT_DOSE")
-                if exists.ANTIVIRAL is None and case_dict.get("ANTIVIRAL") is not None:
-                    exists.ANTIVIRAL = case_dict.get("ANTIVIRAL")
-                if exists.CRITERIO is None and case_dict.get("CRITERIO") is not None:
-                    exists.CRITERIO = case_dict.get("CRITERIO")
-                if exists.TRAT_COV is None and case_dict.get("TRAT_COV") is not None:
-                    exists.TRAT_COV = case_dict.get("TRAT_COV")
+                # Lightweight enrichment for already-seen cases:
+                # fill missing fields if new data is available.
+                for col in model_columns:
+                    val = case_dict.get(col)
+                    if val is not None and getattr(exists, col) is None:
+                        setattr(exists, col, val)
 
         session.commit()
     return new_count

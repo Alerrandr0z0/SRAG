@@ -59,9 +59,15 @@ class SragCase(BaseModel):
     CS_GESTANT: int | None = Field(alias="CS_GESTANT", default=None)
     CS_RACA: int | None = Field(alias="CS_RACA", default=None)
     CS_ESCOL_N: int | None = Field(alias="CS_ESCOL_N", default=None)
+    PAC_DSCBO: str | None = Field(alias="PAC_DSCBO", default=None)
+    AVE_SUINO: int | None = Field(alias="AVE_SUINO", default=None)
     NOSOCOMIAL: int | None = Field(alias="NOSOCOMIAL", default=None)
     ID_MN_RESI: str = Field(alias="ID_MN_RESI")
     SG_UF: str | None = Field(alias="SG_UF", default=None)
+
+    # Identidade e Comunidades
+    POV_CT: int | None = Field(alias="POV_CT", default=None)
+    TP_POV_CT: str | None = Field(alias="TP_POV_CT", default=None)
 
     # Sinais e Sintomas
     FEBRE: int | None = Field(alias="FEBRE", default=None)
@@ -160,6 +166,14 @@ class SragCase(BaseModel):
     DT_ANTIVIR: date | None = Field(alias="DT_ANTIVIR", default=None)
     TRAT_COV: int | None = Field(alias="TRAT_COV", default=None)
     TIPO_TRAT: int | None = Field(alias="TIPO_TRAT", default=None)
+
+    # Fabricantes de Vacina
+    FAB_COV1: str | None = Field(alias="FAB_COV1", default=None)
+    FAB_COV2: str | None = Field(alias="FAB_COV2", default=None)
+    FAB_COVRF: str | None = Field(alias="FAB_COVRF", default=None)
+    FAB_COVRF2: str | None = Field(alias="FAB_COVRF2", default=None)
+    FAB_ADIC: str | None = Field(alias="FAB_ADIC", default=None)
+    FAB_RE_BI: str | None = Field(alias="FAB_RE_BI", default=None)
 
     # Vigilância Genômica e Outros
     VG_OMS: int | None = Field(alias="VG_OMS", default=None)

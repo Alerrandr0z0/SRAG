@@ -1,4 +1,5 @@
 """Type definitions for API responses."""
+
 from typing import Any, TypedDict
 
 
@@ -121,6 +122,8 @@ class CitizenBootstrapResponse(TypedDict):
     citizen_pyramid: list[dict[str, Any]]
     race_profile: list[dict[str, Any]]
     schooling_profile: list[dict[str, Any]]
+    occupation_profile: list[dict[str, Any]]
+    animal_contact: list[dict[str, Any]]
     symptoms_signature: dict[str, Any]
     risk_factors_full: list[dict[str, Any]]
     maternal_profile: dict[str, Any]

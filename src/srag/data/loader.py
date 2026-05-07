@@ -37,6 +37,8 @@ COLUMN_ALIASES = {
     "CO_MUN_RES": "ID_MN_RESI",
     "CO_UNI_NOT": "ID_UNIDADE",
     "CO-DETEC": "CO_DETEC",
+    "FAB_COV_1": "FAB_COV1",
+    "FAB_COV_2": "FAB_COV2",
 }
 
 RURAL_KEYWORDS = [
