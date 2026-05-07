@@ -1,13 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { COLORS } from '../../constants';
-
-let chartLoader: Promise<any>;
-function loadChart() {
-  if (!chartLoader) {
-    chartLoader = import('chart.js/auto').then((mod) => mod.Chart);
-  }
-  return chartLoader;
-}
+import { useChartJs } from '../../hooks/useChartJs';
 
 interface TreatmentByAgentChartProps {
   data: Array<{ treatment: string; agent: string; deaths: number }>;
@@ -23,55 +16,37 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 const TreatmentByAgentChart: React.FC<TreatmentByAgentChartProps> = ({ data }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<any>(null);
+  const treatments = ['Invasivo', 'Não Invasivo', 'Sem Suporte', 'Ignorado'];
+  const agents = Array.from(new Set(data.map((d) => d.agent))).filter(Boolean);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function render() {
-      const Chart = await loadChart();
-      if (cancelled || !canvasRef.current) return;
-
-      // Group treatments
-      const treatments = ['Invasivo', 'Não Invasivo', 'Sem Suporte', 'Ignorado'];
-      const agents = Array.from(new Set(data.map((d) => d.agent))).filter(Boolean);
-
-      const datasets = agents.map((agent) => ({
-        label: agent,
-        data: treatments.map((t) => data.filter((d) => d.treatment === t && d.agent === agent).reduce((sum, d) => sum + d.deaths, 0)),
-        backgroundColor: AGENT_COLORS[agent] || COLORS.SECONDARY,
-        borderWidth: 0,
-        borderRadius: 6,
-      }));
-
-      if (chartInstance.current) chartInstance.current.destroy();
-      chartInstance.current = new Chart(canvasRef.current, {
-        type: 'bar',
-        data: {
-          labels: treatments,
-          datasets,
+  const { canvasRef } = useChartJs(
+    () => ({
+      type: 'bar',
+      data: {
+        labels: treatments,
+        datasets: agents.map((agent) => ({
+          label: agent,
+          data: treatments.map((t) => data.filter((d) => d.treatment === t && d.agent === agent).reduce((sum, d) => sum + d.deaths, 0)),
+          backgroundColor: AGENT_COLORS[agent] || COLORS.SECONDARY,
+          borderWidth: 0,
+          borderRadius: 6,
+        })),
+      },
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { mode: 'index', intersect: false },
         },
-        options: {
-          maintainAspectRatio: false,
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: { mode: 'index', intersect: false },
-          },
-          scales: {
-            x: { stacked: true },
-            y: { stacked: true, beginAtZero: true },
-          },
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
         },
-      });
-    }
-
-    render();
-    return () => {
-      cancelled = true;
-    };
-  }, [data]);
+      },
+    }),
+    [data, agents],
+  );
 
   return <canvas ref={canvasRef} />;
 };

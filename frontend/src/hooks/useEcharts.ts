@@ -4,6 +4,7 @@ import echarts from '../lib/echarts-heatmap';
 export function useEcharts(opt: unknown, dependencies: unknown[] = []) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<{ setOption: (_option: unknown) => void; resize: () => void; dispose: () => void } | null>(null);
+  const dependencyKey = JSON.stringify(dependencies);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -28,7 +29,7 @@ export function useEcharts(opt: unknown, dependencies: unknown[] = []) {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [opt, ...dependencies]);
+  }, [opt, dependencyKey]);
 
   useEffect(() => {
     return () => {

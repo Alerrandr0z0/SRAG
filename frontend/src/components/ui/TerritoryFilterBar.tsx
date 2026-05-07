@@ -5,6 +5,12 @@ interface FilterOption {
   label: string;
 }
 
+const ZONA_OPTIONS: FilterOption[] = [
+  { key: 'URBANA', label: 'Urbana' },
+  { key: 'RURAL', label: 'Rural' },
+  { key: 'PERIURBANA', label: 'Periurbana' },
+];
+
 interface TerritoryFilterBarProps {
   zoneFilter: string[];
   setZoneFilter: (zones: string[]) => void;
@@ -20,12 +26,6 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
   setBairroFilter,
   bairrosList,
 }) => {
-  const zonaOptions: FilterOption[] = [
-    { key: 'URBANA', label: 'Urbana' },
-    { key: 'RURAL', label: 'Rural' },
-    { key: 'PERIURBANA', label: 'Periurbana' },
-  ];
-
   const toggle = (list: string[], key: string, setter: (val: string[]) => void) => {
     if (list.includes(key)) {
       setter(list.filter((i) => i !== key));
@@ -50,17 +50,17 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
 
   const summaryText = useMemo(() => {
     const parts: string[] = [];
-    if (zoneFilter.length) parts.push(zoneFilter.map(k => zonaOptions.find(o => o.key === k)?.label || k).join(', '));
+    if (zoneFilter.length) parts.push(zoneFilter.map(k => ZONA_OPTIONS.find(o => o.key === k)?.label || k).join(', '));
     if (bairroFilter.length) parts.push(bairroFilter.join(', '));
     return parts.join(' · ');
-  }, [zoneFilter, bairroFilter, zonaOptions]);
+  }, [zoneFilter, bairroFilter]);
 
   return (
     <div className="fb">
       <div style={{ overflowX: 'auto', paddingBottom: '2px' }}>
         <div className="fb-bar">
           <span className="fb-label">Zona</span>
-          {zonaOptions.map((opt) => (
+          {ZONA_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               className={`pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}

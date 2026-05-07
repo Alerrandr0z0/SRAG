@@ -6,18 +6,20 @@ import SchoolingChart from "../charts/SchoolingChart";
 import SymptomsSignatureGrid from "../charts/SymptomsSignatureGrid";
 import RiskFactorsChart from "../charts/RiskFactorsChart";
 import VaccinationProfileChart from "../charts/VaccinationProfileChart";
-import KaplanMeierChart from "../charts/KaplanMeierChart";
+import VigilanceDonutChart from "../charts/VigilanceDonutChart";
+import KpiCard from "../ui/KpiCard";
 import * as Epi from "../../types/epi";
 
 interface CitizenPanelProps {
   loading: boolean;
   pyramid: Epi.PyramidRow[];
   schooling: Epi.CitizenBootstrap["schooling_profile"];
+  occupation: Epi.CitizenBootstrap["occupation_profile"];
+  animalContact: Epi.CitizenBootstrap["animal_contact"];
   symptomsSignature: Epi.SymptomSignature | null;
   riskFactors: Epi.CitizenBootstrap["risk_factors_full"];
   maternalProfile?: Epi.CitizenBootstrap["maternal_profile"] | null;
   vaccination: Epi.VaccinationProfile | null;
-  survival: Epi.VaccineSurvival | null;
   genderFilter?: string[];
 }
 
@@ -25,14 +27,34 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
   loading,
   pyramid,
   schooling,
+  occupation,
+  animalContact,
   symptomsSignature,
   riskFactors,
   maternalProfile,
   vaccination,
-  survival,
   genderFilter = [],
 }) => {
   const isOnlyMale = genderFilter.length === 1 && (genderFilter[0] === 'M' || genderFilter[0] === 'Masculino');
+
+  // Logic to find the main manufacturer for the KPI
+  const topManufacturer = vaccination?.manufacturers && vaccination.manufacturers.length > 0 
+    ? vaccination.manufacturers.sort((a, b) => b.count - a.count)[0]
+    : null;
+
+  const topSchooling = [...schooling].sort((a, b) => b.count - a.count)[0]?.label || "N/A";
+  
+  // Risk factors use .factor instead of .label
+  const topRisk = [...riskFactors].sort((a, b) => (b.count as number) - (a.count as number))[0]?.factor || "N/A";
+  
+  const sortedAnimalContact = [...animalContact].sort((a, b) => b.count - a.count);
+  const topAnimal = sortedAnimalContact[0]?.label || "N/A";
+  
+  const noAnimalContactItem = animalContact.find(a => a.label === "Sem Contato");
+  const totalAnimalContact = animalContact.reduce((acc, curr) => acc + curr.count, 0);
+  const noAnimalPct = totalAnimalContact > 0 && noAnimalContactItem 
+    ? ((noAnimalContactItem.count / totalAnimalContact) * 100).toFixed(1) + "%"
+    : "0%";
 
   return (
     <div className="stack">
@@ -86,66 +108,122 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         </div>
       )}
 
-      {/* Grid Equitativo com Relevo para Escolaridade e Fatores de Risco */}
+      <div className="kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px", marginTop: "1.5rem" }}>
+        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#1D9E75' }}></span>
+            Principal espécie
+          </p>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topAnimal}</h2>
+        </article>
+        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#378ADD' }}></span>
+            Maior escolaridade
+          </p>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topSchooling}</h2>
+        </article>
+        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#EF9F27' }}></span>
+            Principal fator
+          </p>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topRisk}</h2>
+        </article>
+        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#D85A30' }}></span>
+            Sem contato animal
+          </p>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{noAnimalPct}</h2>
+        </article>
+      </div>
+
+      {/* GRÁFICOS DE VOLUME (BARRAS) */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
           gap: "1.5rem",
           marginTop: "1.5rem",
         }}
       >
-        <div
-          style={{
-            background: "#f8fafc",
-            padding: "1.25rem",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <h3
-            style={{
-              textAlign: "center",
-              marginTop: 0,
-              marginBottom: "1rem",
-              fontSize: "14px",
-              color: "#475569",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Escolaridade
-          </h3>
+        <div className="panel" style={{ padding: "1.25rem" }}>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Escolaridade</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
             <SchoolingChart data={schooling || []} />
           </div>
         </div>
-        <div
-          style={{
-            background: "#f8fafc",
-            padding: "1.25rem",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <h3
-            style={{
-              textAlign: "center",
-              marginTop: 0,
-              marginBottom: "1rem",
-              fontSize: "14px",
-              color: "#475569",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Fatores de Risco
-          </h3>
+
+        <div className="panel" style={{ padding: "1.25rem" }}>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Ocupação (Top 15)</p>
+          <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
+            <BarChart 
+              labels={occupation.map(o => o.label)} 
+              data={occupation.map(o => o.count)} 
+              horizontal={true}
+              color="#378ADD"
+            />
+          </div>
+        </div>
+
+        <div className="panel" style={{ padding: "1.25rem" }}>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Fatores de Risco</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
             <RiskFactorsChart data={riskFactors || []} />
           </div>
         </div>
+
+        <div className="panel" style={{ padding: "1.25rem" }}>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Contato com Animais</p>
+          <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
+            <BarChart 
+              labels={animalContact.map(a => a.label)} 
+              data={animalContact.map(a => a.count)} 
+              horizontal={true}
+              color="#D85A30"
+            />
+          </div>
+        </div>
       </div>
+
+      {/* SEÇÃO DE DISTRIBUIÇÃO PROPORCIONAL (DONUTS) */}
+      <section className="panel" style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
+        <p className="chart-label" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#475569", marginBottom: "1.5rem", textAlign: 'center' }}>Distribuição Proporcional</p>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+          <div style={{ textAlign: 'center' }}>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Escolaridade</p>
+            <div style={{ height: '180px' }}>
+              <VigilanceDonutChart title="" data={schooling || []} />
+            </div>
+          </div>
+          
+          <div style={{ textAlign: 'center' }}>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Ocupação</p>
+            <div style={{ height: '180px' }}>
+              <VigilanceDonutChart title="" data={occupation || []} />
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Fatores de Risco</p>
+            <div style={{ height: '180px' }}>
+              <VigilanceDonutChart 
+                title="" 
+                data={riskFactors.map(r => ({ label: r.factor as string, count: r.count as number }))} 
+              />
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Contato Animal</p>
+            <div style={{ height: '180px' }}>
+              <VigilanceDonutChart title="" data={animalContact || []} />
+            </div>
+          </div>
+        </div>
+      </section>
 
       <h3 style={{ marginTop: "3rem" }}>Assinatura Clínica de Sintomas</h3>
       <div className="chart-wrap" style={{ height: "600px" }}>
@@ -154,17 +232,53 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         )}
       </div>
 
-      <h3 style={{ marginTop: "3rem" }}>Perfil de Imunização</h3>
-      <div className="chart-wrap" style={{ height: "350px" }}>
-        {vaccination && (
-          <VaccinationProfileChart vaccinationData={vaccination} />
-        )}
-      </div>
+      {/* PAINEL DE POVOS E COMUNIDADES TRADICIONAIS (OCULTO POR BAIXO VOLUME)
+      {traditionalCommunities && traditionalCommunities.length > 0 && (
+        <section className="vigilance-block" style={{ marginTop: '3rem' }}>
+          <h3 className="block-title">Povos e Comunidades Tradicionais</h3>
+          <div className="vigilance-insight-grid" style={{ gridTemplateColumns: '1fr' }}>
+            <article className="panel">
+              <div className="chart-wrap" style={{ height: '300px' }}>
+                <BarChart 
+                  labels={traditionalCommunities.map(c => c.label)}
+                  data={traditionalCommunities.map(c => c.count)}
+                  horizontal={true}
+                  color="#8b5cf6" 
+                />
+              </div>
+            </article>
+          </div>
+        </section>
+      )}
+      */}
 
-      <h3 style={{ marginTop: "3rem" }}>Curva de Proteção Vacinal</h3>
-      <div className="chart-wrap" style={{ height: "400px" }}>
-        {survival && <KaplanMeierChart survivalData={survival} />}
-      </div>
+      {/* PAINEL DE IMUNIZAÇÃO REFORMULADO */}
+      <section className="vigilance-block" style={{ marginTop: '3rem' }}>
+        <h3 className="block-title">Perfil de Imunização</h3>
+        <div className="vigilance-insight-grid" style={{ gridTemplateColumns: 'minmax(240px, 0.7fr) minmax(0, 1.3fr)' }}>
+          <div className="stack" style={{ gap: '1rem' }}>
+            <KpiCard 
+              label="Fabricante Predominante" 
+              value={topManufacturer ? topManufacturer.label.split('/')[0] : 'N/A'} 
+              className="vigilance-metric vigilance-metric--teal" 
+            />
+            <article className="panel" style={{ padding: '1.25rem', flexGrow: 1 }}>
+              <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>Distribuição de Fabricantes</p>
+              <div style={{ height: '200px' }}>
+                <VigilanceDonutChart title="" data={vaccination?.manufacturers || []} />
+              </div>
+            </article>
+          </div>
+          <article className="panel" style={{ padding: '1.5rem' }}>
+            <p className="eyebrow" style={{ marginBottom: '1rem' }}>Esquema por Campanha e Dose</p>
+            <div className="chart-wrap" style={{ height: "300px" }}>
+              {vaccination && (
+                <VaccinationProfileChart vaccinationData={vaccination} />
+              )}
+            </div>
+          </article>
+        </div>
+      </section>
     </div>
   );
 };

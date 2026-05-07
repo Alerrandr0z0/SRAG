@@ -3,10 +3,13 @@ import { COLORS } from '../../constants';
 import { buildBand } from '../../utils/math';
 import * as Epi from '../../types/epi';
 
-let chartLoader: Promise<any>;
+type ChartLike = { destroy: () => void };
+type ChartCtor = { new (el: HTMLCanvasElement, _options: unknown): ChartLike };
+
+let chartLoader: Promise<ChartCtor>;
 function loadChart() {
   if (!chartLoader) {
-    chartLoader = import('chart.js/auto').then((mod) => mod.Chart);
+    chartLoader = import('chart.js/auto').then((mod) => mod.Chart as ChartCtor);
   }
   return chartLoader;
 }
@@ -39,7 +42,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
   seriesMode,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<any>(null);
+  const chartInstance = useRef<ChartLike | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +73,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       const histLast = hist.length ? hist[hist.length - 1] : 0;
       const band = buildBand(labels, forecast, historyLen, seriesMode, histLast);
 
-      const datasets: any[] = [];
+      const datasets: Array<Record<string, unknown>> = [];
 
       if (seriesMode === 'composition' && composition) {
         const viruses = Array.from(new Set(composition.map((c) => c.virus)));
@@ -106,7 +109,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
           datasets.push({
             label: v,
             data: data,
-            backgroundColor: (context: any) => {
+              backgroundColor: (context: { chart: { ctx: CanvasRenderingContext2D; scales: { x?: { getPixelForValue: (value: string) => number } } } }) => {
               const chart = context.chart;
               const { ctx, scales } = chart;
               if (!scales.x) return VIRUS_COLORS[v] || '#ccc';
@@ -187,7 +190,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
 
       const statusPlugin = {
         id: 'statusPlugin',
-        beforeDraw: (chart: any) => {
+          beforeDraw: (chart: { ctx: CanvasRenderingContext2D; chartArea: { top: number; bottom: number; right: number }; scales: { x?: { getPixelForValue: (value: string) => number } } }) => {
           const {
             ctx,
             chartArea: { top, bottom, right },
@@ -219,7 +222,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
 
       const alertPlugin = {
         id: 'alertThresholds',
-        afterDraw: (chart: any) => {
+        afterDraw: (chart: { ctx: CanvasRenderingContext2D; chartArea: { top: number; bottom: number; right: number; left: number }; scales: { y?: { getPixelForValue: (value: number) => number } } }) => {
           if (!thresholds || seriesMode === 'cumulative') return;
           const {
             ctx,
@@ -264,14 +267,14 @@ const TrendChart: React.FC<TrendChartProps> = ({
             legend: {
               position: 'bottom',
               labels: {
-                filter: (item) => !['Limite inferior', 'Faixa prevista', 'Previsão'].includes(item.text),
+                filter: (item: { text: string }) => !['Limite inferior', 'Faixa prevista', 'Previsão'].includes(item.text),
               },
             },
             tooltip: {
-              callbacks: {
-                title: (items) => `Semana: ${items[0].label}`,
-                beforeBody: (items) => {
-                  const isForecast = items[0].dataIndex >= historyLen;
+            callbacks: {
+                title: (items: Array<{ label?: string }>) => `Semana: ${items[0]?.label ?? ''}`,
+                beforeBody: (items: Array<{ dataset: { label?: string }; dataIndex: number; raw: unknown }>) => {
+                  const isForecast = (items[0]?.dataIndex ?? 0) >= historyLen;
 
                   // Lógica inteligente de total:
                   // No modo acumulado, o total já é o valor do ponto.
@@ -283,8 +286,8 @@ const TrendChart: React.FC<TrendChartProps> = ({
                     const prevItem = items.find(i => i.dataset.label === 'Previsão');
                     total = Number((histItem || prevItem)?.raw || 0);
                   } else {
-                    total = items.reduce((sum, item) => {
-                      const label = item.dataset.label;
+                    total = items.reduce((sum: number, item) => {
+                      const label = item.dataset.label ?? '';
                       if (['Limite inferior', 'Faixa prevista'].includes(label)) return sum;
                       // No ponto de conexão (junction), ignoramos a linha de previsão no somatório
                       if (item.dataIndex === historyLen - 1 && label === 'Previsão') return sum;
@@ -294,11 +297,11 @@ const TrendChart: React.FC<TrendChartProps> = ({
 
                   return `${isForecast ? '[PREVISÃO] ' : ''}TOTAL: ${Math.round(total)} CASOS\n-----------------`;
                 },
-                label: (context: any) => {
-                  const label = context.dataset.label;
+                label: (context: { dataset: { label?: string }; raw: unknown }) => {
+                  const label = context.dataset.label ?? '';
                   if (['Faixa prevista', 'Limite inferior', 'Previsão', 'Histórico'].includes(label))
                     return null;
-                  return `${label}: ${Math.round(context.raw)}`;
+                  return `${label}: ${Math.round(Number(context.raw))}`;
                 },
               },
             },

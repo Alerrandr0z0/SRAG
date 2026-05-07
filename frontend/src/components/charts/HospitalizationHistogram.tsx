@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { COLORS } from '../../constants';
 
+type HistogramTooltip = Array<{ seriesName?: string; value?: [number, number] }>;
+
 interface HospitalizationHistogramProps {
   data: number[];
 }
@@ -40,10 +42,10 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross', crossStyle: { color: '#94a3b8' } },
-        formatter: (params: any[]) => {
+        formatter: (params: HistogramTooltip) => {
             const b = params.find(p => p.seriesName === 'Frequência');
             if (!b) return '';
-            return `Permanência: <b>${b.value[0]} dias</b><br/>Volume: <b>${b.value[1]} casos</b>`;
+            return `Permanência: <b>${b.value?.[0] ?? 0} dias</b><br/>Volume: <b>${b.value?.[1] ?? 0} casos</b>`;
         }
       },
       grid: { top: 40, left: 50, right: 30, bottom: 60, containLabel: false },

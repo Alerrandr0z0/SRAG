@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from '../constants';
 import * as Epi from '../types/epi';
+import type { FeatureCollection } from 'geojson';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -84,11 +85,11 @@ export const api = {
     fetchJson<Epi.TrendsData>(withFilters(`${API_BASE}${API_ENDPOINTS.CONTEXT_TRENDS}?key=${encodeURIComponent(key)}&last_n_weeks=${weeksWindow}&weeks_to_predict=4&lookback_weeks=${lookback}`, p, r, g, z, b, u, years, agents)),
 
   fetchMacrosectorPoints: (zone: string) =>
-    fetchJson<{ available: boolean, points: any[] }>(`${API_BASE}${API_ENDPOINTS.MACROSECTOR_HEATPOINTS}?zone=${encodeURIComponent(zone)}&min_cases=1`),
+    fetchJson<{ available: boolean, points: Array<{ lat: number; lon: number; count: number }> }>(`${API_BASE}${API_ENDPOINTS.MACROSECTOR_HEATPOINTS}?zone=${encodeURIComponent(zone)}&min_cases=1`),
 
   fetchRuralHeatpoints: () =>
-    fetchJson<{ available: boolean; sectors: any[]; center: any }>(`${API_BASE}/geo/rural_heatpoints?min_cases=1`),
+    fetchJson<{ available: boolean; sectors: Array<{ sector: string; count: number }>; center: { lat: number; lon: number } }>(`${API_BASE}/geo/rural_heatpoints?min_cases=1`),
 
   fetchRuralSectorsGeo: () =>
-    fetchJson<any>(`${API_BASE}/geo/rural_sectors`),
+    fetchJson<FeatureCollection>(`${API_BASE}/geo/rural_sectors`),
 };

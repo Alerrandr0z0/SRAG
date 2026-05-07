@@ -1,71 +1,54 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { COLORS } from '../../constants';
 import * as Epi from '../../types/epi';
-
-let chartLoader: Promise<any>;
-function loadChart() {
-  if (!chartLoader) {
-    chartLoader = import('chart.js/auto').then((mod) => mod.Chart);
-  }
-  return chartLoader;
-}
+import { useChartJs } from '../../hooks/useChartJs';
 
 interface SchoolingChartProps {
   data: Epi.CitizenBootstrap['schooling_profile'];
 }
 
 const SchoolingChart: React.FC<SchoolingChartProps> = ({ data }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<any>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function render() {
-      const Chart = await loadChart();
-      if (cancelled || !canvasRef.current) return;
-      if (chartInstance.current) chartInstance.current.destroy();
-      chartInstance.current = new Chart(canvasRef.current, {
-        type: 'bar',
-        data: {
-          labels: data.map((x) => x.label),
-          datasets: [{
-            data: data.map((x) => x.count),
-            backgroundColor: COLORS.PRIMARY,
-            borderRadius: 7
-          }],
+  const { canvasRef } = useChartJs(
+    () => ({
+      type: 'bar',
+      data: {
+        labels: data.map((x) => x.label),
+        datasets: [{
+          data: data.map((x) => x.count),
+          backgroundColor: COLORS.PRIMARY,
+          borderRadius: 7,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        layout: {
+          padding: { left: 10, right: 20 },
         },
-        options: {
-          indexAxis: 'y',
-          maintainAspectRatio: false,
-          layout: {
-            padding: { left: 10, right: 20 }
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c: { raw: unknown }) => `Casos: ${c.raw}`,
+            },
           },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (c: any) => `Casos: ${c.raw}`
-              }
-            }
-          },
-          scales: {
-            x: { beginAtZero: true, grid: { display: false } },
-            y: {
-              ticks: {
-                font: { size: 10 },
-                callback: function(value: any) {
-                  const label = this.getLabelForValue(value);
-                  return label.length > 15 ? label.substr(0, 15) + '...' : label;
-                }
-              }
-            }
-          }
         },
-      });
-    }
-    render();
-    return () => { cancelled = true; };
-  }, [data]);
+        scales: {
+          x: { beginAtZero: true, grid: { display: false } },
+          y: {
+            ticks: {
+              font: { size: 10 },
+              callback: (value: string | number) => {
+                const label = String(value);
+                return label.length > 15 ? label.substring(0, 15) + '...' : label;
+              },
+            },
+          },
+        },
+      },
+    }),
+    [data],
+  );
 
   return <canvas ref={canvasRef} />;
 };
