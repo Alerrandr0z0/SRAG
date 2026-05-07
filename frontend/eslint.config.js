@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '.stryker-tmp']),
   { ignores: ['**/*.d.ts'] },
   ...tseslint.configs.recommended,
   {
