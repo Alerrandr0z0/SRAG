@@ -28,3 +28,11 @@ repos:
     rev: v8.25.1
     hooks:
       - id: gitleaks
+  - repo: local
+    hooks:
+      - id: frontend-check
+        name: Frontend (ESLint + Typecheck)
+        entry: bash -c 'cd frontend && npm run lint && npm run typecheck'
+        language: system
+        pass_filenot_regex: '^(?!frontend/)'
+        stages: [pre-commit]
