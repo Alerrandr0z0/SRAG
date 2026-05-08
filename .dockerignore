@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Build artifacts
+dist/
+frontend/dist/
+frontend/storybook-static/
+frontend/.stryker-tmp/
+frontend/reports/
+frontend/test-results/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# Docker
+docker-compose.yml
+*.Dockerfile
+
+# Documentation and temporary files
+docs/
+notebooks/.ipynb_checkpoints/
+*.md
+LICENSE
+README.md

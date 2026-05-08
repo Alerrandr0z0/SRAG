@@ -40,15 +40,17 @@ data/external/*
 .DS_Store
 Thumbs.db
 
-# Project Agents/Internal docs
-#AGENTS.md
-#GEMINI.md
-#frontend/GEMINI.md
+# Project Agents/Internal docs (uncomment if these should be private)
+# AGENTS.md
+# GEMINI.md
+# frontend/GEMINI.md
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
+frontend/.stryker-tmp/
+frontend/test-results/
 
 # mypy cache
 .mypy_cache/
