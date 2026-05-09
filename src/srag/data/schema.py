@@ -134,6 +134,8 @@ class SragCase(BaseModel):
     AN_PARA1: int | None = Field(alias="AN_PARA1", default=None)
     AN_PARA2: int | None = Field(alias="AN_PARA2", default=None)
     AN_PARA3: int | None = Field(alias="AN_PARA3", default=None)
+    AMOSTRA: int | None = Field(alias="AMOSTRA", default=None)
+    TP_AMOSTRA: int | None = Field(alias="TP_AMOSTRA", default=None)
     EVOLUCAO: int | None = Field(alias="EVOLUCAO", default=None)
     DT_EVOLUCA: date | None = Field(alias="DT_EVOLUCA", default=None)
 

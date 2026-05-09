@@ -11,7 +11,9 @@ export function useTerritoryData(
   zoneFilter?: string[],
   bairroFilter?: string[],
   unitFilter?: string[],
-  years?: number[]
+  years?: number[],
+  maternal?: string[],
+  occupations?: string[]
 ) {
   const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({ bairros: [], zonas: [] });
   const [boundary, setBoundary] = useState<unknown>(null);
@@ -28,7 +30,7 @@ export function useTerritoryData(
     async function loadBootstrap() {
       setLoading(true);
       try {
-         const bootstrap = await api.fetchTerritoryBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years);
+         const bootstrap = await api.fetchTerritoryBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations);
         if (isMounted) {
           setTerritory(bootstrap.territory);
           setBoundary(bootstrap.boundary);
@@ -43,7 +45,7 @@ export function useTerritoryData(
     }
     loadBootstrap();
     return () => { isMounted = false; };
-  }, [active, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years]);
+  }, [active, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, maternal, occupations]);
 
   useEffect(() => {
     if (!active) return;

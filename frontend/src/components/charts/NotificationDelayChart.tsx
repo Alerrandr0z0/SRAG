@@ -14,12 +14,6 @@ const NotificationDelayChart: React.FC<NotificationDelayChartProps> = ({ data })
     const { weeks, delays, counts } = buildNotificationDelaySeries(data || [], weeksWindow);
 
     return {
-      title: {
-        text: 'Atraso de Notificação por Semana',
-        left: 0,
-        top: 0,
-        textStyle: { fontSize: 20, color: '#1e293b', fontWeight: 600 }
-      },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
@@ -29,7 +23,7 @@ const NotificationDelayChart: React.FC<NotificationDelayChartProps> = ({ data })
         data: ['Volume', 'Mediana de Atraso'],
         bottom: 0
       },
-      grid: { left: '3%', right: '4%', bottom: '15%', top: '60px', containLabel: true },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '25px', containLabel: true },
       xAxis: {
         type: 'category',
         data: weeks,

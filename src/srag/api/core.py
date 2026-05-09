@@ -10,7 +10,7 @@ from srag.data.database import DB_URL
 
 engine = create_engine(DB_URL, pool_pre_ping=True)
 
-_cache: dict[str, Any] = {"df": None, "loaded_at": None}
+_cache: dict[str, Any] = {"df": None, "loaded_at": None} # Cache invalidated at 2026-05-09
 
 
 def sanitize_data(obj: object) -> object:
@@ -156,11 +156,15 @@ def get_df() -> pd.DataFrame:
             "VG_LIN",
             "VG_MET",
             "VG_REINF",
+            "PCR_PARA4",
             "CO_DETEC",
             "PCR_FLUASU",
             "PCR_FLUBLI",
+            "AMOSTRA",
+            "TP_AMOSTRA",
             "RAIOX_RES",
             "TOMO_RES",
+
             "TP_SOR",
             "RES_IGG",
             "RES_IGM",

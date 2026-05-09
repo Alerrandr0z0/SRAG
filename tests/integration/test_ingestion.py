@@ -12,7 +12,7 @@ if str(scripts_path) not in sys.path:
 from scripts.ingest_data import main as ingest_main
 
 
-def test_run_ingestion_duckdb(tmp_path, monkeypatch):
+def test_run_ingestion_duckdb(tmp_path, monkeypatch) -> None:
     # 1. Setup paths
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()

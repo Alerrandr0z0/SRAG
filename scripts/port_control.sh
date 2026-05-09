@@ -156,8 +156,12 @@ do_start() {
     (
       cd "$ROOT_DIR"
       export PYTHONPATH="$ROOT_DIR/src"
+      # Allow embedding in iframe (CSP and X-Frame-Options)
       uv run jupyter-lab --no-browser --ip 0.0.0.0 --port "$JUPYTER_PORT" \
-        --allow-root --NotebookApp.token='' --NotebookApp.password=''
+        --allow-root --ServerApp.token='' --ServerApp.password='' \
+        --ServerApp.allow_origin='*' \
+        --ServerApp.disable_check_xsrf=True \
+        --ServerApp.tornado_settings='{"headers":{"Content-Security-Policy":"frame-ancestors *","X-Frame-Options":"ALLOWALL"}}'
     ) &
     JUPYTER_PID=$!
   fi

@@ -8,18 +8,36 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
+
+from srag.api.dependencies import CommonFilters, get_common_filters
 
 router = APIRouter()
 
 
 @router.get("/geo/macrosector_heatpoints")
-def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1) -> Any:
+def macrosector_heatpoints(
+    zone: str = "Rural",
+    min_cases: int = 1,
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
     from srag.api import main as api
     from srag.data.geospatial import build_macrosector_heatpoints
 
     df = api.get_df()
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {"available": False, "points": []}
     result = build_macrosector_heatpoints(
@@ -29,11 +47,26 @@ def macrosector_heatpoints(zone: str = "Rural", min_cases: int = 1) -> Any:
 
 
 @router.get("/geo/rural_heatpoints")
-def rural_heatpoints(min_cases: int = 1) -> Any:
+def rural_heatpoints(
+    min_cases: int = 1,
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
     from srag.api import main as api
     from srag.data.geospatial import _feature_centroid, get_municipality_boundary
 
     df = api.get_df()
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {"available": False, "sectors": [], "center": None}
 

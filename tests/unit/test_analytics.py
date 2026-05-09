@@ -10,8 +10,8 @@ from srag.data.analytics import (
     compute_clinical_timing_metrics,
     compute_severity_metrics,
     compute_symptoms_signature,
-    compute_time_series_by_virus,
     compute_time_series,
+    compute_time_series_by_virus,
     compute_virus_distribution,
     infer_etiologic_agent,
     outcome_death_mask,
@@ -19,7 +19,7 @@ from srag.data.analytics import (
 )
 
 
-def test_categorize_age():
+def test_categorize_age() -> None:
     assert categorize_age(0.5) == "0-1 ano"
     assert categorize_age(1.9) == "0-1 ano"
     assert categorize_age(2) == "2-4 anos"
@@ -31,12 +31,12 @@ def test_categorize_age():
     assert categorize_age(85) == "80+ anos"
 
 
-def test_compute_virus_distribution_empty():
+def test_compute_virus_distribution_empty() -> None:
     df = pd.DataFrame()
     assert compute_virus_distribution(df).empty
 
 
-def test_compute_virus_distribution():
+def test_compute_virus_distribution() -> None:
     df = pd.DataFrame(
         {
             "CLASSI_FIN": [1, 5, 5, 2, 4, None],
@@ -50,7 +50,7 @@ def test_compute_virus_distribution():
     assert result[result["virus"] == "Influenza"]["count"].iloc[0] == 1
 
 
-def test_compute_severity_metrics():
+def test_compute_severity_metrics() -> None:
     df = pd.DataFrame(
         {
             "UTI": [1, 2, 1, 9, 1],  # 3 UTI
@@ -63,7 +63,7 @@ def test_compute_severity_metrics():
     assert metrics["death_rate"] == 40.0  # 2/5
 
 
-def test_apply_citizen_filters_profile():
+def test_apply_citizen_filters_profile() -> None:
     df = pd.DataFrame(
         {"NU_IDADE_N": [5, 15, 30, 70], "TP_IDADE": [3, 3, 3, 3], "CS_RACA": [1, 2, 1, 2]}
     )
@@ -74,7 +74,7 @@ def test_apply_citizen_filters_profile():
     assert 70 in filtered["NU_IDADE_N"].values
 
 
-def test_compute_alert_thresholds():
+def test_compute_alert_thresholds() -> None:
     # 10 weeks with 10 cases each
     from datetime import timedelta
 
@@ -91,7 +91,7 @@ def test_compute_alert_thresholds():
     assert thresholds["high"] > thresholds["medium"]
 
 
-def test_compute_time_series_by_virus():
+def test_compute_time_series_by_virus() -> None:
     df = pd.DataFrame(
         {
             "DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 1), date(2024, 1, 10)],
@@ -104,7 +104,7 @@ def test_compute_time_series_by_virus():
     assert "count" in ts.columns
 
 
-def test_outcome_death_mask():
+def test_outcome_death_mask() -> None:
     values = pd.Series([1, 2, 3, None, 2, 1])
     mask = outcome_death_mask(values)
     assert mask.sum() == 2  # Only code 2 should be True
@@ -113,7 +113,7 @@ def test_outcome_death_mask():
     assert mask.iloc[1]  # code 2 = death
 
 
-def test_outcome_valid_mask():
+def test_outcome_valid_mask() -> None:
     values = pd.Series([1, 2, 3, None, 9, 2])
     mask = outcome_valid_mask(values)
     assert mask.sum() == 4  # codes 1, 2, 3, 2 are valid (1,2,3,2)
@@ -121,7 +121,7 @@ def test_outcome_valid_mask():
     assert not mask.iloc[4]  # 9 is not valid
 
 
-def test_infer_etiologic_agent():
+def test_infer_etiologic_agent() -> None:
     df = pd.DataFrame(
         {
             "CLASSI_FIN": [5, 5, 5, 1, 1, 2],
@@ -135,7 +135,7 @@ def test_infer_etiologic_agent():
     assert agents.iloc[3] == "Influenza"
 
 
-def test_classificar_status_gripe():
+def test_classificar_status_gripe() -> None:
     row_with_dose = {
         "VACINA": 1,
         "DT_UT_DOSE": date(2024, 5, 1),
@@ -160,7 +160,7 @@ def test_classificar_status_gripe():
     assert result == "nao_vacinado"
 
 
-def test_compute_time_series():
+def test_compute_time_series() -> None:
     df = pd.DataFrame({"DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 5), date(2024, 1, 15)]})
     ts = compute_time_series(df)
     assert len(ts) >= 1
@@ -168,7 +168,7 @@ def test_compute_time_series():
     assert "total" in ts.columns
 
 
-def test_compute_clinical_timing_metrics():
+def test_compute_clinical_timing_metrics() -> None:
     df = pd.DataFrame(
         {
             "DT_SIN_PRI": [date(2024, 1, 1), date(2024, 1, 1), date(2024, 1, 1)],
@@ -190,7 +190,7 @@ def test_compute_clinical_timing_metrics():
     assert metrics["protocol_48h_adherence_rate"] == 50.0  # 1 de 2 casos tratados é aderente
 
 
-def test_compute_symptoms_signature():
+def test_compute_symptoms_signature() -> None:
     df = pd.DataFrame(
         {
             "NU_IDADE_N": [30, 30, 30],

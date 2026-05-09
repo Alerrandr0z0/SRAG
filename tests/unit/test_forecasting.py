@@ -3,20 +3,20 @@ import pandas as pd
 from srag.models.forecasting import predict_next_weeks
 
 
-def test_predict_next_weeks_empty():
+def test_predict_next_weeks_empty() -> None:
     df = pd.DataFrame(columns=["epi_week", "total"])
     result = predict_next_weeks(df)
     assert result["status"] == "insufficient_data"
 
 
-def test_predict_next_weeks_insufficient_data():
+def test_predict_next_weeks_insufficient_data() -> None:
     df = pd.DataFrame({"epi_week": [f"2024-{i:02d}" for i in range(1, 6)], "total": [10] * 5})
     # Prophet needs at least 12 points in current implementation
     result = predict_next_weeks(df, weeks_to_predict=2)
     assert result["status"] == "insufficient_data"
 
 
-def test_predict_next_weeks_prophet_success():
+def test_predict_next_weeks_prophet_success() -> None:
     # Provide 12 weeks of data
     df = pd.DataFrame(
         {
@@ -35,7 +35,7 @@ def test_predict_next_weeks_prophet_success():
         assert f["is_forecast"] is True
 
 
-def test_predict_next_weeks_no_negative():
+def test_predict_next_weeks_no_negative() -> None:
     # Steep downward trend
     df = pd.DataFrame(
         {

@@ -6,8 +6,9 @@ from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends
 
+from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
 
 router = APIRouter()
@@ -20,14 +21,7 @@ def health() -> dict[str, str]:
 
 @router.get("/summary")
 def get_summary(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> SummaryResponse:
     from srag.api import main as api
 
@@ -37,8 +31,18 @@ def get_summary(
         years_series = pd.to_datetime(df_all["DT_SIN_PRI"], errors="coerce").dt.year.dropna()
         available_years = sorted({int(y) for y in years_series})
 
-    df = api.apply_global_filters(df_all, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
+    df = api.apply_global_filters(
+        df_all,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {
             "uti_rate": 0.0,
@@ -68,20 +72,23 @@ def get_trends(
     last_n_weeks: int = 26,
     weeks_to_predict: int = 4,
     lookback_weeks: int = 0,
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> TrendsResponse:
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {
             "history": [],
@@ -113,23 +120,51 @@ def get_trends(
 @router.get("/virus")
 def get_virus(
     detail_level: str = "summary",
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> list[VirusDistributionItem]:
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return []
 
-    if detail_level == "detailed":
-        dist = api.compute_virus_detailed_distribution(df)
-    else:
+    if detail_level == "summary":
         dist = api.compute_virus_distribution(df)
+    else:
+        dist = api.compute_virus_detailed_distribution(df, detail_level=detail_level)
 
     return api.sanitize_data(dist.to_dict(orient="records"))  # type: ignore[return-value]
+
+
+@router.get("/data_completeness")
+def get_data_completeness(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
+    from srag.api import main as api
+
+    df = api.get_df()
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
+    return api.compute_data_completeness(df)

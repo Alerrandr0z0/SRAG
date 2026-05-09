@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
+import * as d3 from 'd3';
 
 interface ChoroplethType {
   feature_collection?: FeatureCollection;
@@ -43,6 +44,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const boundaryLayer = useRef<L.GeoJSON | null>(null);
   const overlayLayer = useRef<L.LayerGroup | null>(null);
 
+  // Calculate the color scale based on intensity
+  const colorScale = useMemo(() => {
+    if (mapZoneMode !== 'Urbana' || !choropleth?.feature_collection?.features?.length) {
+      return null;
+    }
+
+    const counts = choropleth.feature_collection.features.map(f => (f.properties?.count as number) || 0);
+    const maxCount = d3.max(counts) || 1;
+
+    // Sequential scale using warm tones (Yellow-Orange-Red)
+    return d3.scaleSequential()
+      .domain([0, maxCount])
+      .interpolator(d3.interpolateYlOrRd);
+  }, [choropleth, mapZoneMode]);
+
   const handleSectorClick = useCallback((sector: string) => {
     if (!onSectorSelect) return;
     const next = selectedSectors.includes(sector)
@@ -78,22 +94,27 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
 
       if (mapZoneMode === 'Urbana' && choropleth?.feature_collection?.features?.length) {
+        if (mapInstance.current) {
+          mapInstance.current.setView([-5.18, -37.34], 12);
+        }
+
         overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
           style: (f) => {
             const feature = f as { properties?: { bairro?: string; count?: number } };
-            const count = feature.properties && (feature.properties as { count?: number }).count;
+            const count = (feature.properties?.count as number) || 0;
             return {
               color: '#0f172a',
-              weight: 1,
-              fillColor: count != null && count > 0 ? '#14b8a6' : '#e2e8f0',
+              weight: 0.5,
+              fillColor: count > 0 && colorScale ? colorScale(count) : '#e2e8f0',
               fillOpacity: 0.85,
             };
           },
           onEachFeature: (feature, layer) => {
-            const feat = feature as { properties?: { bairro?: string } };
+            const feat = feature as { properties?: { bairro?: string; count?: number } };
             if (feat.properties?.bairro) {
+              const c = feat.properties.count || 0;
               layer.bindTooltip(
-                `<strong>${feat.properties.bairro}</strong><br/>${feature.properties?.count || 0} casos`,
+                `<strong>${feat.properties.bairro}</strong><br/>${c} ${c === 1 ? 'caso' : 'casos'}`,
                 { sticky: true }
               );
             }
@@ -151,7 +172,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
     renderMap();
     return () => { cancelled = true; };
-  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick]);
+  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick, colorScale]);
 
   useEffect(() => {
     return () => {

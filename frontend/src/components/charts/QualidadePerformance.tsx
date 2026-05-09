@@ -31,6 +31,15 @@ export interface QualidadePerformanceData {
   antiviral:        AntiviralItem[];
   oportunidade:     BoxStats;
   oportunidadeMeta: number; // dias — janela terapêutica (ex: 2)
+  coberturaTestagem: {
+    collected: number;
+    total: number;
+    rate: number;
+  };
+  distribuicaoAmostra: {
+    label: string;
+    count: number;
+  }[];
 }
 
 // ─── Paleta unificada ────────────────────────────────────────────────────────
@@ -521,21 +530,68 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
         </div>
       ),
     },
+    {
+      title: "Cobertura de testagem",
+      sub:   "Proporção de casos com amostra laboratorial coletada",
+      content: (
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+             <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                <circle 
+                  cx="60" cy="60" r="54" fill="none" stroke={data.coberturaTestagem.rate >= 80 ? COLORS.ok : COLORS.warn} 
+                  strokeWidth="12" strokeDasharray={`${(data.coberturaTestagem.rate / 100) * 339.29} 339.29`} 
+                  strokeLinecap="round" transform="rotate(-90 60 60)"
+                  style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                />
+             </svg>
+             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b' }}>{data.coberturaTestagem.rate}%</span>
+             </div>
+          </div>
+          <p style={{ marginTop: '1rem', fontSize: '12px', color: '#64748b' }}>
+            <strong>{data.coberturaTestagem.collected}</strong> amostras de <strong>{data.coberturaTestagem.total}</strong> casos
+          </p>
+        </div>
+      )
+    },
+    {
+      title: "Distribuição de amostras",
+      sub:   "Tipos de material biológico coletado para diagnóstico",
+      content: (
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
+          {data.distribuicaoAmostra.slice(0, 5).map((item, i) => (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 600, color: '#475569' }}>{item.label}</span>
+                <span style={{ color: '#94a3b8' }}>{item.count}</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${(item.count / Math.max(1, data.coberturaTestagem.collected)) * 100}%`, 
+                  height: '100%', 
+                  background: i === 0 ? COLORS.ok : COLORS.neutral,
+                  borderRadius: '3px'
+                }} />
+              </div>
+            </div>
+          ))}
+          {data.distribuicaoAmostra.length === 0 && (
+            <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>Sem dados de amostra.</p>
+          )}
+        </div>
+      )
+    }
   ];
 
   return (
-    <div style={{ padding: "8px 0", fontFamily: "inherit" }}>
+    <div style={{ padding: "0", fontFamily: "inherit" }}>
       <Tooltip {...tooltip} />
 
-      {/* Cabeçalho da seção */}
-      <h3 className="block-title">
-        Qualidade e Performance Assistencial
-      </h3>
-
-      {/* Grid 2×2 */}
+      {/* Grid 2×3 */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+        gridTemplateColumns: "repeat(3, 1fr)",
         gap: "16px",
       }}>
         {cards.map((card, i) => (
