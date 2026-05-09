@@ -6,25 +6,51 @@ from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
+from srag.api.dependencies import CommonFilters, get_common_filters
 
 router = APIRouter()
 
 
+@router.get("/occupations")
+def get_occupations(
+    limit: int = 50,
+    filters: CommonFilters = Depends(get_common_filters),
+) -> list[dict[str, Any]]:
+    """Retorna as ocupações mais frequentes, permitindo filtragem por ano/zona."""
+    from srag.api import main as api
+
+    df = api.get_df()
+    # Aplicamos apenas filtros de base (Ano, Zona, Bairro) para não circular a busca
+    df = api.apply_global_filters(
+        df,
+        zonas=filters.zonas,
+        bairros=filters.bairros,
+        years=filters.years,
+    )
+    return api.compute_occupation_profile(df, top_n=limit)
+
+
 @router.get("/clinical_flow")
 def clinical_flow(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Analisa a jornada clínica completa para o gráfico Sankey com porcentagens."""
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return {"nodes": [], "links": []}
 
@@ -77,18 +103,23 @@ def clinical_flow(
 
 @router.get("/hospitalization_duration")
 def hospitalization_duration(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> list[float]:
     """Calcula a distribuição de dias de internação (DT_EVOLUCA - DT_INTERNA)."""
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return []
 
@@ -104,18 +135,23 @@ def hospitalization_duration(
 
 @router.get("/vaccination_profile")
 def vaccination_profile(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Analisa o esquema vacinal detalhado de COVID-19 e Influenza com filtros."""
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return {}
 
@@ -167,20 +203,25 @@ def vaccination_profile(
 
 @router.get("/citizen_bootstrap")
 def citizen_bootstrap(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Bootstrap de dados do cidadão com filtros hierárquicos e multi-seleção."""
     from srag.api import main as api
 
     df = api.get_df()
-    df_filtered = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df_filtered = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
 
-    valid_profiles = [p for p in (profile or []) if p]
+    valid_profiles = [p for p in (filters.profile or []) if p]
     heatmap_profile = valid_profiles[0] if len(valid_profiles) == 1 else "all"
 
     return api.sanitize_data(
@@ -202,41 +243,46 @@ def citizen_bootstrap(
 
 @router.get("/clinical_timing")
 def clinical_timing(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Métricas de fluxo clínico: tempo sintomas→internação, internação→UTI, adesão ao protocolo antiviral."""
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
-    if df.empty:
-        return api.compute_clinical_timing_metrics(df)
-
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     return api.compute_clinical_timing_metrics(df)
 
 
 @router.get("/vaccine_survival")
 def vaccine_survival(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Calcula as curvas de sobrevivência Kaplan-Meier com filtros."""
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return {"covid": {}, "gripe": {}}
 

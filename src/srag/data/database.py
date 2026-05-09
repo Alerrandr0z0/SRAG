@@ -72,6 +72,8 @@ class SragRecord(Base):
     AN_PARA1 = Column(Integer)
     AN_PARA2 = Column(Integer)
     AN_PARA3 = Column(Integer)
+    AMOSTRA = Column(Integer)
+    TP_AMOSTRA = Column(Integer)
     DT_INTERNA = Column(Date)
     DT_ENTUTI = Column(Date)
     DT_SAIDUTI = Column(Date)

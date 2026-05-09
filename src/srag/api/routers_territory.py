@@ -7,7 +7,9 @@ from typing import Any
 import json
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from srag.api.dependencies import CommonFilters, get_common_filters
 
 router = APIRouter()
 
@@ -17,10 +19,23 @@ def territory_bootstrap(
     min_cases: int = 5,
     entities_min_cases: int = 3,
     entities_limit: int = 40,
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     from srag.api import main as api
 
     df = api.get_df()
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {}
 
@@ -63,10 +78,25 @@ def territory_bootstrap(
 
 
 @router.get("/units")
-def get_units(min_cases: int = 3) -> Any:
+def get_units(
+    min_cases: int = 3,
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
     from srag.api import main as api
 
     df = api.get_df()
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return []
     dist = api.compute_unit_distribution(df, min_cases=min_cases)

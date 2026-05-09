@@ -279,9 +279,10 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
     out = df.copy()
     pcr_res = pd.to_numeric(out.get("PCR_RESUL"), errors="coerce")
     an_res = pd.to_numeric(out.get("RES_AN"), errors="coerce")
-    amostra = pd.to_numeric(out.get("AMOSTRA"), errors="coerce")
+    pd.to_numeric(out.get("AMOSTRA"), errors="coerce")
 
-    # Apenas casos que coletaram amostra (1=Sim) são considerados para o denominador de positividade
+    # Apenas casos que coletaram amostra (1=Sim) são considerados para
+    # o denominador de positividade
     # Fallback para o nome da coluna conforme o dicionário/schema
     col_amostra = out.get("AMOSTRA")
     if col_amostra is None:
@@ -300,8 +301,8 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
         .reset_index()
     )
 
-    # Evita divisão por zero e infinito
-    def calc_rate(row):
+    # Divisão segura
+    def calc_rate(row: pd.Series) -> float:
         if row["tested"] <= 0:
             return 0.0
         return round((row["positive"] / row["tested"] * 100), 1)
@@ -417,12 +418,75 @@ def compute_virus_distribution(df: pd.DataFrame) -> pd.DataFrame:
     return result.reset_index(drop=True)
 
 
-def compute_virus_detailed_distribution(df: pd.DataFrame) -> pd.DataFrame:
+def compute_virus_detailed_distribution(
+    df: pd.DataFrame, detail_level: str = "detailed"
+) -> pd.DataFrame:
     """Build detailed viral profile from laboratory fields when available."""
     if df.empty:
         return pd.DataFrame(columns=["virus", "count"])
 
     out = df.copy()
+
+    if detail_level == "influenza_detailed":
+        # Specific focus on Influenza subtypes
+        flu = out[pd.to_numeric(out["CLASSI_FIN"], errors="coerce") == 1].copy()
+        if flu.empty:
+            return pd.DataFrame([{"virus": "Nenhum Influenza detectado", "count": 0}])
+
+        # Map Influenza A subtypes
+        a_map = {1: "A/H1N1 pdm09", 2: "A/H3N2", 3: "A (Não subtipado)", 4: "A (Não subtipável)"}
+        flu_a = flu[pd.to_numeric(flu["TP_FLU_PCR"], errors="coerce") == 1].copy()
+        flu_a["virus"] = (
+            pd.to_numeric(flu_a["PCR_FLUASU"], errors="coerce").map(a_map).fillna("Influenza A")
+        )
+
+        # Map Influenza B lineages
+        b_map = {1: "B/Victoria", 2: "B/Yamagata"}
+        flu_b = flu[pd.to_numeric(flu["TP_FLU_PCR"], errors="coerce") == 2].copy()
+        flu_b["virus"] = (
+            pd.to_numeric(flu_b["PCR_FLUBLI"], errors="coerce").map(b_map).fillna("Influenza B")
+        )
+
+        # Merge results
+        remaining = flu[~flu.index.isin(flu_a.index) & ~flu.index.isin(flu_b.index)].copy()
+        remaining["virus"] = "Influenza (Não tipada)"
+
+        final = pd.concat([flu_a, flu_b, remaining])
+        return (
+            final.groupby("virus")
+            .size()
+            .reset_index(name="count")
+            .sort_values("count", ascending=False)
+        )
+
+    if detail_level == "covid_detailed":
+        # Specific focus on COVID variants (even if empty in current base)
+        covid = out[pd.to_numeric(out["CLASSI_FIN"], errors="coerce") == 5].copy()
+        if covid.empty:
+            return pd.DataFrame([{"virus": "Nenhum COVID-19 detectado", "count": 0}])
+
+        variant_map = {
+            1: "Ômicron",
+            2: "Delta",
+            3: "Alfa",
+            4: "Beta",
+            5: "Gama",
+            6: "Recombinante",
+            7: "Outra",
+        }
+        covid["virus"] = (
+            pd.to_numeric(covid["VG_OMS"], errors="coerce")
+            .map(variant_map)
+            .fillna("Não sequenciado")
+        )
+        return (
+            covid.groupby("virus")
+            .size()
+            .reset_index(name="count")
+            .sort_values("count", ascending=False)
+        )
+
+    # Standard "detailed" logic
     out["virus"] = "Em investigacao"
 
     pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")
@@ -804,7 +868,7 @@ def compute_vaccine_manufacturer_distribution(df: pd.DataFrame) -> list[dict[str
     fab_cols = ["FAB_RE_BI", "FAB_ADIC", "FAB_COVRF2", "FAB_COVRF", "FAB_COV2", "FAB_COV1"]
 
     # Extract last non-null manufacturer per row
-    def get_last_fab(row):
+    def get_last_fab(row: pd.Series) -> str | None:
         for col in fab_cols:
             val = row.get(col)
             if pd.notna(val) and str(val).strip() != "":
@@ -828,7 +892,7 @@ def compute_vaccine_manufacturer_distribution(df: pd.DataFrame) -> list[dict[str
         "JOHNSON": "Janssen (Johnson & Johnson)",
     }
 
-    def normalize_fab(name):
+    def normalize_fab(name: str | None) -> str:
         if name == "NÃO INFORMADO":
             return name
         for key, target in mapping.items():

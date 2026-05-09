@@ -5,12 +5,15 @@ Ele realiza a filtragem e anonimização de dados de SRAG conforme a LGPD.
 
 import tkinter as tk
 import unicodedata
-from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from datetime import date
 
 # --- LÓGICA DE NEGÓCIO (EMBUTIDA PARA SER INDEPENDENTE) ---
 
@@ -57,7 +60,7 @@ def normalize_bairro_name(value):
     return " ".join(text.split())
 
 
-def infer_zone(bairro_ref):
+def infer_zone(bairro_ref) -> str | None:
     if bairro_ref is None:
         return None
     if any(k in bairro_ref for k in RURAL_KEYWORDS):
@@ -139,7 +142,7 @@ def process_file(input_path, output_path):
 
 
 class App:
-    def __init__(self, root):
+    def __init__(self, root) -> None:
         self.root = root
         root.title("Mossoró - Processador de Dados SRAG (LGPD)")
         root.geometry("500x300")
@@ -184,7 +187,7 @@ class App:
         # Botão de Processar
         ttk.Button(main_frame, text="PROCESSAR E ANONIMIZAR", command=self.run).pack(pady=20)
 
-    def browse_input(self):
+    def browse_input(self) -> None:
         filename = filedialog.askopenfilename(
             filetypes=[("Arquivos de Dados", "*.csv *.xlsx *.xls *.parquet")]
         )
@@ -194,14 +197,14 @@ class App:
             p = Path(filename)
             self.output_path.set(str(p.parent / f"{p.stem}_MOSSORO_LIMPO.csv"))
 
-    def browse_output(self):
+    def browse_output(self) -> None:
         filename = filedialog.asksaveasfilename(
             defaultextension=".csv", filetypes=[("CSV", "*.csv")]
         )
         if filename:
             self.output_path.set(filename)
 
-    def run(self):
+    def run(self) -> None:
         if not self.input_path.get() or not self.output_path.get():
             messagebox.showwarning("Erro", "Por favor, selecione os arquivos de entrada e saída.")
             return

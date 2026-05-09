@@ -31,6 +31,8 @@ def apply_global_filters(
     bairros: list[str] | None = None,
     unidades: list[str] | None = None,
     years: list[int] | None = None,
+    maternal: list[str] | None = None,
+    occupations: list[str] | None = None,
 ) -> pd.DataFrame:
     """Apply hierarchy of filters with support for multi-selection."""
     if df.empty:
@@ -49,6 +51,8 @@ def apply_global_filters(
     zonas = [z for z in (zonas or []) if z]
     bairros = [b for b in (bairros or []) if b]
     unidades = [u for u in (unidades or []) if u]
+    maternal = [m for m in (maternal or []) if m]
+    occupations = [o for o in (occupations or []) if o]
 
     if profiles:
         age = _age_years(out)
@@ -75,8 +79,56 @@ def apply_global_filters(
 
     if genders:
         gender_codes = [g.upper() for g in genders if g.upper() in ["M", "F", "I"]]
-        if gender_codes:
+
+        # LOGIC: If 'F' is selected AND 'maternal' sub-filters are active,
+        # the maternal filters should define the female subset to avoid duplication.
+        if "F" in gender_codes and maternal:
+            # We don't apply the 'F' filter here, because the 'maternal' block below
+            # will handle the specific female subset. We only apply 'M' or 'I' if present.
+            other_genders = [g for g in gender_codes if g != "F"]
+            if other_genders:
+                # If M or I are also selected, we need a complex mask
+                m_base = pd.to_numeric(out["CS_GESTANT"], errors="coerce")
+                is_maternal = False
+                if "gestante" in maternal:
+                    is_maternal |= m_base.isin([1, 2, 3, 4])
+                if "puerpera" in maternal:
+                    is_maternal |= (m_base == 6)
+
+                out = out[
+                    out["CS_SEXO"].isin(other_genders)
+                    | ((out["CS_SEXO"] == "F") & is_maternal)
+                ]
+                # Mark maternal as handled so the next block doesn't filter again
+                maternal = None
+            else:
+                # ONLY F selected with maternal filters, let the maternal block handle it
+                pass
+        elif gender_codes:
             out = out[out["CS_SEXO"].isin(gender_codes)]
+
+    if maternal:
+        # CS_GESTANT codes: 1-1o, 2-2o, 3-3o, 4-Idade gestacional ignorada,
+        # 5-Não se aplica, 6-Puérpera, 9-Ignorado
+        m_masks = []
+        m_base = pd.to_numeric(out["CS_GESTANT"], errors="coerce")
+        if "gestante" in maternal:
+            m_masks.append(m_base.isin([1, 2, 3, 4]))
+        if "puerpera" in maternal:
+            m_masks.append(m_base == 6)
+
+        if m_masks:
+            m_combined = m_masks[0].fillna(False)
+            for m in m_masks[1:]:
+                m_combined |= m.fillna(False)
+            # Apply maternal filter AND ensure they are Female (SIVEP rule)
+            out = out[(out["CS_SEXO"] == "F") & m_combined]
+
+    if occupations:
+        occ_norm = [str(o).strip().upper() for o in occupations]
+        out = out[
+            out["PAC_DSCBO"].fillna("").astype(str).str.upper().str.strip().isin(occ_norm)
+        ]
 
     if zonas:
         zona_norm = [str(z).strip().upper() for z in zonas]

@@ -36,12 +36,12 @@ def generate_test_data(n_rows: int = 1000) -> pd.DataFrame:
 
 
 class TestCategorizeAgeBenchmark:
-    def test_categorize_age_single(self, benchmark):
+    def test_categorize_age_single(self, benchmark) -> None:
         """Benchmark: categorize single age."""
         result = benchmark(categorize_age, 30.5)
         assert result == "30-39 anos"
 
-    def test_categorize_age_batch(self, benchmark):
+    def test_categorize_age_batch(self, benchmark) -> None:
         """Benchmark: categorize 1000 ages."""
         ages = [i % 100 for i in range(1000)]
         result = benchmark(lambda: [categorize_age(a) for a in ages])
@@ -49,12 +49,12 @@ class TestCategorizeAgeBenchmark:
 
 
 class TestNormalizeAgeBenchmark:
-    def test_normalize_age_years(self, benchmark):
+    def test_normalize_age_years(self, benchmark) -> None:
         """Benchmark: normalize age in years (most common)."""
         result = benchmark(_normalize_age_to_years, 30, 3)
         assert result == 30.0
 
-    def test_normalize_age_batch(self, benchmark):
+    def test_normalize_age_batch(self, benchmark) -> None:
         """Benchmark: normalize 1000 ages."""
         data = [(i % 100, 3) for i in range(1000)]
         result = benchmark(lambda: [_normalize_age_to_years(age, tp) for age, tp in data])
@@ -62,13 +62,13 @@ class TestNormalizeAgeBenchmark:
 
 
 class TestOutcomeDeathMaskBenchmark:
-    def test_outcome_death_mask_small(self, benchmark):
+    def test_outcome_death_mask_small(self, benchmark) -> None:
         """Benchmark: death mask with 100 records."""
         df = generate_test_data(100)
         result = benchmark(outcome_death_mask, df["EVOLUCAO"])
         assert len(result) == 100
 
-    def test_outcome_death_mask_large(self, benchmark):
+    def test_outcome_death_mask_large(self, benchmark) -> None:
         """Benchmark: death mask with 10000 records."""
         df = generate_test_data(10000)
         result = benchmark(outcome_death_mask, df["EVOLUCAO"])
@@ -76,13 +76,13 @@ class TestOutcomeDeathMaskBenchmark:
 
 
 class TestInferEtiologicAgentBenchmark:
-    def test_infer_etiologic_agent_small(self, benchmark):
+    def test_infer_etiologic_agent_small(self, benchmark) -> None:
         """Benchmark: infer agent with 100 records."""
         df = generate_test_data(100)
         result = benchmark(infer_etiologic_agent, df)
         assert len(result) == 100
 
-    def test_infer_etiologic_agent_large(self, benchmark):
+    def test_infer_etiologic_agent_large(self, benchmark) -> None:
         """Benchmark: infer agent with 10000 records."""
         df = generate_test_data(10000)
         result = benchmark(infer_etiologic_agent, df)
@@ -90,13 +90,13 @@ class TestInferEtiologicAgentBenchmark:
 
 
 class TestComputeVirusDistributionBenchmark:
-    def test_compute_virus_distribution_small(self, benchmark):
+    def test_compute_virus_distribution_small(self, benchmark) -> None:
         """Benchmark: compute virus distribution with 100 records."""
         df = generate_test_data(100)
         result = benchmark(compute_virus_distribution, df)
         assert not result.empty
 
-    def test_compute_virus_distribution_large(self, benchmark):
+    def test_compute_virus_distribution_large(self, benchmark) -> None:
         """Benchmark: compute virus distribution with 10000 records."""
         df = generate_test_data(10000)
         result = benchmark(compute_virus_distribution, df)
@@ -104,13 +104,13 @@ class TestComputeVirusDistributionBenchmark:
 
 
 class TestComputeTimeSeriesBenchmark:
-    def test_compute_time_series_small(self, benchmark):
+    def test_compute_time_series_small(self, benchmark) -> None:
         """Benchmark: compute time series with 100 records."""
         df = generate_test_data(100)
         result = benchmark(compute_time_series, df)
         assert len(result) >= 0
 
-    def test_compute_time_series_large(self, benchmark):
+    def test_compute_time_series_large(self, benchmark) -> None:
         """Benchmark: compute time series with 10000 records."""
         df = generate_test_data(10000)
         result = benchmark(compute_time_series, df)
@@ -118,7 +118,7 @@ class TestComputeTimeSeriesBenchmark:
 
 
 class TestComputeAlertThresholdsBenchmark:
-    def test_compute_alert_thresholds(self, benchmark):
+    def test_compute_alert_thresholds(self, benchmark) -> None:
         """Benchmark: compute alert thresholds."""
         df = generate_test_data(1000)
         result = benchmark(compute_alert_thresholds, df)
@@ -127,7 +127,7 @@ class TestComputeAlertThresholdsBenchmark:
 
 
 class TestComputeSeverityMetricsBenchmark:
-    def test_compute_severity_metrics(self, benchmark):
+    def test_compute_severity_metrics(self, benchmark) -> None:
         """Benchmark: compute severity metrics."""
         df = generate_test_data(1000)
         result = benchmark(compute_severity_metrics, df)
@@ -137,13 +137,13 @@ class TestComputeSeverityMetricsBenchmark:
 
 
 class TestApplyGlobalFiltersBenchmark:
-    def test_apply_global_filters_by_profile(self, benchmark):
+    def test_apply_global_filters_by_profile(self, benchmark) -> None:
         """Benchmark: apply global filters by profile."""
         df = generate_test_data(5000)
         result = benchmark(apply_global_filters, df, profiles=["idoso"])
         assert len(result) <= len(df)
 
-    def test_apply_global_filters_by_gender(self, benchmark):
+    def test_apply_global_filters_by_gender(self, benchmark) -> None:
         """Benchmark: apply global filters by gender."""
         df = generate_test_data(5000)
         result = benchmark(apply_global_filters, df, genders=["M"])
@@ -151,7 +151,7 @@ class TestApplyGlobalFiltersBenchmark:
 
 
 class TestClassificarStatusGripeBenchmark:
-    def test_classificar_status_gripe(self, benchmark):
+    def test_classificar_status_gripe(self, benchmark) -> None:
         """Benchmark: classify vaccination status for flu."""
         row = {
             "VACINA": 1,

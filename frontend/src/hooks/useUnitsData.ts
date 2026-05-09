@@ -11,7 +11,9 @@ export function useUnitsData(
   zoneFilter?: string[],
   bairroFilter?: string[],
   unitFilter?: string[],
-  years?: number[]
+  years?: number[],
+  maternal?: string[],
+  occupations?: string[]
 ) {
   const [units, setUnits] = useState<Epi.UnitStats[]>([]);
   const [clinicalFlow, setClinicalFlow] = useState<Epi.ClinicalFlow>({ nodes: [], links: [] });
@@ -28,11 +30,11 @@ export function useUnitsData(
       setLoading(true);
       try {
         const [unitsData, flowData, hospData, timeline, bottleneck] = await Promise.all([
-          api.fetchUnits(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchClinicalFlow(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchHospitalizationDuration(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchIcuBottleneck(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years)
+          api.fetchUnits(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
+          api.fetchClinicalFlow(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
+          api.fetchHospitalizationDuration(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
+          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
+          api.fetchIcuBottleneck(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations)
         ]);
 
         if (isMounted) {
@@ -50,7 +52,7 @@ export function useUnitsData(
     }
     load();
     return () => { isMounted = false; };
-  }, [active, swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years]);
+  }, [active, swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, maternal, occupations]);
 
   return { units, clinicalFlow, hospitalization, timelineData, icuBottleneck, loading };
 }

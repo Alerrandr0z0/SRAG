@@ -6,27 +6,32 @@ from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends
+
+from srag.api.dependencies import CommonFilters, get_common_filters
 
 router = APIRouter()
 
 
 @router.get("/laboratory_network")
 def laboratory_network(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {}
 
@@ -93,18 +98,23 @@ def context_trends(
     last_n_weeks: int = 26,
     weeks_to_predict: int = 4,
     lookback_weeks: int = 0,
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     from srag.api import main as api
     from srag.models.forecasting import predict_next_weeks
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return {"history": [], "forecast": [], "thresholds": {}, "composition": []}
 
@@ -135,17 +145,22 @@ def context_trends(
 @router.get("/timeline_agg")
 def timeline_agg(
     virus: str = "covid",
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     from srag.api import main as api
 
     df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = api.apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
     if df.empty:
         return []
 
@@ -155,21 +170,25 @@ def timeline_agg(
 
 @router.get("/icu_bottleneck")
 def icu_bottleneck(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Calcula o tempo de espera (em dias) entre a internação e a entrada na UTI por mês."""
     from srag.api import main as api
 
     try:
         df = api.get_df()
-        df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades, years)
+        df = api.apply_global_filters(
+            df,
+            filters.profile,
+            filters.race,
+            filters.gender,
+            filters.zonas,
+            filters.bairros,
+            filters.unidades,
+            filters.years,
+            maternal=filters.maternal,
+            occupations=filters.occupations,
+        )
         if df.empty:
             return []
 

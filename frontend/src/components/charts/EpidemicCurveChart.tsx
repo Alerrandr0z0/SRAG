@@ -32,18 +32,6 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       allWeeks = allWeeks.slice(-limit);
     }
 
-    const baseTitle = {
-      text: 'Circulação Viral Confirmada',
-      left: 0,
-      top: 0,
-      textStyle: { 
-        fontSize: 20, 
-        color: '#1e293b', 
-        fontWeight: 600,
-        fontFamily: 'inherit'
-      }
-    };
-
     if (mode === 'composicao') {
       const agents = Array.from(new Set(virusTrends.map(d => d.virus))).filter(Boolean);
 
@@ -65,7 +53,6 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       });
 
       return {
-        title: baseTitle,
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
         legend: { data: agents, bottom: 0, icon: 'circle' },
         grid: { left: '30px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
@@ -88,7 +75,6 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       });
 
       return {
-        title: baseTitle,
         tooltip: { trigger: 'axis' },
         grid: { left: '40px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
         xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks }],
@@ -110,7 +96,6 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       const rates = filteredPositivity.map((d) => d.positivity_rate);
 
       return {
-        title: baseTitle,
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
         legend: { data: ['Exames', 'Positivos', 'Taxa (%)'], bottom: 0 },
         grid: { left: '3%', right: '3%', bottom: '15%', top: '25px', containLabel: true },
