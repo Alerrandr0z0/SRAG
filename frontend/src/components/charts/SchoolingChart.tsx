@@ -38,10 +38,6 @@ const SchoolingChart: React.FC<SchoolingChartProps> = ({ data }) => {
           y: {
             ticks: {
               font: { size: 10 },
-              callback: (value: string | number) => {
-                const label = String(value);
-                return label.length > 15 ? label.substring(0, 15) + '...' : label;
-              },
             },
           },
         },

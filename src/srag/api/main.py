@@ -64,10 +64,20 @@ outcome_valid_mask = _analytics.outcome_valid_mask
 predict_next_weeks = _forecasting.predict_next_weeks
 
 app = FastAPI(title="SRAG Mossoró API")
-logfire.configure()
-logfire.instrument_fastapi(app)
-logfire.instrument_pydantic()
-logfire.instrument_sqlalchemy(engine := create_engine(DB_URL, pool_pre_ping=True))
+
+# Configure Logfire (Optional for local development)
+try:
+    logfire.configure(send_to_logfire='if_token_set')
+    logfire.instrument_fastapi(app)
+    logfire.instrument_pydantic()
+except Exception as e:
+    print(f"⚠️ Logfire not configured: {e}")
+
+engine = create_engine(DB_URL, pool_pre_ping=True)
+try:
+    logfire.instrument_sqlalchemy(engine)
+except Exception:
+    pass
 
 app.add_middleware(
     CORSMiddleware,
