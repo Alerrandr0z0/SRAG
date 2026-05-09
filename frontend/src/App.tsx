@@ -8,6 +8,7 @@ import { useUnitsData } from './hooks/useUnitsData';
 import { useCitizenData } from './hooks/useCitizenData';
 
 // UI Components
+import Sidebar from './components/ui/Sidebar';
 import KpiCard from './components/ui/KpiCard';
 import CitizenFilterBar from './components/ui/CitizenFilterBar';
 import TerritoryFilterBar from './components/ui/TerritoryFilterBar';
@@ -22,6 +23,7 @@ import TerritoryPanel from './components/panels/TerritoryPanel';
 import UnitsPanel from './components/panels/UnitsPanel';
 import CitizenPanel from './components/panels/CitizenPanel';
 import VigilancePanel from './components/panels/VigilancePanel';
+import NotebooksPanel from './components/panels/NotebooksPanel';
 
 function App() {
   // Config State
@@ -76,13 +78,6 @@ function App() {
 
   const availableYears = data?.summary?.available_years || [];
 
-  const panelButtons = [
-    { key: 'territorio', label: 'Território' },
-    { key: 'unidades', label: 'Unid. Saúde' },
-    { key: 'cidadao', label: 'Cidadão' },
-    { key: 'vigilancia', label: 'Vigilância' }
-  ];
-
   const currentTrends = data?.trends;
 
   const activeFilters = [
@@ -104,65 +99,54 @@ function App() {
   };
 
   return (
-    <main className="app-shell">
-      <section className="panel header-panel">
-        <div style={{ flex: 1 }}>
-          <h1>Painel SRAG - Mossoró/RN</h1>
-          {activeFilters.length === 0 ? (
-            <p className="sub">Monitoramento de gravidade e perfil viral.</p>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginRight: '4px', letterSpacing: '0.05em' }}>FILTROS ATIVOS:</span>
-              {activeFilters.map(f => (
-                <div key={`${f.type}-${f.val}`} className="global-filter-chip">
-                  <span style={{ opacity: 0.6, marginRight: '3px' }}>{f.type}:</span>
-                  <strong>{f.val}</strong>
-                  <button onClick={f.remover} className="global-filter-close">
-                    <svg viewBox="0 0 14 14" width="12" height="12"><path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  </button>
-                </div>
-              ))}
-              <button onClick={clearAllFilters} className="global-filter-clear">Limpar Tudo</button>
-            </div>
-          )}
-        </div>
-        <div className="status-grid status-grid--wide">
-          <div><p>Sincronização</p><strong>{status === 'online' ? 'BANCO ATIVO' : 'OFFLINE'}</strong></div>
-          <div><p>Atualização</p><strong>{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</strong></div>
-          <div className="status-year">
-            <p>Ano</p>
-            <select value={dashboardYear[0] ? String(dashboardYear[0]) : ''} onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}>
-              <option value="">Todos</option>
-              {availableYears.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+    <div className="app-layout">
+      <Sidebar activePanel={panel} setPanel={setPanel} />
+      
+      <main className="app-shell">
+        <section className="panel header-panel">
+          <div style={{ flex: 1 }}>
+            <h1>Painel SRAG - Mossoró/RN</h1>
+            {activeFilters.length === 0 ? (
+              <p className="sub">Monitoramento de gravidade e perfil viral.</p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginRight: '4px', letterSpacing: '0.05em' }}>FILTROS ATIVOS:</span>
+                {activeFilters.map(f => (
+                  <div key={`${f.type}-${f.val}`} className="global-filter-chip">
+                    <span style={{ opacity: 0.6, marginRight: '3px' }}>{f.type}:</span>
+                    <strong>{f.val}</strong>
+                    <button onClick={f.remover} className="global-filter-close">
+                      <svg viewBox="0 0 14 14" width="12" height="12"><path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    </button>
+                  </div>
+                ))}
+                <button onClick={clearAllFilters} className="global-filter-clear">Limpar Tudo</button>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+          <div className="status-grid status-grid--wide">
+            <div><p>Sincronização</p><strong>{status === 'online' ? 'BANCO ATIVO' : 'OFFLINE'}</strong></div>
+            <div><p>Atualização</p><strong>{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</strong></div>
+            <div className="status-year">
+              <p>Ano</p>
+              <select value={dashboardYear[0] ? String(dashboardYear[0]) : ''} onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}>
+                <option value="">Todos</option>
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
 
-      <section className="kpi-grid">
-        <KpiCard label="Total Internações" value={kpis.total} />
-        <KpiCard label="Total UTI" value={kpis.uti} />
-        <KpiCard label="Letalidade" value={kpis.death} />
-        <KpiCard label="PROJEÇÃO" value={kpis.next} />
-      </section>
+        <section className="kpi-grid">
+          <KpiCard label="Total Internações" value={kpis.total} />
+          <KpiCard label="Total UTI" value={kpis.uti} />
+          <KpiCard label="Letalidade" value={kpis.death} />
+          <KpiCard label="PROJEÇÃO" value={kpis.next} />
+        </section>
 
-      <section className="panel tabs-panel">
-        <div className="tab-row">
-          {panelButtons.map(b => (
-            <button
-              key={b.key}
-              className={`tab-btn ${panel === b.key ? 'active' : ''}`}
-              onClick={() => setPanel(b.key)}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="main-grid">
+        <section className="main-grid">
         <article className="panel">
           <div className="section-header">
             <div className="stack" style={{ gap: 4 }}>
@@ -330,8 +314,13 @@ function App() {
             />
           </article>
         )}
+
+        {panel === 'notebooks' && (
+          <NotebooksPanel />
+        )}
       </section>
     </main>
+  </div>
   );
 }
 

@@ -33,6 +33,7 @@ def main(
     init_db()
     con = duckdb.connect()
     con.execute("INSTALL spatial; LOAD spatial;")
+    con.execute("INSTALL excel; LOAD excel;")
     con.execute(f"ATTACH '{db_path}' AS sqlite_db (TYPE SQLITE);")
 
     print("🧹 Limpando dados antigos...")
@@ -76,6 +77,7 @@ def main(
         if d.exists():
             files.extend(list(d.glob("**/*.parquet")))
             files.extend(list(d.glob("**/*.csv")))
+            files.extend(list(d.glob("**/*.xlsx")))
 
     if not files:
         print(f"⚠️ Nenhum dado encontrado em {data_dirs}.")
@@ -86,7 +88,12 @@ def main(
     for pf in files:
         print(f"  -> {pf.name}")
         ext = pf.suffix.lower()
-        read_func = "read_parquet" if ext == ".parquet" else "read_csv_auto"
+        if ext == ".parquet":
+            read_func = "read_parquet"
+        elif ext == ".xlsx":
+            read_func = "st_read"
+        else:
+            read_func = "read_csv_auto"
 
         try:
             file_cols_raw = [

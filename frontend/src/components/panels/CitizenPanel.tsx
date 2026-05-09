@@ -4,7 +4,6 @@ import MaternalOutcomeChart from "../charts/MaternalOutcomeChart";
 import PiramideEtariaChart from "../charts/PiramideEtariaChart";
 import SchoolingChart from "../charts/SchoolingChart";
 import SymptomsSignatureGrid from "../charts/SymptomsSignatureGrid";
-import RiskFactorsChart from "../charts/RiskFactorsChart";
 import VaccinationProfileChart from "../charts/VaccinationProfileChart";
 import VigilanceDonutChart from "../charts/VigilanceDonutChart";
 import KpiCard from "../ui/KpiCard";
@@ -143,7 +142,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+          gridTemplateColumns: "1fr 1fr",
           gap: "1.5rem",
           marginTop: "1.5rem",
         }}
@@ -170,7 +169,12 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         <div className="panel" style={{ padding: "1.25rem" }}>
           <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Fatores de Risco</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
-            <RiskFactorsChart data={riskFactors || []} />
+            <BarChart 
+              labels={riskFactors.map(r => String(r.factor))} 
+              data={riskFactors.map(r => Number(r.count))} 
+              horizontal={true}
+              color="#EF9F27"
+            />
           </div>
         </div>
 
