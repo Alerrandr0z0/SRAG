@@ -67,7 +67,6 @@ const meta: Meta<typeof AggregatedSwimmerPlot> = {
   component: AggregatedSwimmerPlot,
   args: {
     data,
-    debug: true,
   },
 };
 

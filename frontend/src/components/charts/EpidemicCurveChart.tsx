@@ -32,6 +32,10 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       allWeeks = allWeeks.slice(-limit);
     }
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const axisColor = isDark ? '#475569' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
     if (mode === 'composicao') {
       const agents = Array.from(new Set(virusTrends.map(d => d.virus))).filter(Boolean);
 
@@ -54,10 +58,22 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
 
       return {
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-        legend: { data: agents, bottom: 0, icon: 'circle' },
+        legend: { data: agents, bottom: 0, icon: 'circle', textStyle: { color: textColor } },
         grid: { left: '30px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
-        xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks }],
-        yAxis: [{ type: 'value', name: 'Casos Positivos' }],
+        xAxis: [{ 
+          type: 'category', 
+          boundaryGap: false, 
+          data: allWeeks,
+          axisLine: { show: true, lineStyle: { color: axisColor } },
+          axisLabel: { color: textColor }
+        }],
+        yAxis: [{ 
+          type: 'value', 
+          name: 'Casos Positivos',
+          axisLine: { show: false },
+          axisLabel: { color: textColor },
+          splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }
+        }],
         series
       };
     } else if (mode === 'acumulado') {
@@ -77,8 +93,19 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       return {
         tooltip: { trigger: 'axis' },
         grid: { left: '40px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
-        xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks }],
-        yAxis: [{ type: 'value', name: 'Total Acumulado' }],
+        xAxis: [{ 
+          type: 'category', 
+          boundaryGap: false, 
+          data: allWeeks,
+          axisLine: { show: true, lineStyle: { color: axisColor } },
+          axisLabel: { color: textColor }
+        }],
+        yAxis: [{ 
+          type: 'value', 
+          name: 'Total Acumulado',
+          axisLabel: { color: textColor },
+          splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }
+        }],
         series: [{
           name: 'Acumulado',
           type: 'line',
@@ -97,15 +124,35 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
 
       return {
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-        legend: { data: ['Exames', 'Positivos', 'Taxa (%)'], bottom: 0 },
+        legend: { data: ['Exames', 'Positivos', 'Taxa (%)'], bottom: 0, textStyle: { color: textColor } },
         grid: { left: '3%', right: '3%', bottom: '15%', top: '25px', containLabel: true },
-        xAxis: [{ type: 'category', data: weeks, axisPointer: { type: 'shadow' } }],
+        xAxis: [{ 
+          type: 'category', 
+          data: weeks, 
+          axisPointer: { type: 'shadow' },
+          axisLine: { show: true, lineStyle: { color: axisColor } },
+          axisLabel: { color: textColor }
+        }],
         yAxis: [
-          { type: 'value', name: 'Volume', min: 0 },
-          { type: 'value', name: 'Taxa (%)', min: 0, max: 100, position: 'right', axisLabel: { formatter: '{value}%' } }
+          { 
+            type: 'value', 
+            name: 'Volume', 
+            min: 0,
+            axisLabel: { color: textColor },
+            splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }
+          },
+          { 
+            type: 'value', 
+            name: 'Taxa (%)', 
+            min: 0, 
+            max: 100, 
+            position: 'right', 
+            axisLabel: { formatter: '{value}%', color: textColor },
+            splitLine: { show: false }
+          }
         ],
         series: [
-          { name: 'Exames', type: 'bar', data: tested, itemStyle: { color: '#e2e8f0' }, barGap: '-100%', barCategoryGap: '30%' },
+          { name: 'Exames', type: 'bar', data: tested, itemStyle: { color: isDark ? '#334155' : '#e2e8f0' }, barGap: '-100%', barCategoryGap: '30%' },
           { name: 'Positivos', type: 'bar', data: positive, itemStyle: { color: COLORS.PRIMARY } },
           { name: 'Taxa (%)', type: 'line', yAxisIndex: 1, data: rates, itemStyle: { color: '#ef4444' }, lineWidth: 3, symbolSize: 6 }
         ]
@@ -139,7 +186,14 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
         <select 
           value={mode} 
           onChange={e => setMode(e.target.value as Mode)}
-          style={{ fontSize: '0.8rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}
+          style={{ 
+            fontSize: '0.8rem', 
+            padding: '0.25rem', 
+            borderRadius: '4px', 
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-input)',
+            color: 'var(--text-main)'
+          }}
         >
           <option value="composicao">Composição</option>
           <option value="acumulado">Acumulado</option>

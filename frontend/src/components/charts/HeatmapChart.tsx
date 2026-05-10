@@ -90,23 +90,28 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
 
   const { chartRef } = useEcharts(option, [xLabels, yLabels, matrix]);
 
-  if (!xLabels.length || !yLabels.length || !matrix.length) {
-    return (
-      <div
-        style={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#94a3b8",
-        }}
-      >
-        <p>Aguardando processamento de matriz de incidência.</p>
-      </div>
-    );
-  }
+  const hasData = xLabels.length > 0 && yLabels.length > 0 && matrix.length > 0;
 
-  return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {!hasData && (
+        <div style={{ 
+          position: 'absolute', 
+          inset: 0, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: '#94a3b8', 
+          fontSize: '0.8rem',
+          zIndex: 10,
+          background: 'var(--bg-panel)'
+        }}>
+          <p>Aguardando processamento de matriz de incidência.</p>
+        </div>
+      )}
+      <div ref={chartRef} style={{ width: '100%', height: '100%', opacity: hasData ? 1 : 0 }} />
+    </div>
+  );
 };
 
 export default HeatmapChart;

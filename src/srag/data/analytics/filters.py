@@ -10,8 +10,8 @@ def _age_years(df: pd.DataFrame) -> pd.Series:
     if "IDADE_ANOS" in df.columns and df["IDADE_ANOS"].notna().any():
         return pd.to_numeric(df["IDADE_ANOS"], errors="coerce")
 
-    idade_bruta = pd.to_numeric(df.get("NU_IDADE_N"), errors="coerce").fillna(0)
-    tp = pd.to_numeric(df.get("TP_IDADE"), errors="coerce")
+    idade_bruta = pd.to_numeric(df.get("NU_IDADE_N", pd.Series(index=df.index)), errors="coerce").fillna(0)
+    tp = pd.to_numeric(df.get("TP_IDADE", pd.Series(index=df.index)), errors="coerce")
 
     idade_anos = pd.Series(pd.NA, index=df.index, dtype="Float64")
     idade_anos = idade_anos.mask(tp == 3, idade_bruta)

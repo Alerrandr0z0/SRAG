@@ -20,7 +20,7 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     if "DT_PCR" not in out.columns or "DT_COLETA" not in out.columns:
         return {"boxplot_data": [], "median": 0.0}
 
-    valid = out.dropna(subset=["DT_COLETA", "DT_PCR"])
+    valid = out.dropna(subset=["DT_COLETA", "DT_PCR"]).copy()
     valid["delta"] = (valid["DT_PCR"] - valid["DT_COLETA"]).dt.days
     valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 30)]
 

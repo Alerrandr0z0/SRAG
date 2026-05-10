@@ -119,9 +119,9 @@ def compute_territory_entities_by_zone(
 
     return {
         "urban_bairros": [
-            {"name": str(r["BAIRRO_REF"]), "count": int(r["count"])} for _, r in urban.iterrows()
+            {"label": str(r["BAIRRO_REF"]), "count": int(r["count"])} for _, r in urban.iterrows()
         ],
         "rural_comunidades": [
-            {"name": str(r["BAIRRO_REF"]), "count": int(r["count"])} for _, r in rural.iterrows()
+            {"label": str(r["BAIRRO_REF"]), "count": int(r["count"])} for _, r in rural.iterrows()
         ],
     }
