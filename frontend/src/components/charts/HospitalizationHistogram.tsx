@@ -38,10 +38,17 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       return [val[0], sum / count];
     });
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const axisColor = isDark ? '#475569' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
     return {
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'cross', crossStyle: { color: '#94a3b8' } },
+        axisPointer: { type: 'cross', crossStyle: { color: textColor } },
+        backgroundColor: isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+        borderColor: axisColor,
+        textStyle: { color: isDark ? '#f8fafc' : '#1e293b' },
         formatter: (params: HistogramTooltip) => {
             const b = params.find(p => p.seriesName === 'Frequência');
             if (!b) return '';
@@ -57,13 +64,16 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
         min: 0,
         max: maxDay,
         splitLine: { show: false },
-        axisLabel: { color: '#64748b' }
+        axisLabel: { color: textColor },
+        axisLine: { show: true, lineStyle: { color: axisColor } },
+        nameTextStyle: { color: textColor }
       },
       yAxis: {
         type: 'value',
         name: 'Casos',
-        splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } },
-        axisLabel: { color: '#64748b' }
+        splitLine: { lineStyle: { type: 'dashed', color: axisColor } },
+        axisLabel: { color: textColor },
+        nameTextStyle: { color: textColor }
       },
       series: [
         {

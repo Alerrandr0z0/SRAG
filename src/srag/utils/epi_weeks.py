@@ -25,18 +25,23 @@ def get_epi_week(dt: object) -> tuple[int, int]:
     try:
         if pd.isna(dt):
             return 0, 0
-    except TypeError, ValueError:
-        pass
+    except (TypeError, ValueError):
         return 0, 0
 
     # Ensure we have a datetime.date object
-    if hasattr(dt, "date") and callable(dt.date):
-        dt = dt.date()
-    elif isinstance(dt, str):
-        try:
+    try:
+        if hasattr(dt, "date") and callable(dt.date):
+            dt = dt.date()
+        elif isinstance(dt, str):
             dt = pd.to_datetime(dt).date()
-        except TypeError, ValueError:
-            return 0, 0
+    except (TypeError, ValueError, AttributeError, Exception):
+        return 0, 0
+
+    if pd.isna(dt):
+        return 0, 0
+
+    if not isinstance(dt, date):
+        return 0, 0
 
     # The first SE of the year is the one that contains the first Wednesday
     # of the year (or the one with at least 4 days in January).

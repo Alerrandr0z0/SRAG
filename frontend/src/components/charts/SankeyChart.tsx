@@ -75,24 +75,31 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       };
     });
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const tooltipBg = isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)';
+    const tooltipBorder = isDark ? '#475569' : '#e2e8f0';
+    const mainTextColor = isDark ? '#f8fafc' : '#1e293b';
+    const mutedTextColor = isDark ? '#94a3b8' : '#64748b';
+    const labelColor = isDark ? '#cbd5e1' : '#475569';
+
     return {
       tooltip: {
         trigger: "item",
-        backgroundColor: "rgba(255, 255, 255, 0.98)",
+        backgroundColor: tooltipBg,
         padding: [10, 15],
-        borderColor: "#e2e8f0",
+        borderColor: tooltipBorder,
         borderWidth: 1,
-        textStyle: { color: "#334155" },
+        textStyle: { color: mainTextColor },
         formatter: (params: unknown) => {
           const p = params as { dataType: string; name: string; data: { nodePct?: number; value: number; source: string; target: string; pct?: number } };
           if (p.dataType === "node") {
             const isNoise =
               p.name.includes("(Ignorado)") || p.name === "Em Aberto";
             return `
-                    <div style="font-size:10px; color:#64748b; margin-bottom:4px;">
+                    <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">
                         ${isNoise ? "QUALIDADE DE DADO" : "MARCO CLÍNICO"}
                     </div>
-                    <b style="font-size:14px; color:#1e293b;">${p.name}</b><br/>
+                    <b style="font-size:14px; color:${mainTextColor};">${p.name}</b><br/>
                     <div style="margin-top:8px; display:flex; justify-content:space-between; gap:20px;">
                         <span>Volume:</span> <b>${p.data.value} casos</b>
                     </div>
@@ -102,15 +109,15 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
                 `;
           }
           return `
-                <div style="font-size:10px; color:#64748b; margin-bottom:4px;">FLUXO DE PACIENTES</div>
+                <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">FLUXO DE PACIENTES</div>
                 <div style="margin-bottom:8px;">
-                    <b style="color:#1e293b;">${p.data.source}</b> ➔ <b style="color:#1e293b;">${p.data.target}</b>
+                    <b style="color:${mainTextColor};">${p.data.source}</b> ➔ <b style="color:${mainTextColor};">${p.data.target}</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
                     <span>Volume:</span> <b>${p.data.value} casos</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
-                    <span>Proporção na Origem:</span> <b style="color:#1e3a8a;">${p.data.pct}%</b>
+                    <span>Proporção na Origem:</span> <b style="color:#3b82f6;">${p.data.pct}%</b>
                 </div>
             `;
         },
@@ -128,7 +135,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
           label: {
             position: "right",
             fontSize: 11,
-            color: "#475569",
+            color: labelColor,
             fontWeight: "bold",
             distance: 10,
           },

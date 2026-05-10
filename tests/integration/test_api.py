@@ -14,6 +14,12 @@ def mock_df(monkeypatch: pytest.MonkeyPatch) -> pd.DataFrame:
     # Create a dummy dataframe with at least 5 cases to satisfy min_cases=5
     data = []
     for i in range(15):  # More cases for trends
+        evolucao = 1  # Cura
+        if i == 0:
+            evolucao = 2  # Óbito por SRAG
+        elif i == 1:
+            evolucao = 3  # Óbito por outras causas (Deve ser ignorado no fluxo final como óbito)
+
         data.append(
             {
                 "DT_NOTIFIC": date(2024, 5, 1 + i),
@@ -29,7 +35,7 @@ def mock_df(monkeypatch: pytest.MonkeyPatch) -> pd.DataFrame:
                 "IDADE_ANOS": 30.0,
                 "CS_SEXO": "M",
                 "CS_RACA": 1,
-                "EVOLUCAO": 1,
+                "EVOLUCAO": evolucao,
                 "UTI": 2,
                 "HOSPITAL": 1,
                 "SUPORT_VEN": 3,
@@ -121,7 +127,22 @@ def test_get_laboratory_network(mock_df: pd.DataFrame) -> None:
 def test_clinical_flow_ignores_code_3_as_death(mock_df: pd.DataFrame) -> None:
     response = client.get("/clinical_flow")
     assert response.status_code == 200
-    # Add assertions if needed
+    json_data = response.json()
+
+    assert "nodes" in json_data
+    assert "links" in json_data
+
+    {n["name"]: n for n in json_data["nodes"]}
+
+    # Baseado no nosso mock_df, criamos 1 óbito por SRAG (código 2, i=0) e 1 Óbito por outras causas (código 3, i=1). O resto são curas.
+    # Como confirmado: Para Quantidade de óbitos (82) estamos utilizando apenas parametro 2.
+    # O SIVEP-Gripe regra diz que código 3 NÃO PODE ser listado no nó final de "Óbito" como mortalidade pela doença.
+
+    obito_count = sum(link["value"] for link in json_data["links"] if link["target"] == "Óbito")
+    assert obito_count == 1
+
+    cura_count = sum(link["value"] for link in json_data["links"] if link["target"] == "Cura")
+    assert cura_count <= 13
 
 
 def test_vaccination_profile(mock_df: pd.DataFrame) -> None:

@@ -33,6 +33,14 @@ import NotebooksPanel from './components/panels/NotebooksPanel';
 function App() {
   // Config State
   const [panel, setPanel] = useState('territorio');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
   const [weeksWindow, setWeeksWindow] = useState('0'); // Init in 'Tudo'
   const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
@@ -74,6 +82,20 @@ function App() {
   const citizenData = useCitizenData(panel === 'cidadao', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
   const auditData = useAuditData(panel === 'auditoria', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
   const vigilanceLoading = panel === 'vigilancia' && !data?.laboratoryNetwork;
+
+  const bairrosList = useMemo(() => {
+    const combined = [
+      ...(territoryData.entities?.urban_bairros || []),
+      ...(territoryData.entities?.rural_comunidades || [])
+    ];
+    // Remove duplicates by label (keeping the one with highest count)
+    const uniqueMap = new Map<string, number>();
+    combined.forEach(item => {
+      const current = uniqueMap.get(item.label) || 0;
+      if (item.count > current) uniqueMap.set(item.label, item.count);
+    });
+    return Array.from(uniqueMap.entries()).map(([name, count]) => ({ name, count }));
+  }, [territoryData.entities]);
 
   useEffect(() => {
     if (panel === 'cidadao') {
@@ -124,7 +146,12 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar activePanel={panel} setPanel={setPanel} />
+      <Sidebar 
+        activePanel={panel} 
+        setPanel={setPanel} 
+        theme={theme} 
+        setTheme={setTheme} 
+      />
       
       <main className="app-shell">
         {panel !== 'notebooks' && (
@@ -232,7 +259,7 @@ function App() {
             <TerritoryFilterBar
               zoneFilter={zoneFilter} setZoneFilter={setZoneFilter}
               bairroFilter={bairroFilter} setBairroFilter={setBairroFilter}
-              bairrosList={(territoryData.entities?.urban_bairros || []).map((item) => ({ name: item.label, count: item.count }))}
+              bairrosList={bairrosList}
             />
           </article>
         </section>
