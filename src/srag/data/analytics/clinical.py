@@ -384,8 +384,8 @@ def compute_symptoms_heatmap(df: pd.DataFrame) -> dict[str, object]:
 
 
 def compute_symptoms_signature(
-    df: pd.DataFrame, profile_type: str = "all", pathogens_mask_func: Callable | None = None
-) -> dict[str, object]:
+    df: pd.DataFrame, profile_type: str = "all", pathogens_mask_func: Callable[..., Any] | None = None
+) -> dict[str, Any]:
     """Calculate symptom prevalence (%) side-by-side for COVID, Flu, and VSR."""
     if df.empty:
         return {"labels": [], "bands": [], "matrices": {}}

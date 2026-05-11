@@ -79,12 +79,15 @@ def _infer_zone_from_bairro(bairro_ref: str | None) -> str | None:
 
 def _normalize_zone(cs_zona: int | None) -> str | None:
     """Map official CS_ZONA coding to human-readable labels."""
+    if cs_zona is None:
+        return None
     zone_map = {
         1: "Urbana",
         2: "Rural",
         3: "Periurbana",
     }
     return zone_map.get(cs_zona)
+
 
 
 def _normalize_age_to_years(nu_idade_n: int | None, tp_idade: int | None) -> float | None:

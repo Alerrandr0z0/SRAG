@@ -49,7 +49,7 @@ status:
 lint: lint-back lint-front
 lint-back:
 	uv run ruff check .
-	uv run mypy .
+	uv run pyright
 lint-front:
 	cd frontend && npm run lint
 
