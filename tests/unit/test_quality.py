@@ -97,41 +97,75 @@ def test_data_completeness_missing_cols() -> None:
 
 def test_data_completeness_valid() -> None:
     df = pd.DataFrame({
-        "NU_IDADE_N": [10, 20, np.nan, 40], # 3 valid
-        "CS_SEXO": ["M", "F", "I", ""],     # 2 valid (I is ignored, "" is empty)
-        "CS_RACA": [1, 2, 9, 4],            # 3 valid (9 is ignored)
-        "CS_ESCOL_N": ["1", "2", "9", np.nan], # 2 valid (9 ignored, nan invalid)
-        "PAC_DSCBO": ["Ocupacao", "9", 9, ""], # 1 valid
-        "CS_ZONA": [1, 2, 9, 3],            # 3 valid
+        "NU_IDADE_N": [10, 20, np.nan, 40], # 3/4 = 75%
+        "CS_SEXO": ["M", "F", "I", ""],     # 2/4 = 50% (M, F valid, I ignored, empty invalid)
+        "CS_RACA": [1, 2, 9, 4],            # 3/4 = 75% (9 is ignored)
+        "CS_ESCOL_N": [1, 2, 9, np.nan],    # 2/4 = 50% (9 ignored, nan invalid)
+        "PAC_DSCBO": ["Ocupacao", "9", 9, ""], # 1/4 = 25% (9 and '9' ignored)
+        "CS_ZONA": [1, 2, 9, 3],            # 3/4 = 75% (9 ignored)
 
-        "DT_SIN_PRI": ["2023", "2023", None, "2023"], # 3 valid
-        "FEBRE": [1, 2, 9, 1], # 3 valid
-        "TOSSE": [1, 1, 9, 2], # 3 valid
-        "DISPNEIA": [1, 2, 9, 1], # 3 valid
-        "SATURACAO": [1, 2, 9, 1], # 3 valid
-        "FATOR_RISC": ["S", "N", 9, "S"], # 3 valid
+        "DT_SIN_PRI": ["2023", "2023", None, "2023"], # 3/4 = 75%
+        "FEBRE": [1, 2, 9, 1], # 3/4 = 75%
+        "TOSSE": [1, 1, 9, 2], # 3/4 = 75%
+        "DISPNEIA": [1, 2, 9, 1], # 3/4 = 75%
+        "SATURACAO": [1, 2, 9, 1], # 3/4 = 75%
+        "FATOR_RISC": [1, 2, 9, 1], # 3/4 = 75%
 
-        "DT_INTERNA": ["2023", None, None, None], # 1 valid
-        "UTI": [1, 2, 9, 9], # 2 valid
-        "SUPORT_VEN": [1, 2, 3, 9], # 3 valid
-        "EVOLUCAO": [1, 2, 9, np.nan], # 2 valid
-        "DT_EVOLUCA": ["2023", "2023", None, None], # 2 valid
+        "DT_INTERNA": ["2023", None, None, None], # 1/4 = 25%
+        "UTI": [1, 2, 9, 9], # 2/4 = 50%
+        "SUPORT_VEN": [1, 2, 3, 9], # 3/4 = 75%
+        "EVOLUCAO": [1, 2, 9, np.nan], # 2/4 = 50%
+        "DT_EVOLUCA": ["2023", "2023", None, None], # 2/4 = 50%
 
-        "AMOSTRA": [1, 2, 9, 1], # 3 valid
-        "TP_AMOSTRA": [1, 2, 9, 3], # 3 valid
-        "DT_COLETA": ["2023", None, "2023", "2023"], # 3 valid
-        "PCR_RESUL": [1, 2, 9, 4], # 2 valid
-        "CLASSI_FIN": [1, 2, 3, 9], # 3 valid
+        "AMOSTRA": [1, 2, 9, 1], # 3/4 = 75%
+        "TP_AMOSTRA": [1, 2, 9, 3], # 3/4 = 75%
+        "DT_COLETA": ["2023", None, "2023", "2023"], # 3/4 = 75%
+        "PCR_RESUL": [1, 2, 9, 4], # 2/4 = 50% (9, 4, 5 ignored)
+        "CLASSI_FIN": [1, 2, 3, 9], # 3/4 = 75%
 
-        "ANTIVIRAL": [1, 2, 9, 1], # 3 valid
-        "VACINA_COV": [1, 2, 9, 1], # 3 valid
-        "VACINA": [1, 2, 9, 1], # 3 valid
+        "ANTIVIRAL": [1, 2, 9, 1], # 3/4 = 75%
+        "VACINA_COV": [1, 2, 9, 1], # 3/4 = 75%
+        "VACINA": [1, 2, 9, 1], # 3/4 = 75%
     })
     res = compute_data_completeness(df)
+    
+    # helper to check field rate
+    def assert_rate(group_name: str, field_name: str, expected: float):
+        group = next(g for g in res if g["group"] == group_name)
+        field = next(f for f in group["fields"] if f["field"] == field_name)
+        assert field["rate"] == expected, f"Failed {group_name} -> {field_name}: got {field['rate']} expected {expected}"
 
-    assert len(res) == 5
-    demo_group = next(g for g in res if g["group"] == "Demografia e Perfil")
-    idade_rate = next(f["rate"] for f in demo_group["fields"] if f["field"] == "Idade")
-    assert idade_rate == 75.0 # 3/4
-    sexo_rate = next(f["rate"] for f in demo_group["fields"] if f["field"] == "Sexo")
-    assert sexo_rate == 50.0 # 2/4
+    # Demografia
+    assert_rate("Demografia e Perfil", "Idade", 75.0)
+    assert_rate("Demografia e Perfil", "Sexo", 50.0)
+    assert_rate("Demografia e Perfil", "Raça/Cor", 75.0)
+    assert_rate("Demografia e Perfil", "Escolaridade", 50.0)
+    assert_rate("Demografia e Perfil", "Ocupação", 25.0)
+    assert_rate("Demografia e Perfil", "Zona (Urbana/Rural)", 75.0)
+
+    # Clínica
+    assert_rate("Sinais e Sintomas", "Data Primeiros Sintomas", 75.0)
+    assert_rate("Sinais e Sintomas", "Febre", 75.0)
+    assert_rate("Sinais e Sintomas", "Tosse", 75.0)
+    assert_rate("Sinais e Sintomas", "Dispneia", 75.0)
+    assert_rate("Sinais e Sintomas", "Saturação < 95%", 75.0)
+    assert_rate("Sinais e Sintomas", "Fatores de Risco", 75.0)
+
+    # Atendimento
+    assert_rate("Atendimento e Desfecho", "Data de Internação", 25.0)
+    assert_rate("Atendimento e Desfecho", "Internação em UTI", 50.0)
+    assert_rate("Atendimento e Desfecho", "Suporte Ventilatório", 75.0)
+    assert_rate("Atendimento e Desfecho", "Evolução (Cura/Óbito)", 50.0)
+    assert_rate("Atendimento e Desfecho", "Data de Evolução", 50.0)
+
+    # Laboratório
+    assert_rate("Laboratório e Diagnóstico", "Coleta de Amostra", 75.0)
+    assert_rate("Laboratório e Diagnóstico", "Tipo de Amostra", 75.0)
+    assert_rate("Laboratório e Diagnóstico", "Data de Coleta", 75.0)
+    assert_rate("Laboratório e Diagnóstico", "Resultado PCR", 50.0)
+    assert_rate("Laboratório e Diagnóstico", "Classificação Final", 75.0)
+
+    # Tratamento
+    assert_rate("Tratamento e Vacinação", "Uso de Antiviral", 75.0)
+    assert_rate("Tratamento e Vacinação", "Vacina COVID-19", 75.0)
+    assert_rate("Tratamento e Vacinação", "Vacina Gripe", 75.0)

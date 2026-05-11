@@ -170,8 +170,7 @@ def generate_case_hash(record: dict[str, Any]) -> str:
         str(record.get("CS_SEXO")),
     ]
     hash_input = "|".join(key_fields).encode("utf-8")
-    return hashlib.md5(hash_input).hexdigest()
-
+    return hashlib.md5(hash_input, usedforsecurity=False).hexdigest()
 
 def _generate_legacy_case_hash(record: dict[str, Any]) -> str:
     """Compatibility hash for older records that included ID_UNIDADE."""
@@ -184,8 +183,7 @@ def _generate_legacy_case_hash(record: dict[str, Any]) -> str:
         str(record.get("ID_UNIDADE")),
     ]
     hash_input = "|".join(key_fields).encode("utf-8")
-    return hashlib.md5(hash_input).hexdigest()
-
+    return hashlib.md5(hash_input, usedforsecurity=False).hexdigest()
 
 def init_db() -> None:
     """Initialize the SQLite database and create tables with automated migrations."""

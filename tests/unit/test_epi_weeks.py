@@ -45,8 +45,18 @@ def test_get_epi_week_string() -> None:
 def test_get_epi_week_pd_timestamp() -> None:
     assert get_epi_week(pd.Timestamp("2024-04-10")) == (2024, 15)
 
-def test_get_epi_week_invalid_type() -> None:
-    assert get_epi_week(12345) == (0, 0)
+def test_get_epi_week_all_days_of_week() -> None:
+    # SE 15 of 2024 starts on April 7 (Sunday) and ends on April 13 (Saturday)
+    expected = (2024, 15)
+    for day in range(7, 14):
+        dt = date(2024, 4, day)
+        assert get_epi_week(dt) == expected, f"Failed for {dt} (weekday {dt.weekday()})"
+
+def test_get_epi_week_exception_path() -> None:
+    # Mutmut mutant 7: change return 0, 0 to 1, 0 in except block
+    # We need to trigger a TypeError or ValueError in the first try block
+    # pd.isna(object()) might work or passing a list
+    assert get_epi_week([1, 2, 3]) == (0, 0)
 
 def test_format_epi_week() -> None:
     assert format_epi_week(2024, 5) == "2024-05"

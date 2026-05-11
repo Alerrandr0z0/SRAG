@@ -179,8 +179,9 @@ def get_df() -> pd.DataFrame:
         ]
         unique_cols = list(dict.fromkeys(core_cols))
         cols_str = ", ".join(unique_cols)
-        df = pd.read_sql(f"SELECT {cols_str} FROM casos_srag", engine)
+        df = pd.read_sql(f"SELECT {cols_str} FROM casos_srag", engine)  # nosec: B608
         df = df.reset_index(drop=True)
+
         date_cols = [
             "DT_NOTIFIC",
             "DT_SIN_PRI",

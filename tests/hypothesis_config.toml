@@ -1,0 +1,15 @@
+[tool.bandit]
+exclude_dirs = ["tests", "scripts", ".venv"]
+skips = ["B101"]  # Skip assert check as we use them in analytics sanity checks
+
+[tool.hypothesis]
+deadline = 1000  # Give more time for heavy pandas operations
+max_examples = 100
+verbosity = "normal"
+
+[tool.hypothesis.profiles.default]
+max_examples = 100
+
+[tool.hypothesis.profiles.ci]
+max_examples = 1000
+deadline = None
