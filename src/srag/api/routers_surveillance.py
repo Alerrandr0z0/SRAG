@@ -9,6 +9,36 @@ import pandas as pd
 from fastapi import APIRouter, Depends
 
 from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.analytics import (
+    apply_global_filters,
+    compute_aggregated_timeline,
+    compute_alert_thresholds,
+    compute_antiviral_latency,
+    compute_antiviral_outcome_impact,
+    compute_antiviral_types,
+    compute_antiviral_usage,
+    compute_clinical_timing_metrics,
+    compute_closure_criteria,
+    compute_codetection_matrix,
+    compute_diagnostic_latency,
+    compute_genomic_variants,
+    compute_imaging_profile,
+    compute_influenza_subtypes,
+    compute_laboratory_network_summary,
+    compute_lethality_heatmap,
+    compute_mortality_by_treatment_agent,
+    compute_notification_delay_series,
+    compute_positivity_trend,
+    compute_sample_type_distribution,
+    compute_serology_profile,
+    compute_testing_coverage,
+    compute_time_series,
+    compute_time_series_by_virus,
+    compute_vaccine_survival,
+    compute_virus_distribution,
+)
+from srag.models.forecasting import predict_next_weeks
 
 router = APIRouter()
 
@@ -17,10 +47,8 @@ router = APIRouter()
 def laboratory_network(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -31,12 +59,12 @@ def laboratory_network(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {}
 
-    base_summary = api.compute_laboratory_network_summary(df)
-    timing_metrics = api.compute_clinical_timing_metrics(df)
+    base_summary = compute_laboratory_network_summary(df)
+    timing_metrics = compute_clinical_timing_metrics(df)
 
     # Adiciona a taxa de adesão 48h ao resumo geral
     base_summary["overall"]["protocol_48h_adherence_rate"] = timing_metrics[
@@ -45,14 +73,14 @@ def laboratory_network(
 
     # Novos indicadores de qualidade e tratamento (Blocos 3 e 6)
     quality_metrics = {
-        "testing_coverage": api.compute_testing_coverage(df),
-        "sample_type_distribution": api.compute_sample_type_distribution(df),
-        "diagnostic_latency": api.compute_diagnostic_latency(df),
+        "testing_coverage": compute_testing_coverage(df),
+        "sample_type_distribution": compute_sample_type_distribution(df),
+        "diagnostic_latency": compute_diagnostic_latency(df),
     }
 
     treatment_metrics = {
-        "antiviral_latency": api.compute_antiviral_latency(df),
-        "antiviral_outcome_impact": api.compute_antiviral_outcome_impact(df),
+        "antiviral_latency": compute_antiviral_latency(df),
+        "antiviral_outcome_impact": compute_antiviral_outcome_impact(df),
     }
 
     # Cálculo de Sobrevivência Vacinal (KM)
@@ -62,32 +90,32 @@ def laboratory_network(
     df_km["LAST_COV_DATE"] = df_km[dose_cols].apply(pd.to_datetime, errors="coerce").max(axis=1)
 
     vaccine_survival = {
-        "covid": api.compute_vaccine_survival(df_km, "LAST_COV_DATE"),
-        "gripe": api.compute_vaccine_survival(df_km, "DT_UT_DOSE"),
+        "covid": compute_vaccine_survival(df_km, "LAST_COV_DATE"),
+        "gripe": compute_vaccine_survival(df_km, "DT_UT_DOSE"),
     }
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
             **base_summary,
             "quality_metrics": quality_metrics,
             "treatment_metrics": treatment_metrics,
             "vaccine_survival": vaccine_survival,
-            "agent_lethality_heatmap": api.compute_lethality_heatmap(df),
-            "codetection_matrix": api.compute_codetection_matrix(df),
-            "positivity_trend": api.compute_positivity_trend(df),
-            "influenza_subtypes": api.compute_influenza_subtypes(df),
-            "antiviral_usage": api.compute_antiviral_usage(df),
-            "closure_criteria": api.compute_closure_criteria(df),
-            "notification_delay": api.compute_notification_delay_series(df),
-            "mortality_by_treatment_agent": api.compute_mortality_by_treatment_agent(df).to_dict(
+            "agent_lethality_heatmap": compute_lethality_heatmap(df),
+            "codetection_matrix": compute_codetection_matrix(df),
+            "positivity_trend": compute_positivity_trend(df),
+            "influenza_subtypes": compute_influenza_subtypes(df),
+            "antiviral_usage": compute_antiviral_usage(df),
+            "closure_criteria": compute_closure_criteria(df),
+            "notification_delay": compute_notification_delay_series(df),
+            "mortality_by_treatment_agent": compute_mortality_by_treatment_agent(df).to_dict(
                 orient="records"
             ),
-            "genomic_variants": api.compute_genomic_variants(df),
-            "virus_trends": api.compute_time_series_by_virus(df).to_dict(orient="records"),
-            "imaging_profile": api.compute_imaging_profile(df),
-            "serology_profile": api.compute_serology_profile(df),
-            "antiviral_types": api.compute_antiviral_types(df),
-            "virus_ranking": api.compute_virus_distribution(df).to_dict(orient="records"),
+            "genomic_variants": compute_genomic_variants(df),
+            "virus_trends": compute_time_series_by_virus(df).to_dict(orient="records"),
+            "imaging_profile": compute_imaging_profile(df),
+            "serology_profile": compute_serology_profile(df),
+            "antiviral_types": compute_antiviral_types(df),
+            "virus_ranking": compute_virus_distribution(df).to_dict(orient="records"),
         }
     )
 
@@ -100,11 +128,8 @@ def context_trends(
     lookback_weeks: int = 0,
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-    from srag.models.forecasting import predict_next_weeks
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -124,9 +149,9 @@ def context_trends(
     elif key.startswith("ZONA::"):
         work = work[work["ZONA"].str.capitalize() == key.split("::")[1].capitalize()]
 
-    ts = api.compute_time_series(work)
+    ts = compute_time_series(work)
     result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
-    result["thresholds"] = api.compute_alert_thresholds(work)
+    result["thresholds"] = compute_alert_thresholds(work)
     history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
     composition = ts[ts["epi_week"].isin(history_weeks)]
     result["composition"] = composition.to_dict(orient="records")
@@ -139,7 +164,7 @@ def context_trends(
         result["base_cumulative"] = 0
         result["history"] = full_history
 
-    return api.sanitize_data(result)
+    return sanitize_data(result)
 
 
 @router.get("/timeline_agg")
@@ -147,10 +172,8 @@ def timeline_agg(
     virus: str = "covid",
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -164,8 +187,8 @@ def timeline_agg(
     if df.empty:
         return []
 
-    result = api.compute_aggregated_timeline(df, virus)
-    return api.sanitize_data(result)
+    result = compute_aggregated_timeline(df, virus)
+    return sanitize_data(result)
 
 
 @router.get("/icu_bottleneck")
@@ -173,11 +196,9 @@ def icu_bottleneck(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Calcula o tempo de espera (em dias) entre a internação e a entrada na UTI por mês."""
-    from srag.api import main as api
-
     try:
-        df = api.get_df()
-        df = api.apply_global_filters(
+        df = get_df()
+        df = apply_global_filters(
             df,
             filters.profile,
             filters.race,
@@ -212,7 +233,8 @@ def icu_bottleneck(
         df_valid = df_valid.sort_values(by="date")
 
         result = df_valid[["date", "wait_days"]].to_dict(orient="records")
-        return api.sanitize_data(result)
+        return sanitize_data(result)
     except Exception as e:
         print(f"ERRO ICU_BOTTLENECK: {e}")
         return []
+

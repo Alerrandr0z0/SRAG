@@ -41,7 +41,7 @@ data/external/*
 Thumbs.db
 
 # Project Agents/Internal docs
-GEMINI.md
+#GEMINI.md
 .gemini/
 # frontend/GEMINI.md
 

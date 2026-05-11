@@ -12,6 +12,9 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.analytics import apply_global_filters
+from srag.data.geospatial import build_macrosector_heatpoints, _feature_centroid, get_municipality_boundary, _iter_coords
 
 router = APIRouter()
 
@@ -22,11 +25,8 @@ def macrosector_heatpoints(
     min_cases: int = 1,
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-    from srag.data.geospatial import build_macrosector_heatpoints
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -37,13 +37,13 @@ def macrosector_heatpoints(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {"available": False, "points": []}
     result = build_macrosector_heatpoints(
         df, "data/geojson/mossoro_bairros.geojson", zone, min_cases
     )
-    return api.sanitize_data(result)
+    return sanitize_data(result)
 
 
 @router.get("/geo/rural_heatpoints")
@@ -51,11 +51,8 @@ def rural_heatpoints(
     min_cases: int = 1,
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-    from srag.data.geospatial import _feature_centroid, get_municipality_boundary
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -66,7 +63,7 @@ def rural_heatpoints(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {"available": False, "sectors": [], "center": None}
 
@@ -106,7 +103,7 @@ def rural_heatpoints(
     cx, cy = city_centroid
 
     if total_rural < min_cases:
-        return api.sanitize_data(
+        return sanitize_data(
             {"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}}
         )
 
@@ -119,7 +116,7 @@ def rural_heatpoints(
         count = base + (1 if idx < remainder else 0)
         sectors.append({"sector": sec, "count": count})
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
             "available": True,
             "center": {"lat": round(cy, 6), "lon": round(cx, 6)},
@@ -140,8 +137,6 @@ def get_rural_sectors() -> Any:
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
 
-    from srag.data.geospatial import _iter_coords, get_municipality_boundary
-
     bairros_geo_path = Path("data/geojson/mossoro_bairros.geojson")
 
     coords: list[tuple[float, float]] = []
@@ -159,6 +154,7 @@ def get_rural_sectors() -> Any:
         if not features:
             return {"error": "boundary_not_found"}
         coords = list(_iter_coords(features[0].get("geometry", {}).get("coordinates", [])))
+
 
     if not coords:
         return {"error": "invalid_boundary"}

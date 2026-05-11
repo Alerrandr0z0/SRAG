@@ -41,8 +41,10 @@ def apply_global_filters(
     out = df.copy()
 
     if years:
+        # Normalize years to int to handle potential string inputs from API
+        years_int = [int(y) for y in years if str(y).isdigit()]
         out["_tmp_year"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year
-        out = out[out["_tmp_year"].isin(years)]
+        out = out[out["_tmp_year"].isin(years_int)]
         out = out.drop(columns=["_tmp_year"])
 
     profiles = [p for p in (profiles or []) if p]

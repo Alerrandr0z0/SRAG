@@ -1,0 +1,6 @@
+[allowlist]
+    description = "Allowlisted files and paths"
+    paths = [
+        '''frontend/public/icons.svg''',
+        '''data/geojson/.*'''
+    ]

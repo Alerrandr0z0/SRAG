@@ -412,15 +412,26 @@ def test_compute_aggregated_timeline_empty() -> None:
 
 def test_compute_aggregated_timeline_valid() -> None:
     df = pd.DataFrame({
-        "DT_SIN_PRI": ["2023-01-01", "2023-01-01"],
-        "DT_INTERNA": ["2023-01-05", "2023-01-06"],
-        "DT_EVOLUCA": ["2023-01-10", "2023-01-12"],
-        "VACINA_COV": [2, 1],
-        "DOSE_1_COV": [np.nan, "2022-12-01"],
-        "EVOLUCAO": [1, 2],
-        "UTI": [1, 2]
+        "DT_SIN_PRI": pd.to_datetime(["2023-01-01", "2023-01-01", "2023-01-01"]),
+        "DT_INTERNA": pd.to_datetime(["2023-01-05", "2023-01-06", "2023-01-07"]),
+        "DT_EVOLUCA": pd.to_datetime(["2023-01-10", "2023-01-12", "2023-01-15"]),
+        "VACINA_COV": [2, 1, 1],
+        "DOSE_1_COV": [np.nan, "2022-12-01", "2022-11-01"],
+        "DOSE_2_COV": [np.nan, "2022-12-15", "2022-11-15"], # Both "Esquema Completo"
+        "EVOLUCAO": [1, 2, 2],
+        "UTI": [1, 2, 1]
     })
     res = compute_aggregated_timeline(df, virus="covid")
     assert len(res) > 0
-    profiles = {r["perfil"] for r in res}
-    assert "Não Vacinado" in profiles
+    
+    # Check "Esquema Completo" profile
+    vax_profile = next(r for r in res if r["perfil"] == "Esquema Completo")
+    
+    assert vax_profile["n"] == 2
+    assert vax_profile["uti_pct"] == 50.0 # 1 out of 2 in UTI
+    
+    # Quantiles for symp_to_hosp [5, 6] -> median=5.5
+    assert vax_profile["mediana_sintoma_internacao"] == 5.5
+    
+    # Quantiles for hosp_to_outcome [6, 8] -> median=7.0
+    assert vax_profile["mediana_internacao_desfecho"] == 7.0

@@ -9,6 +9,25 @@ import pandas as pd
 from fastapi import APIRouter, Depends, Query
 
 from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.analytics import (
+    apply_global_filters,
+    classificar_status_gripe,
+    compute_animal_contact_distribution,
+    compute_citizen_profile_tree,
+    compute_citizen_pyramid,
+    compute_clinical_timing_metrics,
+    compute_maternal_profile,
+    compute_occupation_profile,
+    compute_race_profile,
+    compute_risk_factors_full_profile,
+    compute_schooling_profile,
+    compute_symptoms_heatmap,
+    compute_symptoms_signature,
+    compute_traditional_community_distribution,
+    compute_vaccine_manufacturer_distribution,
+    compute_vaccine_survival,
+)
 
 router = APIRouter()
 
@@ -19,17 +38,15 @@ def get_occupations(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> list[dict[str, Any]]:
     """Retorna as ocupações mais frequentes, permitindo filtragem por ano/zona."""
-    from srag.api import main as api
-
-    df = api.get_df()
+    df = get_df()
     # Aplicamos apenas filtros de base (Ano, Zona, Bairro) para não circular a busca
-    df = api.apply_global_filters(
+    df = apply_global_filters(
         df,
         zonas=filters.zonas,
         bairros=filters.bairros,
         years=filters.years,
     )
-    return api.compute_occupation_profile(df, top_n=limit)
+    return compute_occupation_profile(df, top_n=limit)
 
 
 @router.get("/clinical_flow")
@@ -37,10 +54,8 @@ def clinical_flow(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Analisa a jornada clínica completa para o gráfico Sankey com porcentagens."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -106,10 +121,8 @@ def hospitalization_duration(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> list[float]:
     """Calcula a distribuição de dias de internação (DT_EVOLUCA - DT_INTERNA)."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -138,10 +151,8 @@ def vaccination_profile(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Analisa o esquema vacinal detalhado de COVID-19 e Influenza com filtros."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -155,7 +166,7 @@ def vaccination_profile(
     if df.empty:
         return {}
 
-    raw_gripe = df.apply(api.classificar_status_gripe, axis=1).value_counts().to_dict()
+    raw_gripe = df.apply(classificar_status_gripe, axis=1).value_counts().to_dict()
     gripe_schema = {k: int(v) for k, v in raw_gripe.items()}
     label_map = {
         "protegido": "Protegido (Campanha Atual)",
@@ -190,9 +201,9 @@ def vaccination_profile(
         return "Ignorado"
 
     covid_schema = df.apply(get_last_dose, axis=1).value_counts().to_dict()
-    manufacturers = api.compute_vaccine_manufacturer_distribution(df)
+    manufacturers = compute_vaccine_manufacturer_distribution(df)
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
             "gripe": gripe_schema_readable,
             "covid_detailed": covid_schema,
@@ -206,10 +217,8 @@ def citizen_bootstrap(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Bootstrap de dados do cidadão com filtros hierárquicos e multi-seleção."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df_filtered = api.apply_global_filters(
+    df = get_df()
+    df_filtered = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -224,19 +233,19 @@ def citizen_bootstrap(
     valid_profiles = [p for p in (filters.profile or []) if p]
     heatmap_profile = valid_profiles[0] if len(valid_profiles) == 1 else "all"
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
-            "citizen_profiles": api.compute_citizen_profile_tree(df_filtered),
-            "citizen_pyramid": api.compute_citizen_pyramid(df_filtered),
-            "race_profile": api.compute_race_profile(df_filtered),
-            "schooling_profile": api.compute_schooling_profile(df_filtered),
-            "occupation_profile": api.compute_occupation_profile(df_filtered),
-            "animal_contact": api.compute_animal_contact_distribution(df_filtered),
-            "traditional_communities": api.compute_traditional_community_distribution(df_filtered),
-            "symptoms_signature": api.compute_symptoms_signature(df_filtered, heatmap_profile),
-            "symptoms_heatmap": api.compute_symptoms_heatmap(df_filtered),
-            "risk_factors_full": api.compute_risk_factors_full_profile(df_filtered),
-            "maternal_profile": api.compute_maternal_profile(df_filtered),
+            "citizen_profiles": compute_citizen_profile_tree(df_filtered),
+            "citizen_pyramid": compute_citizen_pyramid(df_filtered),
+            "race_profile": compute_race_profile(df_filtered),
+            "schooling_profile": compute_schooling_profile(df_filtered),
+            "occupation_profile": compute_occupation_profile(df_filtered),
+            "animal_contact": compute_animal_contact_distribution(df_filtered),
+            "traditional_communities": compute_traditional_community_distribution(df_filtered),
+            "symptoms_signature": compute_symptoms_signature(df_filtered, heatmap_profile),
+            "symptoms_heatmap": compute_symptoms_heatmap(df_filtered),
+            "risk_factors_full": compute_risk_factors_full_profile(df_filtered),
+            "maternal_profile": compute_maternal_profile(df_filtered),
         }
     )
 
@@ -246,10 +255,8 @@ def clinical_timing(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Métricas de fluxo clínico: tempo sintomas→internação, internação→UTI, adesão ao protocolo antiviral."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -260,8 +267,8 @@ def clinical_timing(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = api.apply_surveillance_filters(df, filters.years, filters.agents)
-    return api.compute_clinical_timing_metrics(df)
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    return compute_clinical_timing_metrics(df)
 
 
 @router.get("/vaccine_survival")
@@ -269,10 +276,8 @@ def vaccine_survival(
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     """Calcula as curvas de sobrevivência Kaplan-Meier com filtros."""
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(
+    df = get_df()
+    df = apply_global_filters(
         df,
         filters.profile,
         filters.race,
@@ -289,9 +294,10 @@ def vaccine_survival(
     dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
     df["LAST_COV_DATE"] = df[dose_cols].apply(pd.to_datetime, errors="coerce").max(axis=1)
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
-            "covid": api.compute_vaccine_survival(df, "LAST_COV_DATE"),
-            "gripe": api.compute_vaccine_survival(df, "DT_UT_DOSE"),
+            "covid": compute_vaccine_survival(df, "LAST_COV_DATE"),
+            "gripe": compute_vaccine_survival(df, "DT_UT_DOSE"),
         }
     )
+

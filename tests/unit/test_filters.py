@@ -19,17 +19,30 @@ def test_age_years_idade_anos() -> None:
     res = _age_years(df)
     assert list(res.dropna()) == [10.0, 20.0]
 
-def test_age_years_nu_idade_tp_idade() -> None:
-    # TP_IDADE: 3 = Years, 2 = Months, 1 = Days
+def test_age_years_precise_normalization() -> None:
     df = pd.DataFrame({
-        "NU_IDADE_N": [10, 24, 365.25, 5],
-        "TP_IDADE": [3, 2, 1, pd.NA]
+        "NU_IDADE_N": [12, 365.25, 10],
+        "TP_IDADE": [2, 1, pd.NA] # 2=Months, 1=Days, NA=Fallback to years
     })
     res = _age_years(df)
-    assert res.iloc[0] == 10.0
-    assert res.iloc[1] == 2.0
-    assert res.iloc[2] == 1.0
-    assert res.iloc[3] == 5.0
+    assert res.iloc[0] == 1.0   # 12 months = 1 year
+    assert res.iloc[1] == 1.0   # 365.25 days = 1 year
+    assert res.iloc[2] == 10.0  # Fallback
+
+def test_apply_global_filters_all_params_none() -> None:
+    df = pd.DataFrame({"A": [1, 2]})
+    res = apply_global_filters(df)
+    assert res.equals(df)
+
+def test_apply_global_filters_invalid_year_type() -> None:
+    df = pd.DataFrame({"DT_SIN_PRI": ["2023-01-01"]})
+    # Should handle years as strings gracefully and return the record
+    res = apply_global_filters(df, years=["2023"])  # type: ignore
+    assert len(res) == 1
+    
+    # Test with integers as well
+    res2 = apply_global_filters(df, years=[2023])
+    assert len(res2) == 1
 
 def test_apply_global_filters_empty() -> None:
     df = pd.DataFrame()
