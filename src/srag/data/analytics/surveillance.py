@@ -60,7 +60,7 @@ def infer_etiologic_agent(df: pd.DataFrame) -> pd.Series:
     return agent.astype(str)
 
 
-def classificar_status_gripe(row: pd.Series | dict) -> str:
+def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
     """Determine epidemiological status for Flu based on vaccination date and symptoms."""
     vacina = row.get("VACINA")
     dt_dose = row.get("DT_UT_DOSE")
@@ -893,8 +893,8 @@ def compute_vaccine_manufacturer_distribution(df: pd.DataFrame) -> list[dict[str
     }
 
     def normalize_fab(name: str | None) -> str:
-        if name == "NÃO INFORMADO":
-            return name
+        if not name or name == "NÃO INFORMADO":
+            return "NÃO INFORMADO"
         for key, target in mapping.items():
             if key in name:
                 return target

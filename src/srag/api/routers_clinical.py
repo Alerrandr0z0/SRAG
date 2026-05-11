@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data

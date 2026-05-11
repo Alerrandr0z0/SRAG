@@ -41,9 +41,9 @@ data/external/*
 Thumbs.db
 
 # Project Agents/Internal docs
-#GEMINI.md
+GEMINI.md
 .gemini/
-# frontend/GEMINI.md
+frontend/GEMINI.md
 
 # Agent Skills & Knowledge Graph (external assets & artifacts)
 .agents/

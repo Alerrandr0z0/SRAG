@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import pandas as pd
@@ -46,10 +46,10 @@ DATE_COLS = {
 }
 
 
-def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict:
+def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict[str, Any]:
     """Execute the full surveillance lifecycle: Ingest -> Validate -> Snapshot -> Load."""
     start_time = datetime.now()
-    report = {"timestamp": start_time.isoformat(), "steps": [], "status": "starting"}
+    report: dict[str, Any] = {"timestamp": start_time.isoformat(), "steps": [], "status": "starting"}
 
     try:
         # 1. Setup & Extraction (DuckDB Engine)
@@ -155,7 +155,7 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
             df = pd.read_sql("SELECT rowid, NM_BAIRRO, CS_ZONA FROM casos_srag", conn)
             if not df.empty:
                 df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
-                df["ZONA"] = df.apply(
+                df["ZONA"] = cast(Any, df).apply(
                     lambda r: (
                         _normalize_zone(int(r["CS_ZONA"]))
                         if pd.notna(r["CS_ZONA"])

@@ -43,7 +43,8 @@ def apply_surveillance_filters(
     """Apply year and etiologic-agent filters consistently across surveillance endpoints."""
     out = df
     if years and "DT_SIN_PRI" in out.columns:
-        year_values = {int(y) for y in years if y is not None}
+        # Robust conversion: keep only items that can be converted to int
+        year_values = {int(y) for y in years if y is not None and str(y).isdigit()}
         out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year.isin(year_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
