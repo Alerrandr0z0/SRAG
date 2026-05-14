@@ -1,6 +1,6 @@
 # SRAG Mossoró/RN - Unified Toolchain
 
-.PHONY: help setup ingest start stop status test lint fix mutation bench update-graph \
+.PHONY: help setup ingest start stop status start-docker stop-docker test lint fix mutation bench update-graph \
         setup-back setup-front test-back test-front lint-back lint-front \
         fix-back fix-front mutation-back mutation-front \
         observability property-test property-test-back property-test-front \
@@ -38,6 +38,16 @@ ingest:
 
 start:
 	./scripts/port_control.sh start
+
+start-docker:
+	docker compose up --build -d
+	@printf "\nServicos em execucao:\n"
+	@printf -- "- Frontend: http://localhost\n"
+	@printf -- "- Backend:  http://localhost:8000\n"
+	@printf -- "- Jupyter:  http://localhost:8888/lab/\n"
+
+stop-docker:
+	docker compose down
 
 stop:
 	./scripts/port_control.sh stop

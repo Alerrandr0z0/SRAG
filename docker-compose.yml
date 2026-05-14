@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     command: uv run uvicorn srag.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
     volumes:
       - ./data/processed:/app/data/processed
     environment:
@@ -20,6 +22,8 @@ services:
       --ServerApp.base_url=/lab/
       --ServerApp.allow_origin='*'
       --ServerApp.tornado_settings="{\"headers\":{\"Content-Security-Policy\":\"frame-ancestors *\"}}"
+    ports:
+      - "8888:8888"
     volumes:
       - ./data/processed:/app/data/processed
       - ./notebooks:/app/notebooks
