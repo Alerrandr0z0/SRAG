@@ -47,7 +47,19 @@ make mutation    # Teste de mutação (Mutmut + Stryker)
 
 # 5. Iniciar Sistema (Full Stack)
 make start       # Dashboard (5173), API (8000), Jupyter (8888)
+
+# 6. Iniciar com Docker
+make start-docker # Frontend (80), API (8000), Jupyter (8888)
+
+# 7. Encerrar Docker
+make stop-docker  # Encerra o stack do Compose
 ```
+
+### Acesso público via Docker
+
+- `Frontend`: http://localhost
+- `Backend`: http://localhost:8000
+- `Jupyter`: http://localhost:8888/lab/
 
 ## 🛡️ Padrões de Engenharia
 
