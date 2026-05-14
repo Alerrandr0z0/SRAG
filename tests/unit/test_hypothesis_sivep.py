@@ -35,7 +35,7 @@ class TestCategorizeAgeHypothesis:
 
     @given(age=st.floats(min_value=0, max_value=150, allow_nan=False, allow_infinity=False))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.differing_executors])
-    def test_categorize_age_never_fails(self, age):
+    def test_categorize_age_never_fails(self, age) -> None:
         """Todas as idades entre 0 e 150 devem retornar uma categoria."""
         result = categorize_age(age)
         assert result is not None
@@ -44,21 +44,21 @@ class TestCategorizeAgeHypothesis:
 
     @given(age=st.floats(min_value=0, max_value=1, allow_nan=False, allow_infinity=False))
     @settings(max_examples=50)
-    def test_categorize_age_below_1_year(self, age):
+    def test_categorize_age_below_1_year(self, age) -> None:
         """Idade < 1 ano deve ser categorizada como '0-1 ano'."""
         result = categorize_age(age)
         assert result == "0-1 ano"
 
     @given(age=st.floats(min_value=2, max_value=4.99, allow_nan=False, allow_infinity=False))
     @settings(max_examples=50)
-    def test_categorize_age_1_to_4_years(self, age):
+    def test_categorize_age_1_to_4_years(self, age) -> None:
         """Idade entre 2 e 4 anos deve ser '2-4 anos'."""
         result = categorize_age(age)
         assert result == "2-4 anos"
 
     @given(age=st.floats(min_value=60, max_value=150, allow_nan=False, allow_infinity=False))
     @settings(max_examples=50)
-    def test_categorize_age_elderly(self, age):
+    def test_categorize_age_elderly(self, age) -> None:
         """Idade >= 60 deve ser categorizada como '60-69 anos', '70-79 anos' ou '80+ anos'."""
         result = categorize_age(age)
         assert result in ["60-69 anos", "70-79 anos", "80+ anos"]
@@ -69,14 +69,14 @@ class TestNormalizeAgeHypothesis:
 
     @given(nu_idade=st.integers(min_value=0, max_value=1000), tp_idade=st.sampled_from([1, 2, 3]))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.differing_executors])
-    def test_normalize_age_never_fails(self, nu_idade, tp_idade):
+    def test_normalize_age_never_fails(self, nu_idade, tp_idade) -> None:
         """Normalização de idade não deve falhar para valores válidos."""
         result = _normalize_age_to_years(nu_idade, tp_idade)
         assert result is None or isinstance(result, (int, float))
 
     @given(nu_idade=st.integers(min_value=1, max_value=365), tp_idade=st.just(1))
     @settings(max_examples=30)
-    def test_normalize_age_days_to_years(self, nu_idade, tp_idade):
+    def test_normalize_age_days_to_years(self, nu_idade, tp_idade) -> None:
         """Conversão de dias para anos deve estar no intervalo válido."""
         result = _normalize_age_to_years(nu_idade, tp_idade)
         if result is not None:
@@ -84,7 +84,7 @@ class TestNormalizeAgeHypothesis:
 
     @given(nu_idade=st.integers(min_value=1, max_value=120), tp_idade=st.just(2))
     @settings(max_examples=30)
-    def test_normalize_age_months_to_years(self, nu_idade, tp_idade):
+    def test_normalize_age_months_to_years(self, nu_idade, tp_idade) -> None:
         """Conversão de meses para anos deve estar no intervalo válido."""
         result = _normalize_age_to_years(nu_idade, tp_idade)
         if result is not None:
@@ -92,12 +92,12 @@ class TestNormalizeAgeHypothesis:
 
     @given(nu_idade=st.integers(min_value=1, max_value=150), tp_idade=st.just(3))
     @settings(max_examples=30)
-    def test_normalize_age_years(self, nu_idade, tp_idade):
+    def test_normalize_age_years(self, nu_idade, tp_idade) -> None:
         """Conversão de anos deve manter o valor."""
         result = _normalize_age_to_years(nu_idade, tp_idade)
         assert result == float(nu_idade)
 
-    def test_normalize_age_negative_returns_none(self):
+    def test_normalize_age_negative_returns_none(self) -> None:
         """Idade negativa deve retornar None."""
         assert _normalize_age_to_years(-1, 3) is None
 
@@ -107,7 +107,7 @@ class TestOutcomeDeathMaskHypothesis:
 
     @given(evolucion_values=st.lists(valid_evolucao, min_size=1, max_size=20, unique=False))
     @settings(max_examples=50)
-    def test_outcome_death_mask_only_counts_code_2(self, evolucion_values):
+    def test_outcome_death_mask_only_counts_code_2(self, evolucion_values) -> None:
         """Apenas EVOLUCAO == 2 deve ser considerada morte."""
         series = pd.Series(evolucion_values)
         mask = outcome_death_mask(series)
@@ -115,13 +115,13 @@ class TestOutcomeDeathMaskHypothesis:
         # Verifica que apenas códigos 2 são verdadeiros
         for i, val in enumerate(evolucion_values):
             if val == 2:
-                assert mask.iloc[i] == True
+                assert mask.iloc[i]
             else:
-                assert mask.iloc[i] == False
+                assert not mask.iloc[i]
 
     @given(evolucion_values=st.lists(valid_evolucao, min_size=1, max_size=20, unique=False))
     @settings(max_examples=50)
-    def test_outcome_death_mask_respects_rule_3_not_death(self, evolucion_values):
+    def test_outcome_death_mask_respects_rule_3_not_death(self, evolucion_values) -> None:
         """EVOLUCAO == 3 (Óbito por outra causa) NÃO conta como morte SRAG."""
         series = pd.Series(evolucion_values)
         mask = outcome_death_mask(series)
@@ -146,7 +146,7 @@ class TestClassificarStatusGripeHypothesis:
     @settings(max_examples=30, deadline=5000)
     def test_classificar_status_gripe_valid_inputs(
         self, dt_ut_dose, dt_1_dose, dt_2_dose, vacinacao, tp_idade, nu_idade_n, dt_sin_pri
-    ):
+    ) -> None:
         """Testa que a função não falha com inputs válidos do SIVEP."""
         row = {
             "DT_UT_DOSE": dt_ut_dose,
@@ -180,7 +180,7 @@ class TestClassificarStatusGripeHypothesis:
         dt_sin_pri=st.dates(min_value=date(2024, 1, 1), max_value=date(2025, 12, 31)),
     )
     @settings(max_examples=20, deadline=5000, suppress_health_check=[HealthCheck.filter_too_much])
-    def test_classificar_status_gripe_nao_vacinado(self, tp_idade, nu_idade_n, dt_sin_pri):
+    def test_classificar_status_gripe_nao_vacinado(self, tp_idade, nu_idade_n, dt_sin_pri) -> None:
         """VACINA=2 (Não vaccinado) deve retornar 'nao_vacinado' se não houver dose."""
         row = {
             "DT_UT_DOSE": None,
@@ -199,7 +199,7 @@ class TestClassificarStatusGripeHypothesis:
         nu_idade_n=st.integers(min_value=18, max_value=100),
     )
     @settings(max_examples=10, deadline=5000)
-    def test_classificar_status_gripe_protegido_adulto(self, nu_idade_n):
+    def test_classificar_status_gripe_protegido_adulto(self, nu_idade_n) -> None:
         """Adulto vacinado depois do início da campanha deve ser 'protegido'."""
         dt_ut_dose = date(2024, 6, 15)
         dt_sin_pri = date(2024, 7, 1)
@@ -226,7 +226,7 @@ class TestApplyGlobalFiltersHypothesis:
         profile=st.lists(st.sampled_from(["crianca", "idoso", "adulto"]), max_size=3),
     )
     @settings(max_examples=30)
-    def test_apply_global_filters_with_profiles(self, n_cases, profile):
+    def test_apply_global_filters_with_profiles(self, n_cases, profile) -> None:
         """Testa filtros por perfil demográfico."""
         ages = [5, 25, 70, 8, 65, 3]  # crianca, adulto, idoso
         df = pd.DataFrame(

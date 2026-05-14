@@ -6,9 +6,22 @@ from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends
 
+from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
+from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.analytics import (
+    apply_global_filters,
+    compute_alert_thresholds,
+    compute_data_completeness,
+    compute_time_series,
+    compute_time_series_by_virus,
+    compute_virus_detailed_distribution,
+    compute_virus_distribution,
+    outcome_death_mask,
+)
+from srag.models.forecasting import predict_next_weeks
 
 router = APIRouter()
 
@@ -20,25 +33,26 @@ def health() -> dict[str, str]:
 
 @router.get("/summary")
 def get_summary(
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> SummaryResponse:
-    from srag.api import main as api
-
-    df_all = api.get_df()
+    df_all = get_df()
     available_years: list[int] = []
     if not df_all.empty and "DT_SIN_PRI" in df_all.columns:
         years_series = pd.to_datetime(df_all["DT_SIN_PRI"], errors="coerce").dt.year.dropna()
         available_years = sorted({int(y) for y in years_series})
 
-    df = api.apply_global_filters(df_all, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
+    df = apply_global_filters(
+        df_all,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {
             "uti_rate": 0.0,
@@ -52,7 +66,7 @@ def get_summary(
     hospital_col = df.get("HOSPITAL")
     hospitalized = int((hospital_col.fillna(0) == 1).sum()) if hospital_col is not None else 0
     uti_cases = int((df["UTI"] == 1).sum())
-    death_cases = api.outcome_death_mask(df["EVOLUCAO"]).sum()
+    death_cases = outcome_death_mask(df["EVOLUCAO"]).sum()
 
     return {
         "uti_rate": round((uti_cases / total) * 100, 2) if total > 0 else 0,
@@ -68,20 +82,21 @@ def get_trends(
     last_n_weeks: int = 26,
     weeks_to_predict: int = 4,
     lookback_weeks: int = 0,
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
-    years: list[int] | None = Query(None),
-    agents: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> TrendsResponse:
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
-    df = api.apply_surveillance_filters(df, years, agents)
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {
             "history": [],
@@ -91,10 +106,10 @@ def get_trends(
             "base_cumulative": 0,
         }
 
-    ts = api.compute_time_series(df)
-    result = api.predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
-    result["thresholds"] = api.compute_alert_thresholds(df)
-    ts_virus = api.compute_time_series_by_virus(df)
+    ts = compute_time_series(df)
+    result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
+    result["thresholds"] = compute_alert_thresholds(df)
+    ts_virus = compute_time_series_by_virus(df)
     history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
     composition = ts_virus[ts_virus["epi_week"].isin(history_weeks)]
     result["composition"] = composition.to_dict(orient="records")
@@ -107,29 +122,54 @@ def get_trends(
         result["base_cumulative"] = 0
         result["history"] = full_history
 
-    return api.sanitize_data(result)  # type: ignore[return-value]
+    return sanitize_data(result)  # type: ignore[return-value]
 
 
 @router.get("/virus")
 def get_virus(
     detail_level: str = "summary",
-    profile: list[str] | None = Query(None),
-    race: list[str] | None = Query(None),
-    gender: list[str] | None = Query(None),
-    zonas: list[str] | None = Query(None),
-    bairros: list[str] | None = Query(None),
-    unidades: list[str] | None = Query(None),
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> list[VirusDistributionItem]:
-    from srag.api import main as api
-
-    df = api.get_df()
-    df = api.apply_global_filters(df, profile, race, gender, zonas, bairros, unidades)
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return []
 
-    if detail_level == "detailed":
-        dist = api.compute_virus_detailed_distribution(df)
+    if detail_level == "summary":
+        dist = compute_virus_distribution(df)
     else:
-        dist = api.compute_virus_distribution(df)
+        dist = compute_virus_detailed_distribution(df, detail_level=detail_level)
 
-    return api.sanitize_data(dist.to_dict(orient="records"))  # type: ignore[return-value]
+    return sanitize_data(dist.to_dict(orient="records"))  # type: ignore[return-value]
+
+
+@router.get("/data_completeness")
+def get_data_completeness(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    return compute_data_completeness(df)
+

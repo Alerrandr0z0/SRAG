@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
 vi.mock('../../../../src/hooks/useEcharts', () => ({
-  useEcharts: () => ({ chartRef: { current: null }, chartInstance: { current: null } }),
+  useEcharts: () => ({ chartRef: () => {} }),
 }));
 
 import SankeyChart from '../../../../src/components/charts/SankeyChart';

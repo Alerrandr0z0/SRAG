@@ -1,8 +1,9 @@
 declare const echarts: {
-  init: (_container: HTMLDivElement) => {
+  init: (_container: HTMLDivElement, _theme?: string) => {
     setOption: (opt: unknown, notMerge?: boolean) => void;
     resize: () => void;
     dispose: () => void;
+    isDisposed: () => boolean;
   };
 };
 

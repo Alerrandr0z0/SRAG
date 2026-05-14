@@ -22,6 +22,7 @@ dependencies = [
     "lifelines>=0.30.3",
     "duckdb>=1.5.1",
     "prophet>=1.3.0",
+    "pyright>=1.1.409",
 ]
 
 [project.optional-dependencies]
@@ -88,29 +89,26 @@ convention = "google"
 [tool.ruff.lint.isort]
 known-first-party = ["srag"]
 
-[tool.mypy]
-python_version = "3.14"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-plugins = ["pydantic.mypy"]
-
-[[tool.mypy.overrides]]
-module = ["sklearn.*", "seaborn.*", "matplotlib.*"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["lifelines.*", "prophet.*", "logfire.*", "requests.*"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["tests.*", "scripts.*"]
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = ["pre_commit.*", "bandit.*"]
-ignore_missing_imports = true
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", ".venv", "tests", "scripts"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
+reportPrivateUsage = false
+reportUnnecessaryIsInstance = false
+reportConstantRedefinition = false
+reportIncompatibleMethodOverride = false
+reportCallIssue = false
+reportArgumentType = false
+reportIndexIssue = false
+reportReturnType = false
 
 [tool.pre-commit]
 default_language_version = { python = "python3.14" }
@@ -147,4 +145,6 @@ dev = [
     "hypothesis>=6.100.0",
     "mutmut>=3.0.0",
     "ruff>=0.15.5",
+    "graphifyy>=0.7.11",
+    "jupyterlab>=4.5.5",
 ]

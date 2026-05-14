@@ -10,7 +10,7 @@ from srag.data.database import DB_URL
 
 engine = create_engine(DB_URL, pool_pre_ping=True)
 
-_cache: dict[str, Any] = {"df": None, "loaded_at": None}
+_cache: dict[str, Any] = {"df": None, "loaded_at": None} # Cache invalidated at 2026-05-09
 
 
 def sanitize_data(obj: object) -> object:
@@ -43,7 +43,8 @@ def apply_surveillance_filters(
     """Apply year and etiologic-agent filters consistently across surveillance endpoints."""
     out = df
     if years and "DT_SIN_PRI" in out.columns:
-        year_values = {int(y) for y in years if y is not None}
+        # Robust conversion: keep only items that can be converted to int
+        year_values = {int(y) for y in years if y is not None and str(y).isdigit()}
         out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year.isin(year_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
@@ -156,11 +157,15 @@ def get_df() -> pd.DataFrame:
             "VG_LIN",
             "VG_MET",
             "VG_REINF",
+            "PCR_PARA4",
             "CO_DETEC",
             "PCR_FLUASU",
             "PCR_FLUBLI",
+            "AMOSTRA",
+            "TP_AMOSTRA",
             "RAIOX_RES",
             "TOMO_RES",
+
             "TP_SOR",
             "RES_IGG",
             "RES_IGM",
@@ -175,8 +180,9 @@ def get_df() -> pd.DataFrame:
         ]
         unique_cols = list(dict.fromkeys(core_cols))
         cols_str = ", ".join(unique_cols)
-        df = pd.read_sql(f"SELECT {cols_str} FROM casos_srag", engine)
+        df = pd.read_sql(f"SELECT {cols_str} FROM casos_srag", engine)  # nosec: B608
         df = df.reset_index(drop=True)
+
         date_cols = [
             "DT_NOTIFIC",
             "DT_SIN_PRI",

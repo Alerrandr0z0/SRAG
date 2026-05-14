@@ -58,9 +58,9 @@ def predict_next_weeks(
     # 'changepoint_prior_scale' menor (0.01) evita que o modelo mude de direção
     # drasticamente por causa de 1 ou 2 semanas de subida (o problema dos 322 casos).
     m = Prophet(
-        yearly_seasonality=True,
-        weekly_seasonality=False,
-        daily_seasonality=False,
+        yearly_seasonality=True,  # type: ignore
+        weekly_seasonality=False, # type: ignore
+        daily_seasonality=False,  # type: ignore
         changepoint_prior_scale=0.01,
         seasonality_prior_scale=1.0,
         interval_width=0.80,

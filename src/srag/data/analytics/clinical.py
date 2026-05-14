@@ -1,11 +1,14 @@
 """Clinical metrics and timelines."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
 from srag.data.analytics.filters import _age_years, outcome_death_mask
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
@@ -381,8 +384,8 @@ def compute_symptoms_heatmap(df: pd.DataFrame) -> dict[str, object]:
 
 
 def compute_symptoms_signature(
-    df: pd.DataFrame, profile_type: str = "all", pathogens_mask_func=None
-) -> dict[str, object]:
+    df: pd.DataFrame, profile_type: str = "all", pathogens_mask_func: Callable[..., Any] | None = None
+) -> dict[str, Any]:
     """Calculate symptom prevalence (%) side-by-side for COVID, Flu, and VSR."""
     if df.empty:
         return {"labels": [], "bands": [], "matrices": {}}

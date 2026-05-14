@@ -20,7 +20,9 @@ export function useCoreData(
   bairroFilter?: string[],
   unitFilter?: string[],
   years?: number[],
-  agents?: string[]
+  agents?: string[],
+  maternal?: string[],
+  occupations?: string[]
 ) {
   const [data, setData] = useState<CoreDataState | null>(null);
   const [status, setStatus] = useState('Conectando...');
@@ -36,10 +38,10 @@ export function useCoreData(
         setStatus('Carregando...');
 
         const [summary, trends, virus, lab] = await Promise.all([
-          api.fetchSummary(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
-          api.fetchTrends(weeksWindow, lookback, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
-          api.fetchVirus(virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents),
-          api.fetchLaboratoryNetwork(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents)
+          api.fetchSummary(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
+          api.fetchTrends(weeksWindow, lookback, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
+          api.fetchVirus(virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
+          api.fetchLaboratoryNetwork(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations)
         ]);
 
         if (!active) return;
@@ -62,7 +64,7 @@ export function useCoreData(
 
     loadCore();
     return () => { active = false; };
-  }, [weeksWindow, lookback, virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents]);
+  }, [weeksWindow, lookback, virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations]);
 
   return { data, setData, status, setStatus, lastUpdate, error, setError };
 }

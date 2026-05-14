@@ -10,7 +10,9 @@ export function useCitizenData(
   zoneFilter?: string[],
   bairroFilter?: string[],
   unitFilter?: string[],
-  years?: number[]
+  years?: number[],
+  maternalFilter?: string[],
+  occupationFilter?: string[]
 ) {
   const [profiles, setProfiles] = useState<Epi.CitizenProfile[]>([]);
   const [pyramid, setPyramid] = useState<Epi.PyramidRow[]>([]);
@@ -36,10 +38,10 @@ export function useCitizenData(
       setLoading(true);
       try {
         const [bootstrap, vaccine, survivalData, timeline] = await Promise.all([
-          api.fetchCitizenBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchVaccinationProfile(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchVaccineSurvival(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years),
-          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years)
+          api.fetchCitizenBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
+          api.fetchVaccinationProfile(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
+          api.fetchVaccineSurvival(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
+          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter)
         ]);
 
         if (isMounted) {
@@ -65,7 +67,7 @@ export function useCitizenData(
     }
     load();
     return () => { isMounted = false; };
-  }, [active, profile, raceFilter, genderFilter, swimmerVirus, zoneFilter, bairroFilter, unitFilter, years]);
+  }, [active, profile, raceFilter, genderFilter, swimmerVirus, zoneFilter, bairroFilter, unitFilter, years, maternalFilter, occupationFilter]);
 
   return {
     profiles, pyramid, raceProfile, schooling, occupation, animalContact, traditionalCommunities,

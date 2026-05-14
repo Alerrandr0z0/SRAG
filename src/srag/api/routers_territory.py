@@ -7,7 +7,17 @@ from typing import Any
 import json
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.analytics import (
+    apply_global_filters,
+    compute_territory_distribution,
+    compute_territory_entities_by_zone,
+    compute_unit_distribution,
+    compute_zone_distribution,
+)
 
 router = APIRouter()
 
@@ -17,14 +27,25 @@ def territory_bootstrap(
     min_cases: int = 5,
     entities_min_cases: int = 3,
     entities_limit: int = 40,
+    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    from srag.api import main as api
-
-    df = api.get_df()
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return {}
 
-    bairros_df = api.compute_territory_distribution(df, min_cases=0)
+    bairros_df = compute_territory_distribution(df, min_cases=0)
     bairros_dict = dict(zip(bairros_df["bairro"].str.upper(), bairros_df["count"]))
 
     boundary_path = Path("data/processed/mossoro_municipality_boundary.geojson")
@@ -47,13 +68,13 @@ def territory_bootstrap(
             "feature_collection": {"type": "FeatureCollection", "features": []},
         }
 
-    entities = api.compute_territory_entities_by_zone(df, entities_min_cases, entities_limit)
+    entities = compute_territory_entities_by_zone(df, entities_min_cases, entities_limit)
 
-    return api.sanitize_data(
+    return sanitize_data(
         {
             "territory": {
                 "bairros": bairros_df[bairros_df["count"] >= min_cases].to_dict(orient="records"),
-                "zonas": api.compute_zone_distribution(df).to_dict(orient="records"),
+                "zonas": compute_zone_distribution(df).to_dict(orient="records"),
             },
             "boundary": boundary,
             "choropleth": choropleth,
@@ -63,11 +84,24 @@ def territory_bootstrap(
 
 
 @router.get("/units")
-def get_units(min_cases: int = 3) -> Any:
-    from srag.api import main as api
-
-    df = api.get_df()
+def get_units(
+    min_cases: int = 3,
+    filters: CommonFilters = Depends(get_common_filters),
+) -> Any:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return []
-    dist = api.compute_unit_distribution(df, min_cases=min_cases)
-    return api.sanitize_data(dist.to_dict(orient="records"))
+    dist = compute_unit_distribution(df, min_cases=min_cases)
+    return sanitize_data(dist.to_dict(orient="records"))

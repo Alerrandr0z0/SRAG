@@ -60,7 +60,7 @@ def infer_etiologic_agent(df: pd.DataFrame) -> pd.Series:
     return agent.astype(str)
 
 
-def classificar_status_gripe(row: pd.Series | dict) -> str:
+def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
     """Determine epidemiological status for Flu based on vaccination date and symptoms."""
     vacina = row.get("VACINA")
     dt_dose = row.get("DT_UT_DOSE")
@@ -68,7 +68,7 @@ def classificar_status_gripe(row: pd.Series | dict) -> str:
 
     try:
         vacina = float(vacina) if pd.notna(vacina) else np.nan
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         vacina = np.nan
 
     nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
@@ -132,7 +132,7 @@ def classificar_status_gripe(row: pd.Series | dict) -> str:
         if isinstance(dt_dose_val, str):
             try:
                 dt_dose_val = pd.to_datetime(dt_dose_val, dayfirst=True, format="mixed").date()
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 return "ignorado"
 
         if isinstance(dt_sintoma_val, str):
@@ -140,7 +140,7 @@ def classificar_status_gripe(row: pd.Series | dict) -> str:
                 dt_sintoma_val = pd.to_datetime(
                     dt_sintoma_val, dayfirst=True, format="mixed"
                 ).date()
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 return "ignorado"
 
         if not hasattr(dt_dose_val, "year") or not hasattr(dt_sintoma_val, "year"):
@@ -279,9 +279,10 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
     out = df.copy()
     pcr_res = pd.to_numeric(out.get("PCR_RESUL"), errors="coerce")
     an_res = pd.to_numeric(out.get("RES_AN"), errors="coerce")
-    amostra = pd.to_numeric(out.get("AMOSTRA"), errors="coerce")
+    pd.to_numeric(out.get("AMOSTRA"), errors="coerce")
 
-    # Apenas casos que coletaram amostra (1=Sim) são considerados para o denominador de positividade
+    # Apenas casos que coletaram amostra (1=Sim) são considerados para
+    # o denominador de positividade
     # Fallback para o nome da coluna conforme o dicionário/schema
     col_amostra = out.get("AMOSTRA")
     if col_amostra is None:
@@ -300,8 +301,8 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
         .reset_index()
     )
 
-    # Evita divisão por zero e infinito
-    def calc_rate(row):
+    # Divisão segura
+    def calc_rate(row: pd.Series) -> float:
         if row["tested"] <= 0:
             return 0.0
         return round((row["positive"] / row["tested"] * 100), 1)
@@ -417,12 +418,75 @@ def compute_virus_distribution(df: pd.DataFrame) -> pd.DataFrame:
     return result.reset_index(drop=True)
 
 
-def compute_virus_detailed_distribution(df: pd.DataFrame) -> pd.DataFrame:
+def compute_virus_detailed_distribution(
+    df: pd.DataFrame, detail_level: str = "detailed"
+) -> pd.DataFrame:
     """Build detailed viral profile from laboratory fields when available."""
     if df.empty:
         return pd.DataFrame(columns=["virus", "count"])
 
     out = df.copy()
+
+    if detail_level == "influenza_detailed":
+        # Specific focus on Influenza subtypes
+        flu = out[pd.to_numeric(out["CLASSI_FIN"], errors="coerce") == 1].copy()
+        if flu.empty:
+            return pd.DataFrame([{"virus": "Nenhum Influenza detectado", "count": 0}])
+
+        # Map Influenza A subtypes
+        a_map = {1: "A/H1N1 pdm09", 2: "A/H3N2", 3: "A (Não subtipado)", 4: "A (Não subtipável)"}
+        flu_a = flu[pd.to_numeric(flu["TP_FLU_PCR"], errors="coerce") == 1].copy()
+        flu_a["virus"] = (
+            pd.to_numeric(flu_a["PCR_FLUASU"], errors="coerce").map(a_map).fillna("Influenza A")
+        )
+
+        # Map Influenza B lineages
+        b_map = {1: "B/Victoria", 2: "B/Yamagata"}
+        flu_b = flu[pd.to_numeric(flu["TP_FLU_PCR"], errors="coerce") == 2].copy()
+        flu_b["virus"] = (
+            pd.to_numeric(flu_b["PCR_FLUBLI"], errors="coerce").map(b_map).fillna("Influenza B")
+        )
+
+        # Merge results
+        remaining = flu[~flu.index.isin(flu_a.index) & ~flu.index.isin(flu_b.index)].copy()
+        remaining["virus"] = "Influenza (Não tipada)"
+
+        final = pd.concat([flu_a, flu_b, remaining])
+        return (
+            final.groupby("virus")
+            .size()
+            .reset_index(name="count")
+            .sort_values("count", ascending=False)
+        )
+
+    if detail_level == "covid_detailed":
+        # Specific focus on COVID variants (even if empty in current base)
+        covid = out[pd.to_numeric(out["CLASSI_FIN"], errors="coerce") == 5].copy()
+        if covid.empty:
+            return pd.DataFrame([{"virus": "Nenhum COVID-19 detectado", "count": 0}])
+
+        variant_map = {
+            1: "Ômicron",
+            2: "Delta",
+            3: "Alfa",
+            4: "Beta",
+            5: "Gama",
+            6: "Recombinante",
+            7: "Outra",
+        }
+        covid["virus"] = (
+            pd.to_numeric(covid["VG_OMS"], errors="coerce")
+            .map(variant_map)
+            .fillna("Não sequenciado")
+        )
+        return (
+            covid.groupby("virus")
+            .size()
+            .reset_index(name="count")
+            .sort_values("count", ascending=False)
+        )
+
+    # Standard "detailed" logic
     out["virus"] = "Em investigacao"
 
     pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")
@@ -804,7 +868,7 @@ def compute_vaccine_manufacturer_distribution(df: pd.DataFrame) -> list[dict[str
     fab_cols = ["FAB_RE_BI", "FAB_ADIC", "FAB_COVRF2", "FAB_COVRF", "FAB_COV2", "FAB_COV1"]
 
     # Extract last non-null manufacturer per row
-    def get_last_fab(row):
+    def get_last_fab(row: pd.Series) -> str | None:
         for col in fab_cols:
             val = row.get(col)
             if pd.notna(val) and str(val).strip() != "":
@@ -828,9 +892,9 @@ def compute_vaccine_manufacturer_distribution(df: pd.DataFrame) -> list[dict[str
         "JOHNSON": "Janssen (Johnson & Johnson)",
     }
 
-    def normalize_fab(name):
-        if name == "NÃO INFORMADO":
-            return name
+    def normalize_fab(name: str | None) -> str:
+        if not name or name == "NÃO INFORMADO":
+            return "NÃO INFORMADO"
         for key, target in mapping.items():
             if key in name:
                 return target
@@ -965,63 +1029,47 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         taxa_obito = round(death_mask.sum() / count, 4) if count > 0 else 0.0
         taxa_cura = round(cure_mask.sum() / count, 4) if count > 0 else 0.0
 
-        dose_to_symptom: list[float] = []
-        symptom_to_hosp: list[float] = []
-        hosp_to_outcome: list[float] = []
+        dt_symptom = subset["DT_SIN_PRI"]
+        dt_hosp = subset["DT_INTERNA"]
+        dt_outcome = subset["DT_EVOLUCA"]
 
-        for _, r in subset.iterrows():
-            dt_dose = None
-            if virus == "covid":
-                dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
-                for col in dose_cols:
-                    if pd.notna(r.get(col)):
-                        dt_dose = pd.to_datetime(r.get(col), errors="coerce")
-                        break
+        if virus == "covid":
+            dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
+            available_cols = [c for c in dose_cols if c in subset.columns]
+            if available_cols:
+                dt_dose = subset[available_cols].bfill(axis=1).iloc[:, 0]
+                dt_dose = pd.to_datetime(dt_dose, errors="coerce")
             else:
-                dt_dose = pd.to_datetime(r.get("DT_UT_DOSE"), errors="coerce")
+                dt_dose = pd.Series(pd.NaT, index=subset.index)
+        else:
+            if "DT_UT_DOSE" in subset.columns:
+                dt_dose = pd.to_datetime(subset["DT_UT_DOSE"], errors="coerce")
+            else:
+                dt_dose = pd.Series(pd.NaT, index=subset.index)
 
-            dt_symptom = r.get("DT_SIN_PRI")
-            dt_hosp = r.get("DT_INTERNA")
-            dt_outcome = r.get("DT_EVOLUCA")
+        days_dose_symp = (dt_dose - dt_symptom).dt.days
+        valid_dose = days_dose_symp[(days_dose_symp >= -180) & (days_dose_symp <= 180)].dropna()
 
-            if pd.notna(dt_dose) and pd.notna(dt_symptom):
-                days = (dt_dose - dt_symptom).days
-                if -180 <= days <= 180:
-                    dose_to_symptom.append(days)
+        days_symp_hosp = (dt_hosp - dt_symptom).dt.days
+        valid_intern = days_symp_hosp[(days_symp_hosp >= 0) & (days_symp_hosp <= 180)].dropna()
 
-            if pd.notna(dt_symptom) and pd.notna(dt_hosp):
-                days = (dt_hosp - dt_symptom).days
-                if 0 <= days <= 180:
-                    symptom_to_hosp.append(days)
+        days_hosp_out = (dt_outcome - dt_hosp).dt.days
+        valid_out = days_hosp_out[(days_hosp_out >= 0) & (days_hosp_out <= 180)].dropna()
 
-            if pd.notna(dt_hosp) and pd.notna(dt_outcome):
-                days = (dt_outcome - dt_hosp).days
-                if 0 <= days <= 180:
-                    hosp_to_outcome.append(days)
+        mediana_dose_sintoma = round(float(valid_dose.median()), 1) if not valid_dose.empty else None
+        dose_p25 = round(float(valid_dose.quantile(0.25)), 1) if not valid_dose.empty else None
+        dose_p75 = round(float(valid_dose.quantile(0.75)), 1) if not valid_dose.empty else None
 
-        mediana_dose_sintoma = (
-            round(float(np.median(dose_to_symptom)), 1) if dose_to_symptom else None
-        )
-        dose_p25 = round(float(np.percentile(dose_to_symptom, 25)), 1) if dose_to_symptom else None
-        dose_p75 = round(float(np.percentile(dose_to_symptom, 75)), 1) if dose_to_symptom else None
+        mediana_sintoma_internacao = round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
+        intern_p25 = round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
+        intern_p75 = round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
 
-        mediana_sintoma_internacao = (
-            round(float(np.median(symptom_to_hosp)), 1) if symptom_to_hosp else 0.0
-        )
-        intern_p25 = (
-            round(float(np.percentile(symptom_to_hosp, 25)), 1) if symptom_to_hosp else 0.0
-        )
-        intern_p75 = (
-            round(float(np.percentile(symptom_to_hosp, 75)), 1) if symptom_to_hosp else 0.0
-        )
-
-        mediana_internacao_desfecho = (
-            round(float(np.median(hosp_to_outcome)), 1) if hosp_to_outcome else 0.0
-        )
-        desf_p25 = round(float(np.percentile(hosp_to_outcome, 25)), 1) if hosp_to_outcome else 0.0
-        desf_p75 = round(float(np.percentile(hosp_to_outcome, 75)), 1) if hosp_to_outcome else 0.0
+        mediana_internacao_desfecho = round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
+        desf_p25 = round(float(valid_out.quantile(0.25)), 1) if not valid_out.empty else 0.0
+        desf_p75 = round(float(valid_out.quantile(0.75)), 1) if not valid_out.empty else 0.0
 
         uti_pct = round((pd.to_numeric(subset.get("UTI"), errors="coerce") == 1).mean() * 100, 1)
+
 
         severity_score = round((taxa_obito * 0.6) + (taxa_cura * 0.4), 4)
 

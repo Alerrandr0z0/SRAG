@@ -2,7 +2,7 @@ from srag.data.references import DEATH_OUTCOMES, MOSSORO_IBGE_CODES
 from srag.data.schema import SragCase, is_mossoro_case
 
 
-def test_is_mossoro_case_by_code():
+def test_is_mossoro_case_by_code() -> None:
     # Standard code
     case1 = SragCase(
         DT_NOTIFIC="20/05/2024",
@@ -40,7 +40,7 @@ def test_is_mossoro_case_by_code():
     assert is_mossoro_case(case2) is True
 
 
-def test_is_mossoro_case_by_name():
+def test_is_mossoro_case_by_name() -> None:
     case = SragCase(
         DT_NOTIFIC="20/05/2024",
         ID_MUNICIP="MOSSORO",
@@ -59,7 +59,7 @@ def test_is_mossoro_case_by_name():
     assert is_mossoro_case(case) is True
 
 
-def test_is_not_mossoro_case():
+def test_is_not_mossoro_case() -> None:
     case = SragCase(
         DT_NOTIFIC="20/05/2024",
         ID_MUNICIP="2408102",  # Natal
@@ -78,11 +78,11 @@ def test_is_not_mossoro_case():
     assert is_mossoro_case(case) is False
 
 
-def test_project_death_override_keeps_code_2_only():
+def test_project_death_override_keeps_code_2_only() -> None:
     assert {2} == DEATH_OUTCOMES
 
 
-def test_is_mossoro_case_by_residence():
+def test_is_mossoro_case_by_residence() -> None:
     # Resident in Mossoró but notified elsewhere
     case = SragCase(
         DT_NOTIFIC="20/05/2024",
@@ -102,7 +102,7 @@ def test_is_mossoro_case_by_residence():
     assert is_mossoro_case(case) is True
 
 
-def test_is_mossoro_case_empty_values():
+def test_is_mossoro_case_empty_values() -> None:
     case = SragCase(
         DT_NOTIFIC="20/05/2024",
         ID_MUNICIP="",
@@ -121,5 +121,5 @@ def test_is_mossoro_case_empty_values():
     assert is_mossoro_case(case) is False
 
 
-def test_mossoro_reference_codes_include_ibge_primary_code():
+def test_mossoro_reference_codes_include_ibge_primary_code() -> None:
     assert MOSSORO_IBGE_CODES[0] == "2408003"

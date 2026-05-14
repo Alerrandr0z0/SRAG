@@ -30,7 +30,7 @@ def test_db_setup(monkeypatch):
         os.remove(TEST_DB_FILE)
 
 
-def test_generate_case_hash():
+def test_generate_case_hash() -> None:
     record = {
         "DT_NOTIFIC": date(2024, 5, 1),
         "ID_MUNICIP": "2408003",
@@ -45,7 +45,7 @@ def test_generate_case_hash():
     assert len(h1) == 32
 
 
-def test_save_cases_deduplication(test_db_setup):
+def test_save_cases_deduplication(test_db_setup) -> None:
     cases = [
         {
             "DT_NOTIFIC": date(2024, 5, 1),
@@ -68,7 +68,7 @@ def test_save_cases_deduplication(test_db_setup):
     assert added_again == 0
 
 
-def test_save_cases_enrichment(test_db_setup):
+def test_save_cases_enrichment(test_db_setup) -> None:
     base_case = {
         "DT_NOTIFIC": date(2024, 5, 1),
         "ID_MUNICIP": "2408003",

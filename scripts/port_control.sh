@@ -6,17 +6,20 @@ API_HOST="${API_HOST:-0.0.0.0}"
 API_PORT="${API_PORT:-8000}"
 FRONT_PORT="${FRONT_PORT:-8080}"
 VITE_PORT="${VITE_PORT:-5173}"
+JUPYTER_PORT="${JUPYTER_PORT:-8888}"
+
+SKIP_JUPYTER=false
 
 usage() {
   cat <<'EOF'
 Uso:
-  ./scripts/port_control.sh start      # sobe backend + frontend
-  ./scripts/port_control.sh stop       # encerra backend + frontend
-  ./scripts/port_control.sh restart    # stop + start
-  ./scripts/port_control.sh status     # mostra estado das portas
+  ./scripts/port_control.sh start [--no-jupyter]  # sobe backend + frontend [+ jupyter]
+  ./scripts/port_control.sh stop                  # encerra backend + frontend + jupyter
+  ./scripts/port_control.sh restart               # stop + start
+  ./scripts/port_control.sh status                # mostra estado das portas
 
 Variaveis opcionais:
-  API_PORT=8001 VITE_PORT=5174 ./scripts/port_control.sh start
+  API_PORT=8001 VITE_PORT=5174 JUPYTER_PORT=8889 ./scripts/port_control.sh start
 EOF
 }
 
@@ -31,7 +34,7 @@ show_port_hint() {
   printf "Verifique com:\n"
   printf "  ss -ltnp '( sport = :%s )'\n" "$port"
   printf "\nOpcional: rode com outra porta:\n"
-  printf "  API_PORT=8001 VITE_PORT=5174 ./scripts/port_control.sh start\n\n"
+  printf "  API_PORT=8001 VITE_PORT=5174 JUPYTER_PORT=8889 ./scripts/port_control.sh start\n\n"
 }
 
 front_active_port() {
@@ -42,10 +45,10 @@ show_status() {
   local active_front
   active_front="$(front_active_port)"
   printf "\nEstado atual:\n"
-  if port_busy "$API_PORT" || port_busy "$active_front"; then
-    ss -ltnp "( sport = :$API_PORT or sport = :$active_front )"
+  if port_busy "$API_PORT" || port_busy "$active_front" || port_busy "$JUPYTER_PORT"; then
+    ss -ltnp "( sport = :$API_PORT or sport = :$active_front or sport = :$JUPYTER_PORT )"
   else
-    printf "Nenhuma porta em uso (%s, %s).\n" "$API_PORT" "$active_front"
+    printf "Nenhuma porta em uso (%s, %s, %s).\n" "$API_PORT" "$active_front" "$JUPYTER_PORT"
   fi
 }
 
@@ -83,14 +86,17 @@ do_stop() {
 
   stop_by_port "$API_PORT" "API"
   stop_by_port "$active_front" "Frontend"
+  stop_by_port "$JUPYTER_PORT" "Jupyter"
 
-  # Fallback for uvicorn reload parent process
+  # Fallback for uvicorn reload parent process and jupyter
   pkill -f "uvicorn srag.api.main:app" 2>/dev/null || true
   pkill -f "vite --host 0.0.0.0" 2>/dev/null || true
+  pkill -f "jupyter-lab" 2>/dev/null || true
 
   sleep 1
   force_kill_port "$API_PORT" "API"
   force_kill_port "$active_front" "Frontend"
+  force_kill_port "$JUPYTER_PORT" "Jupyter"
   sleep 1
   show_status
 }
@@ -103,6 +109,9 @@ cleanup_start() {
   fi
   if [[ -n "${FRONT_PID:-}" ]] && kill -0 "$FRONT_PID" 2>/dev/null; then
     kill "$FRONT_PID" 2>/dev/null || true
+  fi
+  if [[ -n "${JUPYTER_PID:-}" ]] && kill -0 "$JUPYTER_PID" 2>/dev/null; then
+    kill "$JUPYTER_PID" 2>/dev/null || true
   fi
   wait 2>/dev/null || true
   exit "$code"
@@ -118,6 +127,10 @@ do_start() {
   fi
   if port_busy "$active_front"; then
     show_port_hint "$active_front"
+    exit 1
+  fi
+  if ! $SKIP_JUPYTER && port_busy "$JUPYTER_PORT"; then
+    show_port_hint "$JUPYTER_PORT"
     exit 1
   fi
 
@@ -138,15 +151,56 @@ do_start() {
   ) &
   FRONT_PID=$!
 
+  if ! $SKIP_JUPYTER; then
+    printf "Iniciando Jupyter Lab em http://127.0.0.1:%s ...\n" "$JUPYTER_PORT"
+    (
+      cd "$ROOT_DIR"
+      export PYTHONPATH="$ROOT_DIR/src"
+      # Allow embedding in iframe (CSP and X-Frame-Options)
+      uv run jupyter-lab --no-browser --ip 0.0.0.0 --port "$JUPYTER_PORT" \
+        --allow-root --ServerApp.token='' --ServerApp.password='' \
+        --ServerApp.allow_origin='*' \
+        --ServerApp.disable_check_xsrf=True \
+        --ServerApp.tornado_settings='{"headers":{"Content-Security-Policy":"frame-ancestors *","X-Frame-Options":"ALLOWALL"}}'
+    ) &
+    JUPYTER_PID=$!
+  fi
+
   printf "\nServicos em execucao:\n"
   printf -- "- API:      http://127.0.0.1:%s\n" "$API_PORT"
-  printf -- "- Frontend: http://127.0.0.1:%s\n\n" "$active_front"
-  printf "Pressione Ctrl+C para encerrar ambos.\n"
+  printf -- "- Frontend: http://127.0.0.1:%s\n" "$active_front"
+  if ! $SKIP_JUPYTER; then
+    printf -- "- Jupyter:  http://127.0.0.1:%s\n" "$JUPYTER_PORT"
+  fi
+  printf "\nPressione Ctrl+C para encerrar tudo.\n"
 
-  wait -n "$API_PID" "$FRONT_PID"
+  if ! $SKIP_JUPYTER; then
+    wait -n "$API_PID" "$FRONT_PID" "$JUPYTER_PID"
+  else
+    wait -n "$API_PID" "$FRONT_PID"
+  fi
 }
 
 ACTION="${1:-}"
+shift || true
+
+# Parse flags for 'start'
+if [[ "$ACTION" == "start" ]]; then
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --no-jupyter)
+        SKIP_JUPYTER=true
+        shift
+        ;;
+      *)
+        printf "Flag desconhecida: %s\n" "$1"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+fi
+
 case "$ACTION" in
   start)
     do_start

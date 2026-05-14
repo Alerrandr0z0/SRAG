@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
+import * as d3 from 'd3';
 
 interface ChoroplethType {
   feature_collection?: FeatureCollection;
@@ -40,8 +41,25 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const boundaryLayer = useRef<L.GeoJSON | null>(null);
   const overlayLayer = useRef<L.LayerGroup | null>(null);
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+
+  // Calculate the color scale based on intensity
+  const colorScale = useMemo(() => {
+    if (mapZoneMode !== 'Urbana' || !choropleth?.feature_collection?.features?.length) {
+      return null;
+    }
+
+    const counts = choropleth.feature_collection.features.map(f => (f.properties?.count as number) || 0);
+    const maxCount = d3.max(counts) || 1;
+
+    // Sequential scale using warm tones (Yellow-Orange-Red)
+    return d3.scaleSequential()
+      .domain([0, maxCount])
+      .interpolator(d3.interpolateYlOrRd);
+  }, [choropleth, mapZoneMode]);
 
   const handleSectorClick = useCallback((sector: string) => {
     if (!onSectorSelect) return;
@@ -58,14 +76,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       await import('leaflet/dist/leaflet.css');
       if (cancelled || !mapRef.current) return;
 
+      const lightTiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const darkTiles = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      const tileUrl = theme === 'dark' ? darkTiles : lightTiles;
+
       if (!mapInstance.current) {
         mapInstance.current = L.map(mapRef.current, {
           zoomControl: true,
           scrollWheelZoom: true,
         }).setView([-5.18, -37.34], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap',
+        
+        tileLayerRef.current = L.tileLayer(tileUrl, {
+          attribution: theme === 'dark' ? '&copy; CartoDB' : '&copy; OpenStreetMap',
         }).addTo(mapInstance.current);
+      } else {
+        tileLayerRef.current?.setUrl(tileUrl);
       }
 
       if (boundaryLayer.current) boundaryLayer.current.remove();
@@ -78,22 +103,27 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
 
       if (mapZoneMode === 'Urbana' && choropleth?.feature_collection?.features?.length) {
+        if (mapInstance.current) {
+          mapInstance.current.setView([-5.18, -37.34], 12);
+        }
+
         overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
           style: (f) => {
             const feature = f as { properties?: { bairro?: string; count?: number } };
-            const count = feature.properties && (feature.properties as { count?: number }).count;
+            const count = (feature.properties?.count as number) || 0;
             return {
-              color: '#0f172a',
-              weight: 1,
-              fillColor: count != null && count > 0 ? '#14b8a6' : '#e2e8f0',
+              color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+              weight: 0.5,
+              fillColor: count > 0 && colorScale ? colorScale(count) : (theme === 'dark' ? '#334155' : '#e2e8f0'),
               fillOpacity: 0.85,
             };
           },
           onEachFeature: (feature, layer) => {
-            const feat = feature as { properties?: { bairro?: string } };
+            const feat = feature as { properties?: { bairro?: string; count?: number } };
             if (feat.properties?.bairro) {
+              const c = feat.properties.count || 0;
               layer.bindTooltip(
-                `<strong>${feat.properties.bairro}</strong><br/>${feature.properties?.count || 0} casos`,
+                `<strong>${feat.properties.bairro}</strong><br/>${c} ${c === 1 ? 'caso' : 'casos'}`,
                 { sticky: true }
               );
             }
@@ -151,7 +181,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
     renderMap();
     return () => { cancelled = true; };
-  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick]);
+  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick, colorScale, theme]);
 
   useEffect(() => {
     return () => {
@@ -173,14 +203,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             bottom: 20,
             left: 20,
             zIndex: 1000,
-            background: 'rgba(15, 23, 42, 0.9)',
+            background: theme === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.9)',
             color: 'white',
             borderRadius: 8,
             padding: '12px 16px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             minWidth: 140,
             backdropFilter: 'blur(4px)',
-            border: '1px solid #334155',
+            border: `1px solid ${theme === 'dark' ? '#334155' : '#334155'}`,
           }}
         >
           <p style={{ margin: '0 0 8px 0', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -216,10 +246,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             top: 12,
             right: 12,
             zIndex: 1000,
-            background: 'white',
+            background: theme === 'dark' ? '#1e293b' : 'white',
             borderRadius: 999,
             padding: '8px 10px',
-            boxShadow: '0 10px 24px rgba(15,23,42,0.18)',
+            boxShadow: '0 10px 24px rgba(0,0,0,0.2)',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -238,9 +268,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                   fontSize: '12px',
                   fontWeight: 700,
                   borderRadius: 999,
-                  border: isSelected ? `2px solid ${stroke}` : '1px solid #e2e8f0',
-                  background: isSelected ? `${stroke}20` : 'white',
-                  color: isSelected ? stroke : '#0f172a',
+                  border: isSelected ? `2px solid ${stroke}` : `1px solid ${theme === 'dark' ? '#475569' : '#e2e8f0'}`,
+                  background: isSelected ? `${stroke}20` : (theme === 'dark' ? '#1e293b' : 'white'),
+                  color: isSelected ? stroke : (theme === 'dark' ? '#f8fafc' : '#0f172a'),
                   cursor: 'pointer',
                 }}
               >
@@ -254,9 +284,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               style={{
                 padding: '6px 10px',
                 fontSize: '11px',
-                color: '#0f172a',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+                background: theme === 'dark' ? '#334155' : '#f8fafc',
+                border: `1px solid ${theme === 'dark' ? '#475569' : '#e2e8f0'}`,
                 borderRadius: 999,
                 cursor: 'pointer',
               }}

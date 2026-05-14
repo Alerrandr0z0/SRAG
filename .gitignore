@@ -40,10 +40,16 @@ data/external/*
 .DS_Store
 Thumbs.db
 
-# Project Agents/Internal docs (uncomment if these should be private)
-# AGENTS.md
-# GEMINI.md
-# frontend/GEMINI.md
+# Project Agents/Internal docs
+GEMINI.md
+.gemini/
+frontend/GEMINI.md
+
+# Agent Skills & Knowledge Graph (external assets & artifacts)
+.agents/
+graphify-out/
+skills-lock.json
+
 
 # Frontend
 frontend/node_modules/

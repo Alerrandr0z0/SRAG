@@ -217,4 +217,10 @@ export interface AggregatedTimeline {
   count: number;
 }
 
+export interface DataCompletenessGroup {
+  group: string;
+  overall_score: number;
+  fields: Array<{ field: string; rate: number }>;
+}
+
 export type TemporalGrouping = 'year' | 'month' | 'week';

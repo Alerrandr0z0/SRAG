@@ -21,6 +21,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "check": "npm run lint && npm run typecheck && npm run test:unit",
+    "test:property": "vitest run --testNamePattern=.prop.test.ts",
     "test:mutation": "stryker run"
   },
   "dependencies": {

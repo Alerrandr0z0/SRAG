@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import pandas as pd
@@ -46,10 +46,10 @@ DATE_COLS = {
 }
 
 
-def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict:
+def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict[str, Any]:
     """Execute the full surveillance lifecycle: Ingest -> Validate -> Snapshot -> Load."""
     start_time = datetime.now()
-    report = {"timestamp": start_time.isoformat(), "steps": [], "status": "starting"}
+    report: dict[str, Any] = {"timestamp": start_time.isoformat(), "steps": [], "status": "starting"}
 
     try:
         # 1. Setup & Extraction (DuckDB Engine)
@@ -80,8 +80,9 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
 
             # Dynamic Column Mapping
             cols = [
-                c[0] for c in con.execute(f"DESCRIBE SELECT * FROM {read_func}('{pf}')").fetchall()
+                c[0] for c in con.execute(f"DESCRIBE SELECT * FROM {read_func}('{pf}')").fetchall()  # nosec: B608
             ]
+
             file_map = {c.upper(): c for c in cols}
 
             def get_src(name: str, mapping: dict[str, str] = file_map) -> str:
@@ -124,14 +125,13 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
                     select_parts.append(get_src(col_up))
 
             con.execute(
-                f"INSERT INTO temp_raw ({', '.join(target_cols)}) "
-                f"SELECT {', '.join(select_parts)} FROM {read_func}('{pf}') "
-                f"WHERE CAST({s_mun} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "
-                f"CAST({s_res} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "
-                f"UPPER(CAST({s_mun} AS VARCHAR)) IN {MOSSORO_NAMES} OR "
-                f"UPPER(CAST({s_res} AS VARCHAR)) IN {MOSSORO_NAMES}"
+                f"INSERT INTO temp_raw ({', '.join(target_cols)}) "  # nosec: B608
+                f"SELECT {', '.join(select_parts)} FROM {read_func}('{pf}') "  # nosec: B608
+                f"WHERE CAST({s_mun} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
+                f"CAST({s_res} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
+                f"UPPER(CAST({s_mun} AS VARCHAR)) IN {MOSSORO_NAMES} OR "  # nosec: B608
+                f"UPPER(CAST({s_res} AS VARCHAR)) IN {MOSSORO_NAMES}"  # nosec: B608
             )
-
         # 2. Validation (Pandas Pass)
         df_all = con.execute("SELECT * FROM temp_raw").df()
         is_valid, warnings = validate_srag_data(df_all)
@@ -145,18 +145,17 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
         # 3. Load & Deduplicate
         con.execute("DELETE FROM sqlite_db.casos_srag;")
         con.execute(
-            f"INSERT INTO sqlite_db.casos_srag ({', '.join(target_cols)}) "
-            f"SELECT {', '.join(target_cols)} FROM ("
+            f"INSERT INTO sqlite_db.casos_srag ({', '.join(target_cols)}) "  # nosec: B608
+            f"SELECT {', '.join(target_cols)} FROM ("  # nosec: B608
             "SELECT *, ROW_NUMBER() OVER (PARTITION BY unique_hash ORDER BY DT_NOTIFIC DESC) "
             "AS rn FROM temp_raw) WHERE rn = 1"
         )
-
         # 4. Intelligence Pass (Bairros/Zonas)
         with sqlite3.connect(db_path) as conn:
             df = pd.read_sql("SELECT rowid, NM_BAIRRO, CS_ZONA FROM casos_srag", conn)
             if not df.empty:
                 df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
-                df["ZONA"] = df.apply(
+                df["ZONA"] = cast(Any, df).apply(
                     lambda r: (
                         _normalize_zone(int(r["CS_ZONA"]))
                         if pd.notna(r["CS_ZONA"])

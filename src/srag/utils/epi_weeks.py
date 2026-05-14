@@ -1,11 +1,12 @@
 """Utilities for epidemiological week (SE) calculations."""
 
 from datetime import date, timedelta
+from typing import Any
 
 import pandas as pd
 
 
-def get_epi_week(dt: object) -> tuple[int, int]:
+def get_epi_week(dt: Any) -> tuple[int, int]:
     """Calculate the epidemiological week (SE) and year for a given date.
 
     In Brazil, SE follows the international standard (Sunday to Saturday),
@@ -23,20 +24,27 @@ def get_epi_week(dt: object) -> tuple[int, int]:
     if dt is None:
         return 0, 0
     try:
-        if pd.isna(dt):
+        if pd.isna(dt): # type: ignore
             return 0, 0
-    except TypeError, ValueError:
-        pass
+    except (TypeError, ValueError):
         return 0, 0
 
     # Ensure we have a datetime.date object
-    if hasattr(dt, "date") and callable(dt.date):
-        dt = dt.date()
-    elif isinstance(dt, str):
-        try:
-            dt = pd.to_datetime(dt).date()
-        except TypeError, ValueError:
-            return 0, 0
+    try:
+        if hasattr(dt, "date") and callable(dt.date):
+            dt = dt.date()
+        elif isinstance(dt, str):
+            dt_converted = pd.to_datetime(dt)
+            dt = dt_converted.date() if hasattr(dt_converted, "date") else None
+    except (TypeError, ValueError, AttributeError, Exception):
+        return 0, 0
+
+    if dt is None or pd.isna(dt): # type: ignore
+        return 0, 0
+
+
+    if not isinstance(dt, date):
+        return 0, 0
 
     # The first SE of the year is the one that contains the first Wednesday
     # of the year (or the one with at least 4 days in January).

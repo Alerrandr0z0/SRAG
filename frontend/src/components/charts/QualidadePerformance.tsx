@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -31,23 +31,16 @@ export interface QualidadePerformanceData {
   antiviral:        AntiviralItem[];
   oportunidade:     BoxStats;
   oportunidadeMeta: number; // dias — janela terapêutica (ex: 2)
+  coberturaTestagem: {
+    collected: number;
+    total: number;
+    rate: number;
+  };
+  distribuicaoAmostra: {
+    label: string;
+    count: number;
+  }[];
 }
-
-// ─── Paleta unificada ────────────────────────────────────────────────────────
-const COLORS = {
-  ok:      "#0f766e",
-  warn:    "#d97706",
-  crit:    "#dc2626",
-  neutral: "#94a3b8",
-  grid:    "#e2e8f0",
-  text:    "#64748b",
-};
-
-const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-  ok:   { bg: "#e1f5ee", color: "#085041", label: "padrão"   },
-  warn: { bg: "#faeeda", color: "#633806", label: "atenção"  },
-  raro: { bg: "#f1efe8", color: "#444441", label: "raro"     },
-};
 
 // ─── Componente Tooltip Centralizado ─────────────────────────────────────────
 
@@ -65,16 +58,18 @@ const Tooltip: React.FC<TooltipState> = ({ show, x, y, content }) => {
       position: 'fixed',
       left: x + 15,
       top: y - 10,
-      backgroundColor: 'rgba(15, 23, 42, 0.9)',
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
       color: 'white',
       padding: '8px 12px',
       borderRadius: '6px',
       fontSize: '11px',
       pointerEvents: 'none',
       zIndex: 9999,
-      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
       lineHeight: 1.5,
-      maxWidth: '200px'
+      maxWidth: '200px',
+      backdropFilter: 'blur(4px)',
+      border: '1px solid rgba(255, 255, 255, 0.1)'
     }}>
       {content}
     </div>
@@ -91,6 +86,7 @@ interface BoxPlotProps {
   height?:     number;
   onHover: (e: React.MouseEvent, content: React.ReactNode) => void;
   onLeave: () => void;
+  themeColors: any;
 }
 
 const BoxPlot: React.FC<BoxPlotProps> = ({
@@ -100,7 +96,8 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
   metaLabel,
   height = 120,
   onHover,
-  onLeave
+  onLeave,
+  themeColors
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -138,9 +135,9 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
       )
       .call(gg => gg.select(".domain").remove())
       .call(gg => gg.selectAll(".tick line")
-        .attr("stroke", COLORS.grid).attr("stroke-dasharray", "3,3"))
+        .attr("stroke", themeColors.grid).attr("stroke-dasharray", "3,3"))
       .call(gg => gg.selectAll("text")
-        .attr("fill", COLORS.text).attr("font-size", "10px").attr("dy", "1em"));
+        .attr("fill", themeColors.text).attr("font-size", "10px").attr("dy", "1em"));
 
     // Linha de meta (atrás de tudo)
     if (metaVal != null) {
@@ -148,7 +145,7 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
       g.append("line")
         .attr("x1", mx).attr("x2", mx)
         .attr("y1", -margin.top + 6).attr("y2", h)
-        .attr("stroke", COLORS.crit)
+        .attr("stroke", themeColors.crit)
         .attr("stroke-width", 1.5)
         .attr("stroke-dasharray", "5,3");
 
@@ -157,7 +154,7 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
         .attr("y", -margin.top + 14)
         .attr("font-size", "10px")
         .attr("font-weight", "600")
-        .attr("fill", COLORS.crit)
+        .attr("fill", themeColors.crit)
         .text(metaLabel ?? `meta ${metaVal}d`);
     }
 
@@ -187,7 +184,7 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
       .attr("y", cy - 16)
       .attr("width", Math.max(4, xScale(stats.q3) - xScale(stats.q1)))
       .attr("height", 32)
-      .attr("fill", color + "22")
+      .attr("fill", color + "33")
       .attr("stroke", color)
       .attr("stroke-width", 1.5)
       .attr("rx", 3)
@@ -227,7 +224,7 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
       .attr("y", cy + 28)
       .attr("text-anchor", "middle")
       .attr("font-size", "9px")
-      .attr("fill", COLORS.text)
+      .attr("fill", themeColors.text)
       .text(`${stats.min}d`);
 
     g.append("text")
@@ -235,10 +232,10 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
       .attr("y", cy + 28)
       .attr("text-anchor", "middle")
       .attr("font-size", "9px")
-      .attr("fill", COLORS.text)
+      .attr("fill", themeColors.text)
       .text(`${stats.max}d`);
 
-  }, [stats, color, metaVal, metaLabel, height, onHover, onLeave]);
+  }, [stats, color, metaVal, metaLabel, height, onHover, onLeave, themeColors]);
 
   return (
     <svg
@@ -255,7 +252,8 @@ const Barra100: React.FC<{
   criterios: DiagnosticoCriterio[],
   onHover: (e: React.MouseEvent, content: React.ReactNode) => void;
   onLeave: () => void;
-}> = ({ criterios, onHover, onLeave }) => {
+  themeColors: any;
+}> = ({ criterios, onHover, onLeave, themeColors }) => {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   
   const toggle = (label: string) => {
@@ -276,7 +274,7 @@ const Barra100: React.FC<{
       <div style={{
         display: "flex", height: "40px",
         borderRadius: "8px", overflow: "hidden",
-        background: "#f1efe8",
+        background: themeColors.pill,
       }}>
         {criterios.map((c, i) => (
           !hidden.has(c.label) && (
@@ -307,7 +305,7 @@ const Barra100: React.FC<{
           )
         ))}
         {visibleCriterios.length === 0 && (
-           <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: COLORS.text }}>
+           <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: themeColors.text }}>
               Selecione uma categoria abaixo
            </div>
         )}
@@ -323,7 +321,7 @@ const Barra100: React.FC<{
             onClick={() => toggle(c.label)}
             style={{
               display: "flex", alignItems: "center", gap: "6px",
-              fontSize: "11px", color: hidden.has(c.label) ? "#cbd5e1" : "#64748b",
+              fontSize: "11px", color: hidden.has(c.label) ? themeColors.neutral : themeColors.text,
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
               transition: 'color 0.2s'
             }}
@@ -331,7 +329,7 @@ const Barra100: React.FC<{
             <span style={{
               width: "12px", height: "12px",
               borderRadius: "3px", 
-              background: hidden.has(c.label) ? "#e2e8f0" : c.color, 
+              background: hidden.has(c.label) ? themeColors.pill : c.color, 
               flexShrink: 0,
               transition: 'background 0.2s'
             }} />
@@ -347,67 +345,76 @@ const Barra100: React.FC<{
 
 // ─── Sub-componente: KPI cards antiviral ─────────────────────────────────────
 
-const AntiviralKPIs: React.FC<{ items: AntiviralItem[] }> = ({ items }) => (
-  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: `repeat(${Math.max(1, items.length)}, 1fr)`,
-      gap: "10px",
-    }}>
-      {items.map((item, i) => {
-        const badge = STATUS_BADGE[item.status] || STATUS_BADGE.ok;
-        const valColor = item.status === "ok"
-          ? COLORS.ok
-          : item.status === "warn"
-          ? COLORS.warn
-          : COLORS.neutral;
+const AntiviralKPIs: React.FC<{ items: AntiviralItem[], themeColors: any }> = ({ items, themeColors }) => {
+  const getBadgeColors = (status: string) => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (status === 'ok') return isDark ? { bg: '#134e4a', color: '#5eead4' } : { bg: "#e1f5ee", color: "#085041" };
+    if (status === 'warn') return isDark ? { bg: '#451a03', color: '#fbbf24' } : { bg: "#faeeda", color: "#633806" };
+    return isDark ? { bg: '#1e293b', color: '#cbd5e1' } : { bg: "#f1efe8", color: "#444441" };
+  };
 
-        return (
-          <div key={i} style={{
-            background: "#f8fafc",
-            borderRadius: "8px",
-            padding: "20px 10px",
-            textAlign: "center",
-            transition: 'transform 0.2s',
-            cursor: 'default'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-          >
-            <div style={{
-              fontSize: "24px", fontWeight: 600, color: valColor,
-            }}>
-              {item.pct.toFixed(1)}%
+  return (
+    <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${Math.max(1, items.length)}, 1fr)`,
+        gap: "10px",
+      }}>
+        {items.map((item, i) => {
+          const badge = getBadgeColors(item.status);
+          const valColor = item.status === "ok"
+            ? themeColors.ok
+            : item.status === "warn"
+            ? themeColors.warn
+            : themeColors.neutral;
+
+          return (
+            <div key={i} style={{
+              background: themeColors.status,
+              borderRadius: "8px",
+              padding: "20px 10px",
+              textAlign: "center",
+              transition: 'transform 0.2s',
+              cursor: 'default'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <div style={{
+                fontSize: "24px", fontWeight: 600, color: valColor,
+              }}>
+                {item.pct.toFixed(1)}%
+              </div>
+              <div style={{ fontSize: "12px", color: themeColors.text, marginTop: "2px" }}>
+                {item.nome}
+              </div>
+              <div style={{ fontSize: "10px", color: themeColors.neutral, marginTop: "1px" }}>
+                {item.casos} casos
+              </div>
+              <span style={{
+                display: "inline-block",
+                marginTop: "6px",
+                fontSize: "9px",
+                fontWeight: 600,
+                padding: "2px 8px",
+                borderRadius: "4px",
+                background: badge.bg,
+                color: badge.color,
+              }}>
+                {item.status === 'ok' ? 'padrão' : item.status === 'warn' ? 'atenção' : 'raro'}
+              </span>
             </div>
-            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
-              {item.nome}
-            </div>
-            <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "1px" }}>
-              {item.casos} casos
-            </div>
-            <span style={{
-              display: "inline-block",
-              marginTop: "6px",
-              fontSize: "9px",
-              fontWeight: 600,
-              padding: "2px 8px",
-              borderRadius: "4px",
-              background: badge.bg,
-              color: badge.color,
-            }}>
-              {badge.label}
-            </span>
-          </div>
-        );
-      })}
-      {items.length === 0 && (
-         <div style={{ gridColumn: 'span 3', padding: '20px', textAlign: 'center', color: COLORS.text, fontSize: '12px' }}>
-            Nenhum antiviral registrado.
-         </div>
-      )}
+          );
+        })}
+        {items.length === 0 && (
+           <div style={{ gridColumn: 'span 3', padding: '20px', textAlign: 'center', color: themeColors.text, fontSize: '12px' }}>
+              Nenhum antiviral registrado.
+           </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── Componente principal ────────────────────────────────────────────────────
 
@@ -417,6 +424,32 @@ interface QualidadePerformanceProps {
 
 const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => {
   const [tooltip, setTooltip] = useState<TooltipState>({ show: false, x: 0, y: 0, content: "" });
+  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTheme(document.documentElement.getAttribute('data-theme') || 'light');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const themeColors = useMemo(() => {
+    const isDark = theme === 'dark';
+    return {
+      ok:      "#0f766e",
+      warn:    "#d97706",
+      crit:    "#dc2626",
+      neutral: isDark ? "#475569" : "#94a3b8",
+      grid:    isDark ? "#334155" : "#e2e8f0",
+      text:    isDark ? "#94a3b8" : "#64748b",
+      main:    isDark ? "#f8fafc" : "#0f172a",
+      bg:      isDark ? "#1e293b" : "#ffffff",
+      border:  isDark ? "#334155" : "#e2e8f0",
+      status:  isDark ? "#0f172a" : "#f8fafc",
+      pill:    isDark ? "#334155" : "#f1f5f9"
+    };
+  }, [theme]);
 
   const handleHover = (_e: React.MouseEvent | unknown, content: React.ReactNode) => {
     setTooltip({
@@ -433,7 +466,7 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
     {
       title: "Eficiência diagnóstica",
       sub:   "Critério de encerramento dos casos",
-      content: <Barra100 criterios={data.criterios} onHover={handleHover} onLeave={handleLeave} />,
+      content: <Barra100 criterios={data.criterios} onHover={handleHover} onLeave={handleLeave} themeColors={themeColors} />,
     },
     {
       title: "Latência laboratorial",
@@ -444,12 +477,13 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
             stats={data.latencia}
             onHover={handleHover}
             onLeave={handleLeave}
+            themeColors={themeColors}
             color={
               data.latencia.median <= 1
-                ? COLORS.ok
+                ? themeColors.ok
                 : data.latencia.median <= 3
-                ? COLORS.warn
-                : COLORS.crit
+                ? themeColors.warn
+                : themeColors.crit
             }
             metaVal={1}
             metaLabel="meta OMS ≤ 1d"
@@ -460,14 +494,14 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
             marginTop: "12px",
           }}>
             {[
-              { label: "Mediana", val: `${data.latencia.median}d`,  color: COLORS.ok    },
-              { label: "P75",     val: `${data.latencia.q3}d`,      color: COLORS.warn  },
-              { label: "Máx",     val: `${data.latencia.max}d`,     color: COLORS.text  },
-              { label: "Meta OMS",val: "≤ 1d",                      color: COLORS.crit  },
+              { label: "Mediana", val: `${data.latencia.median}d`,  color: themeColors.ok    },
+              { label: "P75",     val: `${data.latencia.q3}d`,      color: themeColors.warn  },
+              { label: "Máx",     val: `${data.latencia.max}d`,     color: themeColors.text  },
+              { label: "Meta OMS",val: "≤ 1d",                      color: themeColors.crit  },
             ].map((l, i) => (
               <span key={i} style={{
                 display: "flex", alignItems: "center", gap: "5px",
-                fontSize: "11px", color: "#64748b",
+                fontSize: "11px", color: themeColors.text,
               }}>
                 <span style={{
                   width: "10px", height: "3px",
@@ -484,7 +518,7 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
     {
       title: "Perfil terapêutico",
       sub:   "Uso de antiviral para gripe — distribuição por tipo",
-      content: <AntiviralKPIs items={data.antiviral} />,
+      content: <AntiviralKPIs items={data.antiviral} themeColors={themeColors} />,
     },
     {
       title: "Oportunidade de tratamento",
@@ -495,12 +529,13 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
             stats={data.oportunidade}
             onHover={handleHover}
             onLeave={handleLeave}
+            themeColors={themeColors}
             color={
               data.oportunidade.median <= data.oportunidadeMeta
-                ? COLORS.ok
+                ? themeColors.ok
                 : data.oportunidade.median <= data.oportunidadeMeta * 2
-                ? COLORS.warn
-                : COLORS.crit
+                ? themeColors.warn
+                : themeColors.crit
             }
             metaVal={data.oportunidadeMeta}
             metaLabel={`meta ${data.oportunidadeMeta}d (48h)`}
@@ -508,55 +543,102 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
           />
           <div style={{
             marginTop: "14px", padding: "12px 14px",
-            background: data.oportunidade.median <= data.oportunidadeMeta ? "#f0fdf4" : "#fcebeb",
+            background: data.oportunidade.median <= data.oportunidadeMeta ? (theme === 'dark' ? '#064e3b' : '#f0fdf4') : (theme === 'dark' ? '#7f1d1d' : '#fcebeb'),
             borderRadius: "8px",
-            borderLeft: `4px solid ${data.oportunidade.median <= data.oportunidadeMeta ? COLORS.ok : COLORS.crit}`,
-            fontSize: "12px", color: data.oportunidade.median <= data.oportunidadeMeta ? "#166534" : "#791f1f", lineHeight: 1.5,
+            borderLeft: `4px solid ${data.oportunidade.median <= data.oportunidadeMeta ? themeColors.ok : themeColors.crit}`,
+            fontSize: "12px", color: data.oportunidade.median <= data.oportunidadeMeta ? (theme === 'dark' ? '#6ee7b7' : '#166534') : (theme === 'dark' ? '#fca5a5' : '#791f1f'), lineHeight: 1.5,
           }}>
             {data.oportunidade.median <= data.oportunidadeMeta 
               ? `Mediana de ${data.oportunidade.median}d está dentro da janela terapêutica recomendada.`
-              : `Mediana de ${data.oportunidade.median}d está acima da janela terapêutica de ${data.oportunidadeMeta * 24}h. Indica diagnóstico tardio ou dificuldade de acesso ao antiviral.`
+              : `Mediana de ${data.oportunidade.median}d está acima da janela de ${data.oportunidadeMeta * 24}h. Indica diagnóstico tardio.`
             }
           </div>
         </div>
       ),
     },
+    {
+      title: "Cobertura de testagem",
+      sub:   "Proporção de casos com amostra laboratorial coletada",
+      content: (
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+             <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke={themeColors.pill} strokeWidth="12" />
+                <circle 
+                  cx="60" cy="60" r="54" fill="none" stroke={data.coberturaTestagem.rate >= 80 ? themeColors.ok : themeColors.warn} 
+                  strokeWidth="12" strokeDasharray={`${(data.coberturaTestagem.rate / 100) * 339.29} 339.29`} 
+                  strokeLinecap="round" transform="rotate(-90 60 60)"
+                  style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                />
+             </svg>
+             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: themeColors.main }}>{data.coberturaTestagem.rate}%</span>
+             </div>
+          </div>
+          <p style={{ marginTop: '1rem', fontSize: '12px', color: themeColors.text }}>
+            <strong>{data.coberturaTestagem.collected}</strong> amostras de <strong>{data.coberturaTestagem.total}</strong> casos
+          </p>
+        </div>
+      )
+    },
+    {
+      title: "Distribuição de amostras",
+      sub:   "Tipos de material biológico coletado",
+      content: (
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
+          {data.distribuicaoAmostra.slice(0, 5).map((item, i) => (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 600, color: themeColors.text }}>{item.label}</span>
+                <span style={{ color: themeColors.neutral }}>{item.count}</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: themeColors.pill, borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${(item.count / Math.max(1, data.coberturaTestagem.collected)) * 100}%`, 
+                  height: '100%', 
+                  background: i === 0 ? themeColors.ok : themeColors.neutral,
+                  borderRadius: '3px'
+                }} />
+              </div>
+            </div>
+          ))}
+          {data.distribuicaoAmostra.length === 0 && (
+            <p style={{ textAlign: 'center', fontSize: '12px', color: themeColors.neutral }}>Sem dados de amostra.</p>
+          )}
+        </div>
+      )
+    }
   ];
 
   return (
-    <div style={{ padding: "8px 0", fontFamily: "inherit" }}>
+    <div style={{ padding: "0", fontFamily: "inherit" }}>
       <Tooltip {...tooltip} />
 
-      {/* Cabeçalho da seção */}
-      <h3 className="block-title">
-        Qualidade e Performance Assistencial
-      </h3>
-
-      {/* Grid 2×2 */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+        gridTemplateColumns: "repeat(3, 1fr)",
         gap: "16px",
       }}>
         {cards.map((card, i) => (
           <div key={i} style={{
-            background: "#ffffff",
-            border: "0.5px solid #e2e8f0",
+            background: themeColors.bg,
+            border: `1px solid ${themeColors.border}`,
             borderRadius: "12px",
             padding: "24px",
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
-            minHeight: '320px'
+            minHeight: '320px',
+            boxShadow: theme === 'dark' ? '0 10px 15px -3px rgba(0, 0, 0, 0.4)' : '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{
-              fontSize: "14px", fontWeight: 600, color: "#0f172a",
+              fontSize: "14px", fontWeight: 600, color: themeColors.main,
               marginBottom: "2px",
             }}>
               {card.title}
             </div>
             <div style={{
-              fontSize: "11px", color: "#64748b", marginBottom: "20px",
+              fontSize: "11px", color: themeColors.text, marginBottom: "20px",
               lineHeight: 1.4,
             }}>
               {card.sub}

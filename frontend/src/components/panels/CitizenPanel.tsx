@@ -4,7 +4,6 @@ import MaternalOutcomeChart from "../charts/MaternalOutcomeChart";
 import PiramideEtariaChart from "../charts/PiramideEtariaChart";
 import SchoolingChart from "../charts/SchoolingChart";
 import SymptomsSignatureGrid from "../charts/SymptomsSignatureGrid";
-import RiskFactorsChart from "../charts/RiskFactorsChart";
 import VaccinationProfileChart from "../charts/VaccinationProfileChart";
 import VigilanceDonutChart from "../charts/VigilanceDonutChart";
 import KpiCard from "../ui/KpiCard";
@@ -109,33 +108,33 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       )}
 
       <div className="kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "10px", marginTop: "1.5rem" }}>
-        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <article className="panel" style={{ background: 'var(--bg-status)', borderRadius: '12px', padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#1D9E75' }}></span>
             Principal espécie
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topAnimal}</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>{topAnimal}</h2>
         </article>
-        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <article className="panel" style={{ background: 'var(--bg-status)', borderRadius: '12px', padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#378ADD' }}></span>
             Maior escolaridade
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topSchooling}</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>{topSchooling}</h2>
         </article>
-        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <article className="panel" style={{ background: 'var(--bg-status)', borderRadius: '12px', padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#EF9F27' }}></span>
             Principal fator
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{topRisk}</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>{topRisk}</h2>
         </article>
-        <article className="panel" style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <article className="panel" style={{ background: 'var(--bg-status)', borderRadius: '12px', padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '6px', background: '#D85A30' }}></span>
             Sem contato animal
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: '#1e293b', margin: 0 }}>{noAnimalPct}</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>{noAnimalPct}</h2>
         </article>
       </div>
 
@@ -143,20 +142,20 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+          gridTemplateColumns: "1fr 1fr",
           gap: "1.5rem",
           marginTop: "1.5rem",
         }}
       >
         <div className="panel" style={{ padding: "1.25rem" }}>
-          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Escolaridade</p>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Escolaridade</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
             <SchoolingChart data={schooling || []} />
           </div>
         </div>
 
         <div className="panel" style={{ padding: "1.25rem" }}>
-          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Ocupação (Top 15)</p>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Ocupação (Top 15)</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
             <BarChart 
               labels={occupation.map(o => o.label)} 
@@ -168,14 +167,19 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         </div>
 
         <div className="panel" style={{ padding: "1.25rem" }}>
-          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Fatores de Risco</p>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Fatores de Risco</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
-            <RiskFactorsChart data={riskFactors || []} />
+            <BarChart 
+              labels={riskFactors.map(r => String(r.factor))} 
+              data={riskFactors.map(r => Number(r.count))} 
+              horizontal={true}
+              color="#EF9F27"
+            />
           </div>
         </div>
 
         <div className="panel" style={{ padding: "1.25rem" }}>
-          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", margin: "0 0 16px" }}>Contato com Animais</p>
+          <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Contato com Animais</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
             <BarChart 
               labels={animalContact.map(a => a.label)} 
@@ -189,25 +193,25 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
 
       {/* SEÇÃO DE DISTRIBUIÇÃO PROPORCIONAL (DONUTS) */}
       <section className="panel" style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
-        <p className="chart-label" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#475569", marginBottom: "1.5rem", textAlign: 'center' }}>Distribuição Proporcional</p>
+        <p className="chart-label" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-eyebrow)", marginBottom: "1.5rem", textAlign: 'center' }}>Distribuição Proporcional</p>
         
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
           <div style={{ textAlign: 'center' }}>
-            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Escolaridade</p>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Escolaridade</p>
             <div style={{ height: '180px' }}>
               <VigilanceDonutChart title="" data={schooling || []} />
             </div>
           </div>
           
           <div style={{ textAlign: 'center' }}>
-            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Ocupação</p>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Ocupação</p>
             <div style={{ height: '180px' }}>
               <VigilanceDonutChart title="" data={occupation || []} />
             </div>
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Fatores de Risco</p>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Fatores de Risco</p>
             <div style={{ height: '180px' }}>
               <VigilanceDonutChart 
                 title="" 
@@ -217,7 +221,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Contato Animal</p>
+            <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Contato Animal</p>
             <div style={{ height: '180px' }}>
               <VigilanceDonutChart title="" data={animalContact || []} />
             </div>

@@ -29,7 +29,6 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
   swimmerVirus,
   setSwimmerVirus,
   dashboardYear = [],
-  chartDebug = import.meta.env.DEV,
 }) => {
   const isYearSelected = dashboardYear.length > 0;
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>("year");
@@ -121,11 +120,11 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
             style={{
               display: "flex",
               flexDirection: "column",
-              background: "#f8fafc",
+              background: "var(--bg-status)",
               padding: "16px",
               borderRadius: "8px",
               marginTop: "15px",
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--border-subtle)",
             }}
           >
             <div
@@ -140,7 +139,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                   style={{
                     fontSize: "10px",
                     fontWeight: "bold",
-                    color: "#64748b",
+                    color: "var(--text-muted)",
                     textTransform: "uppercase",
                   }}
                 >
@@ -154,6 +153,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                     marginTop: "6px",
                     borderRadius: "4px",
                     overflow: "hidden",
+                    background: "var(--bg-pill)",
                   }}
                 >
                   <div
@@ -182,12 +182,12 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                 >
                   ● Admissão no Mesmo Dia
                 </span>
-                <div style={{ fontSize: "18px", fontWeight: "bold" }}>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: "var(--text-main)" }}>
                   {icuSummary.sameDayRate}%{" "}
                   <span
                     style={{
                       fontSize: "12px",
-                      color: "#64748b",
+                      color: "var(--text-muted)",
                       fontWeight: "normal",
                     }}
                   >
@@ -205,12 +205,12 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                 >
                   ● Tempo de Espera {">"} 0d
                 </span>
-                <div style={{ fontSize: "18px", fontWeight: "bold" }}>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: "var(--text-main)" }}>
                   {icuSummary.waitMoreRate}%{" "}
                   <span
                     style={{
                       fontSize: "12px",
-                      color: "#64748b",
+                      color: "var(--text-muted)",
                       fontWeight: "normal",
                     }}
                   >
@@ -223,7 +223,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
               style={{
                 margin: "10px 0 0 0",
                 fontSize: "11px",
-                color: "#64748b",
+                color: "var(--text-muted)",
                 fontStyle: "italic",
               }}
             >
@@ -267,7 +267,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
           </div>
         </div>
         <div style={{ marginTop: "20px" }}>
-          <AggregatedSwimmerPlot data={timelineData} debug={chartDebug} />
+          <AggregatedSwimmerPlot data={timelineData} />
         </div>
       </article>
     </div>

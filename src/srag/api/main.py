@@ -1,3 +1,5 @@
+import contextlib
+
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +47,7 @@ compute_territory_entities_by_zone = _analytics.compute_territory_entities_by_zo
 compute_time_series = _analytics.compute_time_series
 compute_time_series_by_virus = _analytics.compute_time_series_by_virus
 compute_unit_distribution = _analytics.compute_unit_distribution
+compute_data_completeness = _analytics.compute_data_completeness
 compute_vaccine_survival = _analytics.compute_vaccine_survival
 compute_vaccine_manufacturer_distribution = _analytics.compute_vaccine_manufacturer_distribution
 compute_virus_detailed_distribution = _analytics.compute_virus_detailed_distribution
@@ -64,10 +67,18 @@ outcome_valid_mask = _analytics.outcome_valid_mask
 predict_next_weeks = _forecasting.predict_next_weeks
 
 app = FastAPI(title="SRAG Mossoró API")
-logfire.configure()
-logfire.instrument_fastapi(app)
-logfire.instrument_pydantic()
-logfire.instrument_sqlalchemy(engine := create_engine(DB_URL, pool_pre_ping=True))
+
+# Configure Logfire (Optional for local development)
+try:
+    logfire.configure(send_to_logfire='if-token-present')
+    logfire.instrument_fastapi(app)
+    logfire.instrument_pydantic()
+except Exception as e:
+    print(f"⚠️ Logfire not configured: {e}")
+
+engine = create_engine(DB_URL, pool_pre_ping=True)
+with contextlib.suppress(Exception):
+    logfire.instrument_sqlalchemy(engine)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,13 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type ChartLike = { destroy: () => void };
-type ChartCtor = { new (el: HTMLCanvasElement, options: unknown): ChartLike };
+type ChartCtor = { 
+  new (el: HTMLCanvasElement, options: unknown): ChartLike;
+  defaults: {
+    color: string;
+    borderColor: string;
+    [key: string]: unknown;
+  };
+};
 
 let chartLoader: Promise<ChartCtor>;
 
 function loadChart() {
   if (!chartLoader) {
-    chartLoader = import('chart.js/auto').then((mod) => mod.Chart as ChartCtor);
+    chartLoader = import('chart.js/auto').then((mod) => mod.Chart as unknown as ChartCtor);
   }
 
   return chartLoader;
@@ -18,6 +25,17 @@ export function useChartJs<TOptions>(buildOptions: () => TOptions, dependencies:
   const chartInstance = useRef<ChartLike | null>(null);
   const buildOptionsRef = useRef(buildOptions);
   const dependencyKey = JSON.stringify(dependencies);
+  const [currentTheme, setCurrentTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
+
+  // Escuta mudanças de tema no <html>
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const theme = document.documentElement.getAttribute('data-theme') || 'light';
+      setCurrentTheme(theme);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     buildOptionsRef.current = buildOptions;
@@ -32,19 +50,35 @@ export function useChartJs<TOptions>(buildOptions: () => TOptions, dependencies:
 
       if (chartInstance.current) chartInstance.current.destroy();
 
+      // Configurações globais de cores para o Chart.js baseado no tema
+      Chart.defaults.color = currentTheme === 'dark' ? '#94a3b8' : '#64748b';
+      Chart.defaults.borderColor = currentTheme === 'dark' ? '#334155' : '#e2e8f0';
+
       chartInstance.current = new Chart(canvasRef.current, buildOptionsRef.current());
     };
 
     render();
 
+    // ResizeObserver garante que o gráfico se ajuste ao container
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && canvasRef.current && canvasRef.current.parentElement) {
+      resizeObserver = new ResizeObserver(() => {
+        if (chartInstance.current && 'resize' in chartInstance.current) {
+          (chartInstance.current as any).resize();
+        }
+      });
+      resizeObserver.observe(canvasRef.current.parentElement);
+    }
+
     return () => {
       cancelled = true;
+      if (resizeObserver) resizeObserver.disconnect();
       if (chartInstance.current) {
         chartInstance.current.destroy();
         chartInstance.current = null;
       }
     };
-  }, [dependencyKey]);
+  }, [dependencyKey, currentTheme]);
 
   return { canvasRef, chartInstance };
 }
