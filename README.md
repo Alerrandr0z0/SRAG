@@ -63,7 +63,7 @@ make stop-docker  # Encerra o stack do Compose
 
 ## 🛡️ Padrões de Engenharia
 
-- **Tipagem Estrita:** Migração concluída de Mypy para **Pyright (Strict Mode)** para máxima segurança em tempo de desenvolvimento.
+- **Tipagem Estrita:** **Pyright (Strict Mode)** para máxima segurança em tempo de desenvolvimento.
 - **Segurança Blindada:** Auditoria automática contra injeção de SQL e vazamento de segredos (Gitleaks) via hooks de pre-commit.
 - **Performance:** Todas as lógicas analíticas são **vetorizadas**, eliminando loops lentos e garantindo escalabilidade para grandes bases de dados.
 - **Observabilidade:** Integração opcional com **Logfire** para monitoramento de performance de queries e erros de validação Pydantic.
