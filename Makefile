@@ -106,4 +106,4 @@ observability:
 	logfire dashboard
 
 update-graph:
-	graphify update .
+	uv run graphify update .

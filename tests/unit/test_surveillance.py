@@ -435,3 +435,25 @@ def test_compute_aggregated_timeline_valid() -> None:
     
     # Quantiles for hosp_to_outcome [6, 8] -> median=7.0
     assert vax_profile["mediana_internacao_desfecho"] == 7.0
+
+
+def test_compute_aggregated_timeline_exposes_non_binary_outcomes() -> None:
+    df = pd.DataFrame({
+        "DT_SIN_PRI": pd.to_datetime(["2023-01-01"] * 4),
+        "DT_INTERNA": pd.to_datetime(["2023-01-05"] * 4),
+        "DT_EVOLUCA": pd.to_datetime(["2023-01-10"] * 4),
+        "VACINA_COV": [2, 1, 1, 1],
+        "DOSE_1_COV": [np.nan, "2022-12-01", "2022-12-01", "2022-12-01"],
+        "DOSE_2_COV": [np.nan, "2022-12-15", "2022-12-15", "2022-12-15"],
+        "DOSE_REF": [np.nan, np.nan, np.nan, np.nan],
+        "DOSE_2REF": [np.nan, np.nan, np.nan, np.nan],
+        "DOS_RE_BI": [np.nan, np.nan, np.nan, np.nan],
+        "EVOLUCAO": [1, 1, 2, 9],
+        "UTI": [1, 2, 2, 2],
+    })
+
+    res = compute_aggregated_timeline(df, virus="covid")
+    vax_profile = next(r for r in res if r["status_key"] == "completo")
+
+    assert vax_profile["taxa_cura"] == 0.3333
+    assert vax_profile["taxa_obito"] == 0.3333

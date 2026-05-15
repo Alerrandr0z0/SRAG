@@ -1107,7 +1107,7 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
                 "uti_pct": uti_pct,
                 "severity_score": severity_score,
                 "n": count,
-                "count": count,  # Mantém compatibilidade legada se necessário
+                "count": count,
             }
         )
 

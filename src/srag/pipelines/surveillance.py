@@ -46,6 +46,20 @@ DATE_COLS = {
 }
 
 
+def _load_surveillance_sources(con: duckdb.DuckDBPyConnection, pf: Path) -> list[str]:
+    ext = pf.suffix.lower()
+    if ext in {".xls", ".xlsx"}:
+        sheets = pd.read_excel(pf, sheet_name=None, dtype=str)
+        relation_names: list[str] = []
+        for idx, (sheet_name, df) in enumerate(sheets.items()):
+            relation_name = f"xlsx_{pf.stem}_{idx}"
+            con.register(relation_name, df)
+            relation_names.append(relation_name)
+        return relation_names
+
+    return ["read_parquet" if ext == ".parquet" else "read_csv_auto"]
+
+
 def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict[str, Any]:
     """Execute the full surveillance lifecycle: Ingest -> Validate -> Snapshot -> Load."""
     start_time = datetime.now()
@@ -73,65 +87,74 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
             if d.exists():
                 files.extend(list(d.glob("**/*.parquet")))
                 files.extend(list(d.glob("**/*.csv")))
+                files.extend(list(d.glob("**/*.xls")))
+                files.extend(list(d.glob("**/*.xlsx")))
 
         for pf in files:
-            ext = pf.suffix.lower()
-            read_func = "read_parquet" if ext == ".parquet" else "read_csv_auto"
-
-            # Dynamic Column Mapping
-            cols = [
-                c[0] for c in con.execute(f"DESCRIBE SELECT * FROM {read_func}('{pf}')").fetchall()  # nosec: B608
-            ]
-
-            file_map = {c.upper(): c for c in cols}
-
-            def get_src(name: str, mapping: dict[str, str] = file_map) -> str:
-                return mapping.get(name.upper(), "NULL")
-
-            s_mun = (
-                get_src("CO_MUN_NOT") if get_src("CO_MUN_NOT") != "NULL" else get_src("ID_MUNICIP")
-            )
-            s_res = (
-                get_src("CO_MUN_RES") if get_src("CO_MUN_RES") != "NULL" else get_src("ID_MN_RESI")
-            )
-            select_parts = []
-            for col in target_cols:
-                col_up = col.upper()
-                if col == "unique_hash":
-                    select_parts.append(
-                        "md5("
-                        f"COALESCE(CAST({get_src('DT_NOTIFIC')} AS VARCHAR), '') || '|' || "
-                        f"COALESCE(CAST({s_mun} AS VARCHAR), '') || '|' || "
-                        f"COALESCE(CAST({get_src('DT_SIN_PRI')} AS VARCHAR), '') || '|' || "
-                        f"COALESCE(CAST({get_src('NU_IDADE_N')} AS VARCHAR), '') || '|' || "
-                        f"COALESCE(CAST({get_src('CS_SEXO')} AS VARCHAR), '')"
-                        ")"
-                    )
-                elif col in ["BAIRRO_REF", "ZONA"]:
-                    select_parts.append("NULL")
-                elif col == "ID_MUNICIP":
-                    select_parts.append(f"CAST({s_mun} AS VARCHAR)")
-                elif col == "ID_MN_RESI":
-                    select_parts.append(f"CAST({s_res} AS VARCHAR)")
-                elif col_up in DATE_COLS and get_src(col_up) != "NULL":
-                    orig = get_src(col_up)
-                    select_parts.append(
-                        "COALESCE("
-                        f"TRY_CAST({orig} AS DATE), "
-                        f"TRY_CAST(strptime(CAST({orig} AS VARCHAR), '%d/%m/%Y') AS DATE)"
-                        ")"
-                    )
+            for source in _load_surveillance_sources(con, pf):
+                if source.startswith("read_"):
+                    cols = [
+                        c[0]
+                        for c in con.execute(
+                            f"DESCRIBE SELECT * FROM {source}('{pf}')"
+                        ).fetchall()  # nosec: B608
+                    ]
+                    source_expr = f"{source}('{pf}')"
                 else:
-                    select_parts.append(get_src(col_up))
+                    cols = [
+                        c[0] for c in con.execute(f"DESCRIBE SELECT * FROM {source}").fetchall()
+                    ]
+                    source_expr = source
 
-            con.execute(
-                f"INSERT INTO temp_raw ({', '.join(target_cols)}) "  # nosec: B608
-                f"SELECT {', '.join(select_parts)} FROM {read_func}('{pf}') "  # nosec: B608
-                f"WHERE CAST({s_mun} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
-                f"CAST({s_res} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
-                f"UPPER(CAST({s_mun} AS VARCHAR)) IN {MOSSORO_NAMES} OR "  # nosec: B608
-                f"UPPER(CAST({s_res} AS VARCHAR)) IN {MOSSORO_NAMES}"  # nosec: B608
-            )
+                file_map = {c.upper(): c for c in cols}
+
+                def get_src(name: str, mapping: dict[str, str] = file_map) -> str:
+                    return mapping.get(name.upper(), "NULL")
+
+                s_mun = (
+                    get_src("CO_MUN_NOT") if get_src("CO_MUN_NOT") != "NULL" else get_src("ID_MUNICIP")
+                )
+                s_res = (
+                    get_src("CO_MUN_RES") if get_src("CO_MUN_RES") != "NULL" else get_src("ID_MN_RESI")
+                )
+                select_parts = []
+                for col in target_cols:
+                    col_up = col.upper()
+                    if col == "unique_hash":
+                        select_parts.append(
+                            "md5("
+                            f"COALESCE(CAST({get_src('DT_NOTIFIC')} AS VARCHAR), '') || '|' || "
+                            f"COALESCE(CAST({s_mun} AS VARCHAR), '') || '|' || "
+                            f"COALESCE(CAST({get_src('DT_SIN_PRI')} AS VARCHAR), '') || '|' || "
+                            f"COALESCE(CAST({get_src('NU_IDADE_N')} AS VARCHAR), '') || '|' || "
+                            f"COALESCE(CAST({get_src('CS_SEXO')} AS VARCHAR), '')"
+                            ")"
+                        )
+                    elif col in ["BAIRRO_REF", "ZONA"]:
+                        select_parts.append("NULL")
+                    elif col == "ID_MUNICIP":
+                        select_parts.append(f"CAST({s_mun} AS VARCHAR)")
+                    elif col == "ID_MN_RESI":
+                        select_parts.append(f"CAST({s_res} AS VARCHAR)")
+                    elif col_up in DATE_COLS and get_src(col_up) != "NULL":
+                        orig = get_src(col_up)
+                        select_parts.append(
+                            "COALESCE("
+                            f"TRY_CAST({orig} AS DATE), "
+                            f"TRY_CAST(strptime(CAST({orig} AS VARCHAR), '%d/%m/%Y') AS DATE)"
+                            ")"
+                        )
+                    else:
+                        select_parts.append(get_src(col_up))
+
+                con.execute(
+                    f"INSERT INTO temp_raw ({', '.join(target_cols)}) "  # nosec: B608
+                    f"SELECT {', '.join(select_parts)} FROM {source_expr} "  # nosec: B608
+                    f"WHERE CAST({s_mun} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
+                    f"CAST({s_res} AS VARCHAR) IN {MOSSORO_IBGE_CODES} OR "  # nosec: B608
+                    f"UPPER(CAST({s_mun} AS VARCHAR)) IN {MOSSORO_NAMES} OR "  # nosec: B608
+                    f"UPPER(CAST({s_res} AS VARCHAR)) IN {MOSSORO_NAMES}"  # nosec: B608
+                )
         # 2. Validation (Pandas Pass)
         df_all = con.execute("SELECT * FROM temp_raw").df()
         is_valid, warnings = validate_srag_data(df_all)

@@ -5,7 +5,14 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from srag.data.database import SragRecord, generate_case_hash, init_db, save_cases
+from srag.data.database import (
+    CASE_HASH_FIELDS,
+    SragRecord,
+    build_case_hash_sql,
+    generate_case_hash,
+    init_db,
+    save_cases,
+)
 
 # Use a temporary file for testing instead of :memory: to avoid
 # new engines creating new empty databases.
@@ -45,6 +52,24 @@ def test_generate_case_hash() -> None:
     assert len(h1) == 32
 
 
+def test_case_hash_contract_fields() -> None:
+    assert CASE_HASH_FIELDS == (
+        "DT_NOTIFIC",
+        "ID_MUNICIP",
+        "DT_SIN_PRI",
+        "NU_IDADE_N",
+        "CS_SEXO",
+    )
+
+
+def test_build_case_hash_sql_uses_contract_fields() -> None:
+    sql = build_case_hash_sql(lambda field: field)
+    for field in CASE_HASH_FIELDS:
+        assert f"CAST({field} AS VARCHAR)" in sql
+    assert sql.startswith("md5(")
+    assert sql.endswith(")")
+
+
 def test_save_cases_deduplication(test_db_setup) -> None:
     cases = [
         {
@@ -76,14 +101,16 @@ def test_save_cases_enrichment(test_db_setup) -> None:
         "DT_SIN_PRI": date(2024, 4, 25),
         "NU_IDADE_N": 30,
         "CS_SEXO": "M",
-        "ID_UNIDADE": "UPA",
-        "CLASSI_FIN": None,
+        "ID_UNIDADE": "UPA 1",
+        "CLASSI_FIN": 5,
         "TP_IDADE": None,
     }
 
     save_cases([base_case])
 
     enriched_case = base_case.copy()
+    enriched_case["ID_UNIDADE"] = "UPA 2"
+    enriched_case["CLASSI_FIN"] = 4
     enriched_case["TP_IDADE"] = 3
 
     added = save_cases([enriched_case])
@@ -94,4 +121,24 @@ def test_save_cases_enrichment(test_db_setup) -> None:
     session_factory = sessionmaker(bind=engine)
     with session_factory() as session:
         record = session.query(SragRecord).first()
+        assert record.ID_UNIDADE == "UPA 1"
+        assert record.CLASSI_FIN == 5
         assert record.TP_IDADE == 3
+
+
+def test_save_cases_logs_summary(test_db_setup, capsys) -> None:
+    case = {
+        "DT_NOTIFIC": date(2024, 5, 1),
+        "ID_MUNICIP": "2408003",
+        "ID_MN_RESI": "2408003",
+        "DT_SIN_PRI": date(2024, 4, 25),
+        "NU_IDADE_N": 30,
+        "CS_SEXO": "M",
+    }
+
+    save_cases([case])
+    out = capsys.readouterr().out
+    assert "save_cases summary:" in out
+    assert "new=1" in out
+    assert "duplicates=0" in out
+    assert "enriched=0" in out
