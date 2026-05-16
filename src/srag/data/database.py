@@ -1,6 +1,7 @@
 """Database management for SRAG Mossoró historical data."""
 
 import hashlib
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
@@ -9,7 +10,8 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-DB_URL = "sqlite:///data/processed/srag_mossoro.db"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DB_URL = f"sqlite:///{BASE_DIR / 'data' / 'processed' / 'srag_mossoro.db'}"
 CASE_HASH_FIELDS = (
     "DT_NOTIFIC",
     "ID_MUNICIP",
