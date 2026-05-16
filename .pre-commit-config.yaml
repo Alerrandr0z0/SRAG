@@ -24,6 +24,12 @@ repos:
       - id: gitleaks
   - repo: local
     hooks:
+      - id: pyright
+        name: Pyright (strict)
+        entry: uv run pyright src/srag/
+        language: system
+        pass_filenames: false
+        types: [python]
       - id: frontend-check
         name: Frontend (ESLint + Typecheck)
         entry: bash -c 'cd frontend && npm run lint && npm run typecheck'
