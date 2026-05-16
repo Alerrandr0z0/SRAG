@@ -97,7 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setThem
           </div>
         </div>
       </div>
-      
+
       <nav className="sidebar-nav">
         {menuItems.map((item) => (
           <button
@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setThem
       </nav>
 
       <div className="sidebar-footer">
-        <button 
+        <button
           onClick={toggleTheme}
           className="nav-item"
           style={{ width: '100%', marginBottom: '1rem', border: '1px solid var(--border-subtle)', background: 'var(--bg-pill)' }}

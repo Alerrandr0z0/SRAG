@@ -12,4 +12,4 @@ max_examples = 100
 
 [tool.hypothesis.profiles.ci]
 max_examples = 1000
-deadline = None
+# deadline = null  # standard TOML doesn't support None/null. Commenting out.

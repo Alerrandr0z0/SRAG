@@ -172,4 +172,3 @@ def get_data_completeness(
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
     return compute_data_completeness(df)
-

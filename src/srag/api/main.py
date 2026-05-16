@@ -70,7 +70,7 @@ app = FastAPI(title="SRAG Mossoró API")
 
 # Configure Logfire (Optional for local development)
 try:
-    logfire.configure(send_to_logfire='if-token-present')
+    logfire.configure(send_to_logfire="if-token-present")
     logfire.instrument_fastapi(app)
     logfire.instrument_pydantic()
 except Exception as e:

@@ -89,7 +89,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
   return (
     <div className="fb" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', width: '100%' }}>
       <div className="fb-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', width: '100%' }}>
-        
+
         {/* Perfil Group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <span className="fb-label">Perfil</span>
@@ -130,8 +130,8 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
               key={opt.key}
               className={`pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
               onClick={() => {
-                const newList = genderFilter.includes(opt.key) 
-                  ? genderFilter.filter(i => i !== opt.key) 
+                const newList = genderFilter.includes(opt.key)
+                  ? genderFilter.filter(i => i !== opt.key)
                   : [...genderFilter, opt.key];
                 setGenderFilter(newList);
                 if (opt.key === 'F' && genderFilter.includes('F')) {
@@ -180,7 +180,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
               className="custom-select"
               style={{ width: '100%', paddingRight: '2.5rem' }}
             />
-            <svg 
+            <svg
               style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }}
               width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
             >
@@ -189,14 +189,14 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
           </div>
 
           {showOccDropdown && (occSearch || filteredOccupations.length > 0) && (
-            <div 
-              className="panel" 
-              style={{ 
-                position: 'absolute', 
-                top: '100%', 
-                left: 0, 
+            <div
+              className="panel"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
                 right: 0,
-                zIndex: 1000, 
+                zIndex: 1000,
                 marginTop: '8px',
                 padding: '0.6rem',
                 maxHeight: '300px',
@@ -224,7 +224,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
                 )}
               </div>
               <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '6px', paddingTop: '6px' }}>
-                <button 
+                <button
                   onClick={() => setShowOccDropdown(false)}
                   style={{ width: '100%', border: 'none', background: '#f8fafc', padding: '6px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                 >
@@ -247,7 +247,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
           {occupationFilter.map(occ => (
             <div key={occ} className="global-filter-chip" style={{ fontSize: '10px', padding: '2px 8px' }}>
               {occ}
-              <button 
+              <button
                 onClick={() => setOccupationFilter(occupationFilter.filter(o => o !== occ))}
                 className="global-filter-close"
               >

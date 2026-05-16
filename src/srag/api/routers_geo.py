@@ -14,7 +14,12 @@ from fastapi.responses import FileResponse
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import apply_global_filters
-from srag.data.geospatial import build_macrosector_heatpoints, _feature_centroid, get_municipality_boundary, _iter_coords
+from srag.data.geospatial import (
+    build_macrosector_heatpoints,
+    _feature_centroid,
+    get_municipality_boundary,
+    _iter_coords,
+)
 
 router = APIRouter()
 
@@ -103,9 +108,7 @@ def rural_heatpoints(
     cx, cy = city_centroid
 
     if total_rural < min_cases:
-        return sanitize_data(
-            {"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}}
-        )
+        return sanitize_data({"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}})
 
     base = total_rural // 4
     remainder = total_rural % 4
@@ -154,7 +157,6 @@ def get_rural_sectors() -> Any:
         if not features:
             return {"error": "boundary_not_found"}
         coords = list(_iter_coords(features[0].get("geometry", {}).get("coordinates", [])))
-
 
     if not coords:
         return {"error": "invalid_boundary"}

@@ -9,10 +9,10 @@ scripts_path = Path(__file__).parent.parent.parent / "scripts"
 if str(scripts_path) not in sys.path:
     sys.path.insert(0, str(scripts_path))
 
-from scripts.ingest_data import main as ingest_main
-
 
 def test_run_ingestion_duckdb(tmp_path, monkeypatch) -> None:
+    from scripts.ingest_data import main as ingest_main
+
     # 1. Setup paths
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
@@ -59,6 +59,8 @@ def test_run_ingestion_duckdb(tmp_path, monkeypatch) -> None:
 
 
 def test_run_ingestion_reads_all_excel_sheets(tmp_path, monkeypatch) -> None:
+    from scripts.ingest_data import main as ingest_main
+
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
     processed_dir = tmp_path / "processed"
@@ -96,6 +98,7 @@ def test_run_ingestion_reads_all_excel_sheets(tmp_path, monkeypatch) -> None:
     )
 
     import scripts.ingest_data
+
     import srag.data.database
 
     monkeypatch.setattr(
@@ -116,6 +119,8 @@ def test_run_ingestion_reads_all_excel_sheets(tmp_path, monkeypatch) -> None:
 
 
 def test_run_ingestion_normalizes_case_hash_across_formats(tmp_path, monkeypatch) -> None:
+    from scripts.ingest_data import main as ingest_main
+
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
     processed_dir = tmp_path / "processed"
@@ -142,6 +147,7 @@ def test_run_ingestion_normalizes_case_hash_across_formats(tmp_path, monkeypatch
     xlsx_file.touch()
 
     import scripts.ingest_data
+
     import srag.data.database
 
     def fake_read_excel(*args, **kwargs):

@@ -68,7 +68,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
 
     try:
         vacina = float(vacina) if pd.notna(vacina) else np.nan
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         vacina = np.nan
 
     nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
@@ -132,7 +132,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
         if isinstance(dt_dose_val, str):
             try:
                 dt_dose_val = pd.to_datetime(dt_dose_val, dayfirst=True, format="mixed").date()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return "ignorado"
 
         if isinstance(dt_sintoma_val, str):
@@ -140,7 +140,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
                 dt_sintoma_val = pd.to_datetime(
                     dt_sintoma_val, dayfirst=True, format="mixed"
                 ).date()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return "ignorado"
 
         if not hasattr(dt_dose_val, "year") or not hasattr(dt_sintoma_val, "year"):
@@ -1056,20 +1056,29 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         days_hosp_out = (dt_outcome - dt_hosp).dt.days
         valid_out = days_hosp_out[(days_hosp_out >= 0) & (days_hosp_out <= 180)].dropna()
 
-        mediana_dose_sintoma = round(float(valid_dose.median()), 1) if not valid_dose.empty else None
+        mediana_dose_sintoma = (
+            round(float(valid_dose.median()), 1) if not valid_dose.empty else None
+        )
         dose_p25 = round(float(valid_dose.quantile(0.25)), 1) if not valid_dose.empty else None
         dose_p75 = round(float(valid_dose.quantile(0.75)), 1) if not valid_dose.empty else None
 
-        mediana_sintoma_internacao = round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
-        intern_p25 = round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
-        intern_p75 = round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
+        mediana_sintoma_internacao = (
+            round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
+        )
+        intern_p25 = (
+            round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
+        )
+        intern_p75 = (
+            round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
+        )
 
-        mediana_internacao_desfecho = round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
+        mediana_internacao_desfecho = (
+            round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
+        )
         desf_p25 = round(float(valid_out.quantile(0.25)), 1) if not valid_out.empty else 0.0
         desf_p75 = round(float(valid_out.quantile(0.75)), 1) if not valid_out.empty else 0.0
 
         uti_pct = round((pd.to_numeric(subset.get("UTI"), errors="coerce") == 1).mean() * 100, 1)
-
 
         severity_score = round((taxa_obito * 0.6) + (taxa_cura * 0.4), 4)
 

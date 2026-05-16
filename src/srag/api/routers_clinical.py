@@ -300,4 +300,3 @@ def vaccine_survival(
             "gripe": compute_vaccine_survival(df, "DT_UT_DOSE"),
         }
     )
-

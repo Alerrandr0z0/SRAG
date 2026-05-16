@@ -1,4 +1,5 @@
 """Master data ingestion script for SRAG Mossoró.
+
 DuckDB handles CSV and Parquet; XLSX is loaded via pandas.
 """
 
@@ -6,18 +7,22 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
+from typing import TYPE_CHECKING
 
 import duckdb
 import pandas as pd
 
+# Path adjustment for local imports
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from srag.data.database import build_case_hash_sql, init_db
-from srag.data.loader import _infer_zone_from_bairro, _normalize_bairro_name, _normalize_zone
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 
 # Defaults
 DB_PATH = Path("data/processed/srag_mossoro.db")
@@ -29,7 +34,14 @@ MOSSORO_NAMES = ("MOSSORO", "MOSSORÓ")
 
 
 def _load_source_frames(pf: Path) -> Iterable[tuple[str, pd.DataFrame]]:
-    """Load one file as one or more DataFrames."""
+    """Load one file as one or more DataFrames.
+
+    Args:
+        pf: Path to the source file.
+
+    Yields:
+        Tuples of (source_name, DataFrame).
+    """
     ext = pf.suffix.lower()
     if ext == ".xlsx":
         sheets = pd.read_excel(pf, sheet_name=None, dtype=str)
@@ -47,6 +59,15 @@ def _load_source_frames(pf: Path) -> Iterable[tuple[str, pd.DataFrame]]:
 def main(
     db_path_override: Path | None = None, data_dirs_override: list[Path] | None = None
 ) -> None:
+    """Run the master ingestion pipeline.
+
+    Args:
+        db_path_override: Optional path to the SQLite database.
+        data_dirs_override: Optional list of directories to search for data.
+    """
+    from srag.data.database import build_case_hash_sql, init_db
+    from srag.data.loader import _infer_zone_from_bairro, _normalize_bairro_name, _normalize_zone
+
     db_path = db_path_override or DB_PATH
     data_dirs = data_dirs_override or DATA_DIRS
 
@@ -112,13 +133,8 @@ def main(
                 print(f"  -> {source_name}")
                 file_cols = {str(c).upper(): c for c in source_df.columns}
 
-                def get_col(name: str) -> str:
-                    return file_cols.get(name.upper(), "NULL")
-
-                def resolve_hash_field(field: str) -> str:
-                    if field == "ID_MUNICIP":
-                        return source_mun
-                    return get_col(field)
+                def get_col(name: str, current_cols: dict[str, str] = file_cols) -> str:
+                    return current_cols.get(name.upper(), "NULL")
 
                 source_mun = (
                     get_col("CO_MUN_NOT")
@@ -130,6 +146,15 @@ def main(
                     if get_col("CO_MUN_RES") != "NULL"
                     else get_col("ID_MN_RESI")
                 )
+
+                def resolve_hash_field(
+                    field: str,
+                    current_mun: str = source_mun,
+                    current_cols: dict[str, str] = file_cols,
+                ) -> str:
+                    if field == "ID_MUNICIP":
+                        return current_mun
+                    return current_cols.get(field.upper(), "NULL")
 
                 select_parts = []
                 for col in target_cols:
@@ -149,15 +174,17 @@ def main(
                             select_parts.append("NULL")
                         else:
                             # Tenta vários formatos: ISO Date, ISO Timestamp, Brasileiro
+                            p1 = "strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%d/%m/%Y')"
+                            p2 = "strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%Y-%m-%d')"
                             select_parts.append(f"""
                                 COALESCE(
                                     TRY_CAST({orig} AS DATE),
-                                    TRY_CAST(strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%d/%m/%Y') AS DATE),
-                                    TRY_CAST(strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%Y-%m-%d') AS DATE)
+                                    TRY_CAST({p1} AS DATE),
+                                    TRY_CAST({p2} AS DATE)
                                 )
                             """)
                     elif col_up == "CO_DETEC":
-                        # Tenta os dois nomes, pois o SIVEP usa CO-DETEC no dicionário e CO_DETEC em alguns anos
+                        # Tenta os dois nomes: CO-DETEC (dicionário) vs CO_DETEC (alguns anos)
                         orig = (
                             get_col("CO-DETEC")
                             if get_col("CO-DETEC") != "NULL"
@@ -191,7 +218,8 @@ def main(
                         CAST({source_res} AS VARCHAR) LIKE '240800%' OR
                         UPPER(CAST({source_mun} AS VARCHAR)) IN {MOSSORO_NAMES} OR
                         UPPER(CAST({source_res} AS VARCHAR)) IN {MOSSORO_NAMES}
-                """)
+                """)  # nosec B608
+
         except Exception as e:
             print(f"  ❌ Erro em {pf.name}: {e}")
 
@@ -204,11 +232,12 @@ def main(
             SELECT *, ROW_NUMBER() OVER (PARTITION BY unique_hash ORDER BY DT_NOTIFIC DESC) as rn
             FROM temp_cases
         ) WHERE rn = 1
-    """)
+    """)  # nosec B608
     final_count = con.execute("SELECT count(*) FROM sqlite_db.casos_srag").fetchone()[0]
+    duplicates = temp_count - final_count
     print(
         "📊 Ingestão consolidada: "
-        f"temp_cases={temp_count}, unique_cases={final_count}, duplicates_removed={temp_count - final_count}"
+        f"temp_cases={temp_count}, unique_cases={final_count}, duplicates_removed={duplicates}"
     )
 
     # 3. Normalização Inteligente (Pandas Pass)
@@ -228,8 +257,7 @@ def main(
         )
         conn.commit()
 
-    count = final_count
-    print(f"✅ Ingestão finalizada: {count} registros únicos.")
+    print(f"✅ Ingestão finalizada: {final_count} registros únicos.")
 
 
 if __name__ == "__main__":

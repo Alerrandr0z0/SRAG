@@ -85,7 +85,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           zoomControl: true,
           scrollWheelZoom: true,
         }).setView([-5.18, -37.34], 12);
-        
+
         tileLayerRef.current = L.tileLayer(tileUrl, {
           attribution: theme === 'dark' ? '&copy; CartoDB' : '&copy; OpenStreetMap',
         }).addTo(mapInstance.current);

@@ -45,10 +45,7 @@ def test_compute_age_groups_with_idade_anos() -> None:
 
 
 def test_compute_age_groups_with_tp_idade() -> None:
-    df = pd.DataFrame({
-        "TP_IDADE": [3, 2, 1, np.nan],
-        "NU_IDADE_N": [40, 6, 365.25, 10]
-    })
+    df = pd.DataFrame({"TP_IDADE": [3, 2, 1, np.nan], "NU_IDADE_N": [40, 6, 365.25, 10]})
     res = compute_age_groups(df)
     assert not res.empty
     faixas = res.set_index("faixa_etaria")["count"].to_dict()
@@ -69,11 +66,13 @@ def test_compute_citizen_pyramid_empty() -> None:
 
 
 def test_compute_citizen_pyramid_valid() -> None:
-    df = pd.DataFrame({
-        "NU_IDADE_N": [30, 31, 35, 40, 85],
-        "TP_IDADE": [3, 3, 3, 3, 3],
-        "CS_SEXO": ["M", "F", "F", "M", "F"]
-    })
+    df = pd.DataFrame(
+        {
+            "NU_IDADE_N": [30, 31, 35, 40, 85],
+            "TP_IDADE": [3, 3, 3, 3, 3],
+            "CS_SEXO": ["M", "F", "F", "M", "F"],
+        }
+    )
     res = compute_citizen_pyramid(df)
     assert len(res) > 0
     assert any(r["age_band"] == "30-39" and r["male"] == 1 and r["female"] == 2 for r in res)
@@ -98,16 +97,20 @@ def test_compute_schooling_profile_empty() -> None:
 
 
 def test_compute_schooling_profile_valid() -> None:
-    df = pd.DataFrame({
-        "CS_ESCOL_N": [1, 3, 5, 5, 9, np.nan],
-        "NU_IDADE_N": [10, 20, 6, 8, 30, 40],
-        "TP_IDADE": [3, 3, 3, 3, 3, 3]
-    })
+    df = pd.DataFrame(
+        {
+            "CS_ESCOL_N": [1, 3, 5, 5, 9, np.nan],
+            "NU_IDADE_N": [10, 20, 6, 8, 30, 40],
+            "TP_IDADE": [3, 3, 3, 3, 3, 3],
+        }
+    )
     res = compute_schooling_profile(df)
     res_dict = {r["label"]: r["count"] for r in res}
     assert res_dict["Fundamental I"] == 1
     assert res_dict["Médio"] == 1
-    assert res_dict["Não se aplica"] == 1  # only age 6 is kept for 'Não se aplica', age 8 is dropped
+    assert (
+        res_dict["Não se aplica"] == 1
+    )  # only age 6 is kept for 'Não se aplica', age 8 is dropped
     assert res_dict["Ignorado"] == 1
 
 
@@ -123,12 +126,14 @@ def test_profile_metrics_empty() -> None:
 
 
 def test_profile_metrics_valid() -> None:
-    df = pd.DataFrame({
-        "HOSPITAL": [1, 2, 1, np.nan],
-        "UTI": [1, 1, 2, 9],
-        "EVOLUCAO": [2, 1, 2, 9],
-        "VACINA_COV": [1, 1, 1, 2]
-    })
+    df = pd.DataFrame(
+        {
+            "HOSPITAL": [1, 2, 1, np.nan],
+            "UTI": [1, 1, 2, 9],
+            "EVOLUCAO": [2, 1, 2, 9],
+            "VACINA_COV": [1, 1, 1, 2],
+        }
+    )
     res = _profile_metrics(df)
     assert res["count"] == 4
     assert res["hospital_rate"] == 50.0
@@ -143,14 +148,16 @@ def test_compute_citizen_profile_tree_empty() -> None:
 
 
 def test_compute_citizen_profile_tree_valid() -> None:
-    df = pd.DataFrame({
-        "NU_IDADE_N": [1, 4, 8, 13, 17, 25, 45, 65, 75, 85],
-        "TP_IDADE": [3] * 10,
-        "HOSPITAL": [1] * 10,
-        "UTI": [2] * 10,
-        "EVOLUCAO": [1] * 10,
-        "VACINA_COV": [1] * 10
-    })
+    df = pd.DataFrame(
+        {
+            "NU_IDADE_N": [1, 4, 8, 13, 17, 25, 45, 65, 75, 85],
+            "TP_IDADE": [3] * 10,
+            "HOSPITAL": [1] * 10,
+            "UTI": [2] * 10,
+            "EVOLUCAO": [1] * 10,
+            "VACINA_COV": [1] * 10,
+        }
+    )
     res = compute_citizen_profile_tree(df)
     assert len(res["macro_profiles"]) == 4
     macros = {m["key"]: m for m in res["macro_profiles"]}
@@ -172,10 +179,12 @@ def test_compute_traditional_community_distribution_empty() -> None:
 
 
 def test_compute_traditional_community_distribution_valid() -> None:
-    df = pd.DataFrame({
-        "POV_CT": [1, 1, 1, 2, 1],
-        "TP_POV_CT": ["Quilombola", " Quilombola ", "", "Indigena", np.nan]
-    })
+    df = pd.DataFrame(
+        {
+            "POV_CT": [1, 1, 1, 2, 1],
+            "TP_POV_CT": ["Quilombola", " Quilombola ", "", "Indigena", np.nan],
+        }
+    )
     res = compute_traditional_community_distribution(df)
     res_dict = {r["label"]: r["count"] for r in res}
     assert res_dict["QUILOMBOLA"] == 2
@@ -187,9 +196,7 @@ def test_compute_occupation_profile_empty() -> None:
 
 
 def test_compute_occupation_profile_valid() -> None:
-    df = pd.DataFrame({
-        "PAC_DSCBO": ["Professor", " professor ", "Medico", "999999", "", np.nan]
-    })
+    df = pd.DataFrame({"PAC_DSCBO": ["Professor", " professor ", "Medico", "999999", "", np.nan]})
     res = compute_occupation_profile(df)
     res_dict = {r["label"]: r["count"] for r in res}
     assert res_dict["PROFESSOR"] == 2

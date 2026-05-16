@@ -15,20 +15,21 @@ def test_territory_distribution_empty() -> None:
     assert res.empty
     assert list(res.columns) == ["bairro", "count"]
 
+
 def test_territory_distribution_missing_col() -> None:
     df = pd.DataFrame({"OTHER": [1]})
     res = compute_territory_distribution(df)
     assert res.empty
 
+
 def test_territory_distribution_valid() -> None:
-    df = pd.DataFrame({
-        "BAIRRO_REF": ["A"] * 5 + ["B"] * 4 + ["C"] * 10 + [None] * 6
-    })
+    df = pd.DataFrame({"BAIRRO_REF": ["A"] * 5 + ["B"] * 4 + ["C"] * 10 + [None] * 6})
     res = compute_territory_distribution(df, min_cases=5)
     assert len(res) == 3
     assert list(res["bairro"]) == ["C", "NAO INFORMADO", "A"]
     assert list(res["count"]) == [10, 6, 5]
     # B has 4 cases, which is < 5, so it's dropped.
+
 
 def test_zone_distribution_empty() -> None:
     df = pd.DataFrame()
@@ -36,15 +37,15 @@ def test_zone_distribution_empty() -> None:
     assert res.empty
     assert list(res.columns) == ["zona", "count"]
 
+
 def test_zone_distribution_valid() -> None:
-    df = pd.DataFrame({
-        "ZONA": ["Urbana", "Urbana", "Rural", None]
-    })
+    df = pd.DataFrame({"ZONA": ["Urbana", "Urbana", "Rural", None]})
     res = compute_zone_distribution(df)
     assert len(res) == 3
     assert res.iloc[0]["zona"] == "Urbana"
     assert res.iloc[0]["count"] == 2
     assert "Nao informado" in res["zona"].values
+
 
 def test_unit_distribution_empty() -> None:
     df = pd.DataFrame()
@@ -52,35 +53,56 @@ def test_unit_distribution_empty() -> None:
     assert res.empty
     assert list(res.columns) == ["id_unidade", "count"]
 
+
 def test_unit_distribution_valid() -> None:
-    df = pd.DataFrame({
-        "ID_UNIDADE": ["H1"] * 4 + ["H2"] * 2 + [None] * 3
-    })
+    df = pd.DataFrame({"ID_UNIDADE": ["H1"] * 4 + ["H2"] * 2 + [None] * 3})
     res = compute_unit_distribution(df, min_cases=3)
     assert len(res) == 2
     assert list(res["id_unidade"]) == ["H1", "NAO INFORMADO"]
     assert list(res["count"]) == [4, 3]
+
 
 def test_territory_week_heatmap_empty() -> None:
     df = pd.DataFrame()
     res = compute_territory_week_heatmap(df)
     assert res.empty
 
+
 def test_territory_week_heatmap_missing_cols() -> None:
     df = pd.DataFrame({"BAIRRO_REF": ["A"]})
     res = compute_territory_week_heatmap(df)
     assert res.empty
 
+
 def test_territory_week_heatmap_valid() -> None:
-    df = pd.DataFrame({
-        "BAIRRO_REF": ["B1"] * 6 + ["B2"] * 5 + ["B3"] * 4 + [None] * 6,
-        "DT_SIN_PRI": [
-            "2023-01-01", "2023-01-01", "2023-01-08", "2023-01-08", "2023-01-15", "2023-01-15", # B1
-            "2023-01-01", "2023-01-08", "2023-01-08", "2023-01-15", "2023-01-15",             # B2
-            "2023-01-01", "2023-01-08", "2023-01-15", "2023-01-22",                           # B3 (dropped since count < 5)
-            "2023-01-01", "2023-01-01", "2023-01-01", "2023-01-01", "2023-01-01", "2023-01-01"  # NAO INFORMADO
-        ]
-    })
+    df = pd.DataFrame(
+        {
+            "BAIRRO_REF": ["B1"] * 6 + ["B2"] * 5 + ["B3"] * 4 + [None] * 6,
+            "DT_SIN_PRI": [
+                "2023-01-01",
+                "2023-01-01",
+                "2023-01-08",
+                "2023-01-08",
+                "2023-01-15",
+                "2023-01-15",  # B1
+                "2023-01-01",
+                "2023-01-08",
+                "2023-01-08",
+                "2023-01-15",
+                "2023-01-15",  # B2
+                "2023-01-01",
+                "2023-01-08",
+                "2023-01-15",
+                "2023-01-22",  # B3 (dropped since count < 5)
+                "2023-01-01",
+                "2023-01-01",
+                "2023-01-01",
+                "2023-01-01",
+                "2023-01-01",
+                "2023-01-01",  # NAO INFORMADO
+            ],
+        }
+    )
     # B1 (6), B2 (5), NAO INFORMADO (6) -> these are kept.
     res = compute_territory_week_heatmap(df, min_cases=5, last_n_weeks=3)
 
@@ -97,21 +119,30 @@ def test_territory_week_heatmap_valid() -> None:
     # So weeks are from ["2023-01-01", "2023-01-08", "2023-01-15", "2023-01-22"]. Last 3 weeks are "2023-01-08", "2023-01-15", "2023-01-22".
     pass
 
+
 def test_territory_entities_by_zone_empty() -> None:
     df = pd.DataFrame()
     res = compute_territory_entities_by_zone(df)
     assert res == {"urban_bairros": [], "rural_comunidades": []}
+
 
 def test_territory_entities_by_zone_missing_cols() -> None:
     df = pd.DataFrame({"BAIRRO_REF": ["A"]})
     res = compute_territory_entities_by_zone(df)
     assert res == {"urban_bairros": [], "rural_comunidades": []}
 
+
 def test_territory_entities_by_zone_valid() -> None:
-    df = pd.DataFrame({
-        "BAIRRO_REF": ["U1"] * 4 + ["U2"] * 2 + ["R1"] * 5 + ["R2"] * 3 + [None] * 4,
-        "ZONA": ["Urbana"] * 4 + ["URBANA"] * 2 + ["Rural"] * 5 + ["RURAL "] * 3 + ["Urbana"] * 4
-    })
+    df = pd.DataFrame(
+        {
+            "BAIRRO_REF": ["U1"] * 4 + ["U2"] * 2 + ["R1"] * 5 + ["R2"] * 3 + [None] * 4,
+            "ZONA": ["Urbana"] * 4
+            + ["URBANA"] * 2
+            + ["Rural"] * 5
+            + ["RURAL "] * 3
+            + ["Urbana"] * 4,
+        }
+    )
 
     res = compute_territory_entities_by_zone(df, min_cases=3)
 

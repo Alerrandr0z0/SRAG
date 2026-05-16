@@ -84,7 +84,6 @@ def _normalize_zone(cs_zona: int | None) -> str | None:
     return zone_map.get(cs_zona)
 
 
-
 def _normalize_age_to_years(nu_idade_n: int | None, tp_idade: int | None) -> float | None:
     """Convert SIVEP age representation into decimal years.
 

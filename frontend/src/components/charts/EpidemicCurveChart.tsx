@@ -25,7 +25,7 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
   const getOption = () => {
     // 1. Get full sorted weeks
     let allWeeks = Array.from(new Set(virusTrends.map(d => d.epi_week))).sort();
-    
+
     // 2. Filter by window if applicable
     if (weeksWindow !== '0') {
       const limit = parseInt(weeksWindow);
@@ -60,15 +60,15 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
         legend: { data: agents, bottom: 0, icon: 'circle', textStyle: { color: textColor } },
         grid: { left: '30px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
-        xAxis: [{ 
-          type: 'category', 
-          boundaryGap: false, 
+        xAxis: [{
+          type: 'category',
+          boundaryGap: false,
           data: allWeeks,
           axisLine: { show: true, lineStyle: { color: axisColor } },
           axisLabel: { color: textColor }
         }],
-        yAxis: [{ 
-          type: 'value', 
+        yAxis: [{
+          type: 'value',
           name: 'Casos Positivos',
           axisLine: { show: false },
           axisLabel: { color: textColor },
@@ -93,15 +93,15 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       return {
         tooltip: { trigger: 'axis' },
         grid: { left: '40px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
-        xAxis: [{ 
-          type: 'category', 
-          boundaryGap: false, 
+        xAxis: [{
+          type: 'category',
+          boundaryGap: false,
           data: allWeeks,
           axisLine: { show: true, lineStyle: { color: axisColor } },
           axisLabel: { color: textColor }
         }],
-        yAxis: [{ 
-          type: 'value', 
+        yAxis: [{
+          type: 'value',
           name: 'Total Acumulado',
           axisLabel: { color: textColor },
           splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }
@@ -126,27 +126,27 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
         legend: { data: ['Exames', 'Positivos', 'Taxa (%)'], bottom: 0, textStyle: { color: textColor } },
         grid: { left: '3%', right: '3%', bottom: '15%', top: '25px', containLabel: true },
-        xAxis: [{ 
-          type: 'category', 
-          data: weeks, 
+        xAxis: [{
+          type: 'category',
+          data: weeks,
           axisPointer: { type: 'shadow' },
           axisLine: { show: true, lineStyle: { color: axisColor } },
           axisLabel: { color: textColor }
         }],
         yAxis: [
-          { 
-            type: 'value', 
-            name: 'Volume', 
+          {
+            type: 'value',
+            name: 'Volume',
             min: 0,
             axisLabel: { color: textColor },
             splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }
           },
-          { 
-            type: 'value', 
-            name: 'Taxa (%)', 
-            min: 0, 
-            max: 100, 
-            position: 'right', 
+          {
+            type: 'value',
+            name: 'Taxa (%)',
+            min: 0,
+            max: 100,
+            position: 'right',
             axisLabel: { formatter: '{value}%', color: textColor },
             splitLine: { show: false }
           }
@@ -182,14 +182,14 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
             </button>
           ))}
         </div>
-        
-        <select 
-          value={mode} 
+
+        <select
+          value={mode}
           onChange={e => setMode(e.target.value as Mode)}
-          style={{ 
-            fontSize: '0.8rem', 
-            padding: '0.25rem', 
-            borderRadius: '4px', 
+          style={{
+            fontSize: '0.8rem',
+            padding: '0.25rem',
+            borderRadius: '4px',
             border: '1px solid var(--border-subtle)',
             background: 'var(--bg-input)',
             color: 'var(--text-main)'

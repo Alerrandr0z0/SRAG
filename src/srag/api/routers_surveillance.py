@@ -237,4 +237,3 @@ def icu_bottleneck(
     except Exception as e:
         print(f"ERRO ICU_BOTTLENECK: {e}")
         return []
-

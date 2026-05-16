@@ -10,7 +10,8 @@ def _age_years(df: pd.DataFrame) -> pd.Series:
     if "IDADE_ANOS" in df.columns and df["IDADE_ANOS"].notna().any():
         return pd.to_numeric(df["IDADE_ANOS"], errors="coerce")
 
-    idade_bruta = pd.to_numeric(df.get("NU_IDADE_N", pd.Series(index=df.index)), errors="coerce").fillna(0)
+    nu_idade = df.get("NU_IDADE_N", pd.Series(index=df.index))
+    idade_bruta = pd.to_numeric(nu_idade, errors="coerce").fillna(0)
     tp = pd.to_numeric(df.get("TP_IDADE", pd.Series(index=df.index)), errors="coerce")
 
     idade_anos = pd.Series(pd.NA, index=df.index, dtype="Float64")
@@ -95,11 +96,10 @@ def apply_global_filters(
                 if "gestante" in maternal:
                     is_maternal |= m_base.isin([1, 2, 3, 4])
                 if "puerpera" in maternal:
-                    is_maternal |= (m_base == 6)
+                    is_maternal |= m_base == 6
 
                 out = out[
-                    out["CS_SEXO"].isin(other_genders)
-                    | ((out["CS_SEXO"] == "F") & is_maternal)
+                    out["CS_SEXO"].isin(other_genders) | ((out["CS_SEXO"] == "F") & is_maternal)
                 ]
                 # Mark maternal as handled so the next block doesn't filter again
                 maternal = None
@@ -128,9 +128,7 @@ def apply_global_filters(
 
     if occupations:
         occ_norm = [str(o).strip().upper() for o in occupations]
-        out = out[
-            out["PAC_DSCBO"].fillna("").astype(str).str.upper().str.strip().isin(occ_norm)
-        ]
+        out = out[out["PAC_DSCBO"].fillna("").astype(str).str.upper().str.strip().isin(occ_norm)]
 
     if zonas:
         zona_norm = [str(z).strip().upper() for z in zonas]

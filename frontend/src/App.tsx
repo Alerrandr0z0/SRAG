@@ -146,13 +146,13 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar 
-        activePanel={panel} 
-        setPanel={setPanel} 
-        theme={theme} 
-        setTheme={setTheme} 
+      <Sidebar
+        activePanel={panel}
+        setPanel={setPanel}
+        theme={theme}
+        setTheme={setTheme}
       />
-      
+
       <main className="app-shell">
         {panel !== 'notebooks' && (
           <>
