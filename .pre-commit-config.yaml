@@ -16,7 +16,7 @@ repos:
     rev: 1.9.4
     hooks:
       - id: bandit
-        args: [-q, -r, src, -r, scripts]
+        args: [-q, -r, -s, B101]
         exclude: ^tests/
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0

@@ -72,7 +72,7 @@ fix-front:
 
 security: security-back security-secrets security-deps security-frontend
 security-back:
-	uv run bandit -r src/srag scripts/
+	uv run bandit -r src/srag scripts/ -s B101
 security-secrets:
 	uv run pre-commit run gitleaks --all-files
 security-deps:

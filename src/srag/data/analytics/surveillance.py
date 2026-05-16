@@ -850,9 +850,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
             "codetection_cases": codetec_count,
-            "reinfection_total": int(
-                (pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum()
-            ),
+            "reinfection_total": int((pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum()),
         },
         "reinfection_trend": reinfection_ts,
     }
