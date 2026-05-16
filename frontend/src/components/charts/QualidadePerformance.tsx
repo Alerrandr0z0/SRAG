@@ -86,7 +86,7 @@ interface BoxPlotProps {
   height?:     number;
   onHover: (e: React.MouseEvent, content: React.ReactNode) => void;
   onLeave: () => void;
-  themeColors: any;
+  themeColors: Record<string, string>;
 }
 
 const BoxPlot: React.FC<BoxPlotProps> = ({
@@ -248,14 +248,14 @@ const BoxPlot: React.FC<BoxPlotProps> = ({
 
 // ─── Sub-componente: Barra 100% ──────────────────────────────────────────────
 
-const Barra100: React.FC<{ 
+const Barra100: React.FC<{
   criterios: DiagnosticoCriterio[],
   onHover: (e: React.MouseEvent, content: React.ReactNode) => void;
   onLeave: () => void;
-  themeColors: any;
+  themeColors: Record<string, string>;
 }> = ({ criterios, onHover, onLeave, themeColors }) => {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
-  
+
   const toggle = (label: string) => {
     setHidden(prev => {
       const next = new Set(prev);
@@ -316,8 +316,8 @@ const Barra100: React.FC<{
         display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px",
       }}>
         {criterios.map((c, i) => (
-          <button 
-            key={i} 
+          <button
+            key={i}
             onClick={() => toggle(c.label)}
             style={{
               display: "flex", alignItems: "center", gap: "6px",
@@ -328,8 +328,8 @@ const Barra100: React.FC<{
           >
             <span style={{
               width: "12px", height: "12px",
-              borderRadius: "3px", 
-              background: hidden.has(c.label) ? themeColors.pill : c.color, 
+              borderRadius: "3px",
+              background: hidden.has(c.label) ? themeColors.pill : c.color,
               flexShrink: 0,
               transition: 'background 0.2s'
             }} />
@@ -345,7 +345,7 @@ const Barra100: React.FC<{
 
 // ─── Sub-componente: KPI cards antiviral ─────────────────────────────────────
 
-const AntiviralKPIs: React.FC<{ items: AntiviralItem[], themeColors: any }> = ({ items, themeColors }) => {
+const AntiviralKPIs: React.FC<{ items: AntiviralItem[], themeColors: Record<string, string> }> = ({ items, themeColors }) => {
   const getBadgeColors = (status: string) => {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (status === 'ok') return isDark ? { bg: '#134e4a', color: '#5eead4' } : { bg: "#e1f5ee", color: "#085041" };
@@ -548,7 +548,7 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
             borderLeft: `4px solid ${data.oportunidade.median <= data.oportunidadeMeta ? themeColors.ok : themeColors.crit}`,
             fontSize: "12px", color: data.oportunidade.median <= data.oportunidadeMeta ? (theme === 'dark' ? '#6ee7b7' : '#166534') : (theme === 'dark' ? '#fca5a5' : '#791f1f'), lineHeight: 1.5,
           }}>
-            {data.oportunidade.median <= data.oportunidadeMeta 
+            {data.oportunidade.median <= data.oportunidadeMeta
               ? `Mediana de ${data.oportunidade.median}d está dentro da janela terapêutica recomendada.`
               : `Mediana de ${data.oportunidade.median}d está acima da janela de ${data.oportunidadeMeta * 24}h. Indica diagnóstico tardio.`
             }
@@ -564,9 +564,9 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
           <div style={{ position: 'relative', width: '120px', height: '120px' }}>
              <svg width="120" height="120" viewBox="0 0 120 120">
                 <circle cx="60" cy="60" r="54" fill="none" stroke={themeColors.pill} strokeWidth="12" />
-                <circle 
-                  cx="60" cy="60" r="54" fill="none" stroke={data.coberturaTestagem.rate >= 80 ? themeColors.ok : themeColors.warn} 
-                  strokeWidth="12" strokeDasharray={`${(data.coberturaTestagem.rate / 100) * 339.29} 339.29`} 
+                <circle
+                  cx="60" cy="60" r="54" fill="none" stroke={data.coberturaTestagem.rate >= 80 ? themeColors.ok : themeColors.warn}
+                  strokeWidth="12" strokeDasharray={`${(data.coberturaTestagem.rate / 100) * 339.29} 339.29`}
                   strokeLinecap="round" transform="rotate(-90 60 60)"
                   style={{ transition: 'stroke-dasharray 0.5s ease' }}
                 />
@@ -593,9 +593,9 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
                 <span style={{ color: themeColors.neutral }}>{item.count}</span>
               </div>
               <div style={{ width: '100%', height: '6px', background: themeColors.pill, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${(item.count / Math.max(1, data.coberturaTestagem.collected)) * 100}%`, 
-                  height: '100%', 
+                <div style={{
+                  width: `${(item.count / Math.max(1, data.coberturaTestagem.collected)) * 100}%`,
+                  height: '100%',
                   background: i === 0 ? themeColors.ok : themeColors.neutral,
                   borderRadius: '3px'
                 }} />

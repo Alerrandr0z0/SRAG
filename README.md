@@ -47,11 +47,23 @@ make mutation    # Teste de mutação (Mutmut + Stryker)
 
 # 5. Iniciar Sistema (Full Stack)
 make start       # Dashboard (5173), API (8000), Jupyter (8888)
+
+# 6. Iniciar com Docker
+make start-docker # Frontend (80), API (8000), Jupyter (8888)
+
+# 7. Encerrar Docker
+make stop-docker  # Encerra o stack do Compose
 ```
+
+### Acesso público via Docker
+
+- `Frontend`: http://localhost
+- `Backend`: http://localhost:8000
+- `Jupyter`: http://localhost:8888/lab/
 
 ## 🛡️ Padrões de Engenharia
 
-- **Tipagem Estrita:** Migração concluída de Mypy para **Pyright (Strict Mode)** para máxima segurança em tempo de desenvolvimento.
+- **Tipagem Estrita:** **Pyright (Strict Mode)** para máxima segurança em tempo de desenvolvimento.
 - **Segurança Blindada:** Auditoria automática contra injeção de SQL e vazamento de segredos (Gitleaks) via hooks de pre-commit.
 - **Performance:** Todas as lógicas analíticas são **vetorizadas**, eliminando loops lentos e garantindo escalabilidade para grandes bases de dados.
 - **Observabilidade:** Integração opcional com **Logfire** para monitoramento de performance de queries e erros de validação Pydantic.

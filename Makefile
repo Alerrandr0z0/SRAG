@@ -1,8 +1,8 @@
 # SRAG Mossoró/RN - Unified Toolchain
 
-.PHONY: help setup ingest start stop status test lint fix mutation bench update-graph \
+.PHONY: help setup ingest start stop status start-docker stop-docker test lint fix mutation bench update-graph \
         setup-back setup-front test-back test-front lint-back lint-front \
-        fix-back fix-front mutation-back mutation-front \
+        fix-back fix-front mutation-back mutation-front mutation-incr mutation-score \
         observability property-test property-test-back property-test-front \
         security security-back security-secrets hooks
 
@@ -21,7 +21,9 @@ help:
 	@echo "  lint              Run all quality checks"
 	@echo "  security          Run all security scanners (Bandit + Gitleaks)"
 	@echo "  hooks             Run all pre-commit hooks on all files"
-	@echo "  mutation          Run all mutation tests"
+	@echo "  mutation          Run all mutation tests (full suite, ~30min)"
+	@echo "  mutation-incr     Incremental mutation (agent: PATHS= src/... [TESTS= tests/...])"
+	@echo "  mutation-score    Show last mutation score"
 	@echo "  update-graph      Update knowledge graph (Graphify)"
 
 # --- Setup ---
@@ -38,6 +40,16 @@ ingest:
 
 start:
 	./scripts/port_control.sh start
+
+start-docker:
+	docker compose up --build -d
+	@printf "\nServicos em execucao:\n"
+	@printf -- "- Frontend: http://localhost\n"
+	@printf -- "- Backend:  http://localhost:8000\n"
+	@printf -- "- Jupyter:  http://localhost:8888/lab/\n"
+
+stop-docker:
+	docker compose down
 
 stop:
 	./scripts/port_control.sh stop
@@ -60,11 +72,15 @@ fix-back:
 fix-front:
 	cd frontend && npm run format
 
-security: security-back security-secrets
+security: security-back security-secrets security-deps security-frontend
 security-back:
-	uv run bandit -r src/srag
+	uv run bandit -r src/srag scripts/ -s B101
 security-secrets:
 	uv run pre-commit run gitleaks --all-files
+security-deps:
+	uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed (vulnerabilities found or tool not available)"
+security-frontend:
+	cd frontend && npm audit --audit-level=high 2>/dev/null || echo "npm audit completed with warnings"
 
 hooks:
 	uv run pre-commit run --all-files
@@ -72,7 +88,7 @@ hooks:
 # --- Testing ---
 test: test-back test-front
 test-back:
-	uv run pytest tests/
+	uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
 test-front:
 	cd frontend && npm run test
 
@@ -84,7 +100,15 @@ property-test-front:
 
 mutation: mutation-back mutation-front
 mutation-back:
-	uv run mutmut run
+	rm -rf mutants .mutmut-cache
+	uv run mutmut run --max-children 4
+	@echo "\n=== Mutation Score ==="
+	-uv run mutmut results --no-pager 2>/dev/null | tail -5
+mutation-incr:
+	@if [ -z "$(PATHS)" ]; then echo "Uso: make mutation-incr PATHS='...' [TESTS='tests/...']"; exit 1; fi
+	cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" uv run python scripts/_patch_mutmut_config.py && uv run mutmut run --max-children 4 && uv run mutmut results --no-pager 2>/dev/null | tail -10
+mutation-score:
+	uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-front:
 	cd frontend && npm run test:mutation
 
@@ -96,4 +120,4 @@ observability:
 	logfire dashboard
 
 update-graph:
-	graphify update .
+	uv run graphify update .

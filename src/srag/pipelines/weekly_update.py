@@ -33,7 +33,7 @@ def ingest_secure_file(input_path: Path) -> dict[str, int]:
     if df.empty:
         return {"processed": 0, "new_cases_added": 0}
 
-    new_cases_added = save_cases(df.to_dict(orient="records"))
+    new_cases_added = save_cases(df.to_dict(orient="records"))  # type: ignore[arg-type]
     return {"processed": len(df), "new_cases_added": int(new_cases_added)}
 
 

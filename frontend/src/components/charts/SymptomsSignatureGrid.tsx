@@ -11,8 +11,8 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
   const { labels = [], bands = [], matrices = {} } = signature || {};
 
   const option = useMemo(() => {
-    const hasData = Array.isArray(labels) && labels.length > 0 && 
-                    Array.isArray(bands) && bands.length > 0 && 
+    const hasData = Array.isArray(labels) && labels.length > 0 &&
+                    Array.isArray(bands) && bands.length > 0 &&
                     matrices && typeof matrices === 'object' && Object.keys(matrices).length > 0;
 
     if (!hasData) {
@@ -110,7 +110,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         axisLine: { show: false }
       });
 
-      const matrixData = matrices[p.key as keyof typeof matrices] as any[][];
+      const matrixData = matrices[p.key as keyof typeof matrices] as [number, number][][];
       const plotData: Array<[number, number, number, number]> = [];
 
       if (matrixData && Array.isArray(matrixData)) {
@@ -135,8 +135,8 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
           show: true,
           fontSize: 9,
           color: '#1e293b',
-          formatter: (params: { value: any }) => {
-            const pr = params.value as [number, number, number, number];
+          formatter: (params: { value: [number, number, number, number] }) => {
+            const pr = params.value;
             return pr[2] > 0 ? `${Math.round(pr[2])}%` : '';
           },
         },
@@ -157,8 +157,8 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
         borderWidth: 1,
         borderColor: '#e2e8f0',
         textStyle: { color: '#1e293b' },
-        formatter: (params: { value: any }) => {
-          const p = params.value as [number, number, number, number];
+        formatter: (params: { value: [number, number, number, number] }) => {
+          const p = params.value;
           const symptomIdx = p[1];
           const bandIdx = p[0];
           const symptom = labels[symptomIdx];
@@ -167,7 +167,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
           let res = `<div style="font-weight:bold;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${symptom} <span style="font-weight:normal;color:#64748b;">(${band})</span></div>`;
 
           pathogens.forEach(pa => {
-            const m = matrices[pa.key as keyof typeof matrices] as any[][];
+            const m = matrices[pa.key as keyof typeof matrices] as [number, number][][];
             const cell = (m && m[symptomIdx]) ? m[symptomIdx][bandIdx] : [0, 0];
             const prevalence = cell[0];
             const count = cell[1];

@@ -90,14 +90,14 @@ def compute_citizen_pyramid(df: pd.DataFrame) -> list[dict[str, int | str]]:
     if bins[-1] >= 80:
         labels[-1] = f"{int(bins[-2])}+"
 
-    out["age_bin"] = pd.cut(age, bins=bins, labels=labels, right=False)
+    out["age_bin"] = pd.cut(age, bins=[float(b) for b in bins], labels=labels, right=False)
 
     pyramid = []
     counts = out.groupby(["age_bin", "CS_SEXO"], observed=False).size().unstack(fill_value=0)
 
     for label in labels:
-        male = int(counts.loc[label].get("M", 0)) if label in counts.index else 0
-        female = int(counts.loc[label].get("F", 0)) if label in counts.index else 0
+        male = int(counts.loc[label].get("M", 0)) if label in counts.index else 0  # type: ignore[arg-type]
+        female = int(counts.loc[label].get("F", 0)) if label in counts.index else 0  # type: ignore[arg-type]
         pyramid.append({"age_band": label, "male": male, "female": female})
 
     return pyramid
@@ -127,24 +127,24 @@ def compute_race_profile(df: pd.DataFrame) -> list[dict[str, int | str]]:
 
     result: list[dict[str, int | str]] = []
     for row in grouped.itertuples(index=False):
-        code = int(row.cs_raca_num)
+        code = int(row.cs_raca_num)  # type: ignore[arg-type]
         result.append(
             {
                 "code": code,
                 "label": labels[code],
-                "count": int(row.count or 0),
+                "count": int(row.count),  # type: ignore[arg-type]
             }
         )
     return result
 
 
-def compute_schooling_profile(df: pd.DataFrame) -> list[dict[str, int | str]]:
+def compute_schooling_profile(df: pd.DataFrame) -> list[dict[Any, Any]]:
     """Schooling profile with SIVEP context rule for 'não se aplica'."""
     if df.empty or "CS_ESCOL_N" not in df.columns:
         return []
 
     out = df.copy()
-    escol = pd.to_numeric(out.get("CS_ESCOL_N"), errors="coerce")
+    escol = pd.to_numeric(out["CS_ESCOL_N"], errors="coerce")
     age = _age_years(out)
 
     valid = escol.notna()
@@ -180,10 +180,10 @@ def _profile_metrics(df: pd.DataFrame) -> dict[str, float | int]:
         }
 
     total = len(df)
-    hospital = (pd.to_numeric(df.get("HOSPITAL"), errors="coerce") == 1).sum()
-    uti = (pd.to_numeric(df.get("UTI"), errors="coerce") == 1).sum()
-    death = outcome_death_mask(df.get("EVOLUCAO", pd.Series(index=df.index))).sum()
-    covid_vac = (pd.to_numeric(df.get("VACINA_COV"), errors="coerce") == 1).sum()
+    hospital = (pd.to_numeric(df["HOSPITAL"], errors="coerce") == 1).sum()
+    uti = (pd.to_numeric(df["UTI"], errors="coerce") == 1).sum()
+    death = outcome_death_mask(df["EVOLUCAO"]).sum()
+    covid_vac = (pd.to_numeric(df["VACINA_COV"], errors="coerce") == 1).sum()
 
     return {
         "count": int(total),

@@ -53,8 +53,8 @@ def infer_etiologic_agent(df: pd.DataFrame) -> pd.Series:
 
     has_vsr_cols = {"PCR_VSR", "AN_VSR"}.intersection(set(out.columns))
     if has_vsr_cols:
-        pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")
-        an_vsr = pd.to_numeric(out.get("AN_VSR"), errors="coerce")
+        pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")  # type: ignore[arg-type]
+        an_vsr = pd.to_numeric(out.get("AN_VSR"), errors="coerce")  # type: ignore[arg-type]
         agent.loc[(pcr_vsr == 1) | (an_vsr == 1)] = "VSR"
 
     return agent.astype(str)
@@ -68,7 +68,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
 
     try:
         vacina = float(vacina) if pd.notna(vacina) else np.nan
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         vacina = np.nan
 
     nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
@@ -132,7 +132,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
         if isinstance(dt_dose_val, str):
             try:
                 dt_dose_val = pd.to_datetime(dt_dose_val, dayfirst=True, format="mixed").date()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return "ignorado"
 
         if isinstance(dt_sintoma_val, str):
@@ -140,7 +140,7 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
                 dt_sintoma_val = pd.to_datetime(
                     dt_sintoma_val, dayfirst=True, format="mixed"
                 ).date()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return "ignorado"
 
         if not hasattr(dt_dose_val, "year") or not hasattr(dt_sintoma_val, "year"):
@@ -242,7 +242,7 @@ def compute_alert_thresholds(df: pd.DataFrame) -> dict[str, int]:
     return thresholds
 
 
-def compute_notification_delay_series(df: pd.DataFrame) -> list[dict[str, Any]]:
+def compute_notification_delay_series(df: pd.DataFrame) -> list[dict[Any, Any]]:
     """Calculate the timeline of delay between symptoms onset and notification."""
     if df.empty:
         return []
@@ -271,24 +271,19 @@ def compute_notification_delay_series(df: pd.DataFrame) -> list[dict[str, Any]]:
     return ts.sort_values("epi_week").to_dict(orient="records")
 
 
-def compute_positivity_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
+def compute_positivity_trend(df: pd.DataFrame) -> list[dict[Any, Any]]:
     """Calculate weekly tested cases and positivity rate."""
     if df.empty:
         return []
 
     out = df.copy()
-    pcr_res = pd.to_numeric(out.get("PCR_RESUL"), errors="coerce")
-    an_res = pd.to_numeric(out.get("RES_AN"), errors="coerce")
-    pd.to_numeric(out.get("AMOSTRA"), errors="coerce")
+    pcr_res = pd.to_numeric(out["PCR_RESUL"], errors="coerce")
+    an_res = pd.to_numeric(out["RES_AN"], errors="coerce")
 
-    # Apenas casos que coletaram amostra (1=Sim) são considerados para
-    # o denominador de positividade
-    # Fallback para o nome da coluna conforme o dicionário/schema
-    col_amostra = out.get("AMOSTRA")
-    if col_amostra is None:
-        out["is_tested"] = True  # Fallback para considerar todos como testados se a coluna sumir
+    if "AMOSTRA" not in out.columns:
+        out["is_tested"] = True
     else:
-        out["is_tested"] = pd.to_numeric(col_amostra, errors="coerce") == 1
+        out["is_tested"] = pd.to_numeric(out["AMOSTRA"], errors="coerce") == 1
 
     out["is_positive"] = (pcr_res == 1) | (an_res == 1)
 
@@ -357,7 +352,7 @@ def compute_antiviral_usage(df: pd.DataFrame) -> dict[str, Any]:
     if flu_cases.empty:
         flu_cases = df
 
-    treated = (pd.to_numeric(flu_cases.get("ANTIVIRAL"), errors="coerce") == 1).sum()
+    treated = (pd.to_numeric(flu_cases["ANTIVIRAL"], errors="coerce") == 1).sum()
     total = len(flu_cases)
 
     return {
@@ -380,7 +375,7 @@ def compute_closure_criteria(df: pd.DataFrame) -> list[dict[str, Any]]:
     }
 
     counts = (
-        pd.to_numeric(df.get("CRITERIO"), errors="coerce")
+        pd.to_numeric(df["CRITERIO"], errors="coerce")
         .map(criteria_map)
         .fillna("Ignorado/Em Aberto")
         .value_counts()
@@ -489,20 +484,21 @@ def compute_virus_detailed_distribution(
     # Standard "detailed" logic
     out["virus"] = "Em investigacao"
 
-    pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")
-    an_vsr = pd.to_numeric(out.get("AN_VSR"), errors="coerce")
+    pcr_vsr = pd.to_numeric(out.get("PCR_VSR"), errors="coerce")  # type: ignore[arg-type]
+    an_vsr = pd.to_numeric(out.get("AN_VSR"), errors="coerce")  # type: ignore[arg-type]
     out.loc[(pcr_vsr == 1) | (an_vsr == 1), "virus"] = "VSR"
 
-    pcr_sars2 = pd.to_numeric(out.get("PCR_SARS2"), errors="coerce")
-    an_sars2 = pd.to_numeric(out.get("AN_SARS2"), errors="coerce")
+    pcr_sars2 = pd.to_numeric(out.get("PCR_SARS2"), errors="coerce")  # type: ignore[arg-type]
+    an_sars2 = pd.to_numeric(out.get("AN_SARS2"), errors="coerce")  # type: ignore[arg-type]
     out.loc[(pcr_sars2 == 1) | (an_sars2 == 1), "virus"] = "SARS-CoV-2"
 
-    tp_flu_pcr = pd.to_numeric(out.get("TP_FLU_PCR"), errors="coerce")
-    tp_flu_an = pd.to_numeric(out.get("TP_FLU_AN"), errors="coerce")
-    out.loc[(tp_flu_pcr == 2) | (tp_flu_an == 2), "virus"] = "Influenza B"
-    out.loc[(tp_flu_pcr == 1) | (tp_flu_an == 1), "virus"] = "Influenza A"
+    if "TP_FLU_PCR" in out.columns or "TP_FLU_AN" in out.columns:
+        tp_flu_pcr = pd.to_numeric(out.get("TP_FLU_PCR"), errors="coerce")  # type: ignore[arg-type]
+        tp_flu_an = pd.to_numeric(out.get("TP_FLU_AN"), errors="coerce")  # type: ignore[arg-type]
+        out.loc[(tp_flu_pcr == 2) | (tp_flu_an == 2), "virus"] = "Influenza B"
+        out.loc[(tp_flu_pcr == 1) | (tp_flu_an == 1), "virus"] = "Influenza A"
 
-    classi = pd.to_numeric(out.get("CLASSI_FIN"), errors="coerce")
+    classi = pd.to_numeric(out["CLASSI_FIN"], errors="coerce")
     out.loc[(out["virus"] == "Em investigacao") & (classi == 1), "virus"] = (
         "Influenza (nao tipada)"
     )
@@ -593,7 +589,7 @@ def compute_lethality_heatmap(df: pd.DataFrame) -> dict[str, Any]:
     out["age_band"] = out["age_val"].apply(categorize_age)
 
     # Define death (EVOLUCAO == 2)
-    out["is_death"] = pd.to_numeric(out.get("EVOLUCAO"), errors="coerce") == 2
+    out["is_death"] = pd.to_numeric(out["EVOLUCAO"], errors="coerce") == 2
 
     agents = ["VSR", "Influenza", "COVID-19", "Outros Vírus", "Outro Agente", "Não Especificada"]
     age_bands = [
@@ -637,7 +633,7 @@ def compute_codetection_matrix(df: pd.DataFrame) -> dict[str, Any]:
 
     # Focus on cases where co-detection was flagged
     # Filter only cases where CO_DETEC == 1
-    out = df[pd.to_numeric(df.get("CO_DETEC"), errors="coerce") == 1].copy()
+    out = df[pd.to_numeric(df["CO_DETEC"], errors="coerce") == 1].copy()
 
     virus_flags = [
         ("PCR_SARS2", "SARS-CoV-2"),
@@ -782,8 +778,8 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
         }
 
     out = df.copy()
-    pcr_res = pd.to_numeric(out.get("PCR_RESUL"), errors="coerce")
-    an_res = pd.to_numeric(out.get("RES_AN"), errors="coerce")
+    pcr_res = pd.to_numeric(out["PCR_RESUL"], errors="coerce")
+    an_res = pd.to_numeric(out["RES_AN"], errors="coerce")
 
     tested_mask = pcr_res.isin([1, 2, 3, 5]) | an_res.isin([1, 2, 3, 5])
     tested = out[tested_mask].copy()
@@ -802,8 +798,8 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     tested["lab_ref"] = lab_name.where(lab_name != "", lab_id)
     tested["lab_ref"] = tested["lab_ref"].replace("", "NAO INFORMADO")
 
-    tested["is_positive"] = (pd.to_numeric(tested.get("PCR_RESUL"), errors="coerce") == 1) | (
-        pd.to_numeric(tested.get("RES_AN"), errors="coerce") == 1
+    tested["is_positive"] = (pd.to_numeric(tested["PCR_RESUL"], errors="coerce") == 1) | (
+        pd.to_numeric(tested["RES_AN"], errors="coerce") == 1
     )
 
     grouped = tested.groupby("lab_ref", as_index=False).agg(
@@ -815,9 +811,9 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     )
     grouped = grouped.sort_values("tested_cases", ascending=False)
 
-    dt_coleta = pd.to_datetime(tested.get("DT_COLETA"), errors="coerce")
-    dt_pcr = pd.to_datetime(tested.get("DT_PCR"), errors="coerce")
-    dt_res_an = pd.to_datetime(tested.get("DT_RES_AN"), errors="coerce")
+    dt_coleta = pd.to_datetime(tested["DT_COLETA"], errors="coerce")
+    dt_pcr = pd.to_datetime(tested["DT_PCR"], errors="coerce")
+    dt_res_an = pd.to_datetime(tested["DT_RES_AN"], errors="coerce")
 
     turnaround = pd.concat(
         [(dt_pcr - dt_coleta).dt.days, (dt_res_an - dt_coleta).dt.days], ignore_index=True
@@ -826,13 +822,15 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     turnaround = turnaround[(turnaround >= 0) & (turnaround <= 30)]
     median_turnaround = float(round(turnaround.median(), 1)) if not turnaround.empty else 0.0
 
-    codetec_count = int((pd.to_numeric(out.get("CO_DETEC"), errors="coerce") == 1).sum())
+    codetec_count = int((pd.to_numeric(out["CO_DETEC"], errors="coerce") == 1).sum())
 
     overall_positive = float(round((tested["is_positive"].mean() * 100), 2))
 
     # Cálculo de Reinfecções (Campo 96: VG_REINF == 1)
     reinfection_ts = []
+    reinfection_total = 0
     if "VG_REINF" in out.columns:
+        reinfection_total = int((pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum())
         reinf_df = out[pd.to_numeric(out["VG_REINF"], errors="coerce") == 1].copy()
         if not reinf_df.empty:
             reinf_df["se_year_week"] = reinf_df["DT_SIN_PRI"].apply(get_epi_week)
@@ -851,9 +849,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
             "codetection_cases": codetec_count,
-            "reinfection_total": int(
-                (pd.to_numeric(out.get("VG_REINF"), errors="coerce") == 1).sum()
-            ),
+            "reinfection_total": reinfection_total,
         },
         "reinfection_trend": reinfection_ts,
     }
@@ -953,10 +949,10 @@ def compute_vaccination_and_treatment_profile(df: pd.DataFrame) -> dict[str, flo
             "covid_treatment_count": 0,
         }
 
-    covid_vac = pd.to_numeric(df.get("VACINA_COV"), errors="coerce")
-    flu_vac = pd.to_numeric(df.get("VACINA"), errors="coerce")
-    antivir = pd.to_numeric(df.get("ANTIVIRAL"), errors="coerce")
-    trat_cov = pd.to_numeric(df.get("TRAT_COV"), errors="coerce")
+    covid_vac = pd.to_numeric(df["VACINA_COV"], errors="coerce")
+    flu_vac = pd.to_numeric(df["VACINA"], errors="coerce")
+    antivir = pd.to_numeric(df["ANTIVIRAL"], errors="coerce")
+    trat_cov = pd.to_numeric(df["TRAT_COV"], errors="coerce")
 
     return {
         "covid_vaccinated_count": int((covid_vac == 1).sum()),
@@ -972,9 +968,9 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         return []
 
     out = df.copy()
-    out["DT_SIN_PRI"] = pd.to_datetime(out.get("DT_SIN_PRI"), errors="coerce")
-    out["DT_INTERNA"] = pd.to_datetime(out.get("DT_INTERNA"), errors="coerce")
-    out["DT_EVOLUCA"] = pd.to_datetime(out.get("DT_EVOLUCA"), errors="coerce")
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out["DT_INTERNA"] = pd.to_datetime(out["DT_INTERNA"], errors="coerce")
+    out["DT_EVOLUCA"] = pd.to_datetime(out["DT_EVOLUCA"], errors="coerce")
 
     def get_covid_profile(row: pd.Series) -> str:
         if pd.notna(row.get("DOS_RE_BI")):
@@ -1056,20 +1052,29 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         days_hosp_out = (dt_outcome - dt_hosp).dt.days
         valid_out = days_hosp_out[(days_hosp_out >= 0) & (days_hosp_out <= 180)].dropna()
 
-        mediana_dose_sintoma = round(float(valid_dose.median()), 1) if not valid_dose.empty else None
+        mediana_dose_sintoma = (
+            round(float(valid_dose.median()), 1) if not valid_dose.empty else None
+        )
         dose_p25 = round(float(valid_dose.quantile(0.25)), 1) if not valid_dose.empty else None
         dose_p75 = round(float(valid_dose.quantile(0.75)), 1) if not valid_dose.empty else None
 
-        mediana_sintoma_internacao = round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
-        intern_p25 = round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
-        intern_p75 = round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
+        mediana_sintoma_internacao = (
+            round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
+        )
+        intern_p25 = (
+            round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
+        )
+        intern_p75 = (
+            round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
+        )
 
-        mediana_internacao_desfecho = round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
+        mediana_internacao_desfecho = (
+            round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
+        )
         desf_p25 = round(float(valid_out.quantile(0.25)), 1) if not valid_out.empty else 0.0
         desf_p75 = round(float(valid_out.quantile(0.75)), 1) if not valid_out.empty else 0.0
 
-        uti_pct = round((pd.to_numeric(subset.get("UTI"), errors="coerce") == 1).mean() * 100, 1)
-
+        uti_pct = round((pd.to_numeric(subset["UTI"], errors="coerce") == 1).mean() * 100, 1)
 
         severity_score = round((taxa_obito * 0.6) + (taxa_cura * 0.4), 4)
 
@@ -1107,7 +1112,7 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
                 "uti_pct": uti_pct,
                 "severity_score": severity_score,
                 "n": count,
-                "count": count,  # Mantém compatibilidade legada se necessário
+                "count": count,
             }
         )
 

@@ -24,8 +24,8 @@ MUNICIPALITY_GEO_URL = (
 )
 BOUNDARY_CACHE_PATH = Path("data/processed/mossoro_municipality_boundary.geojson")
 BAIRROS_GEOJSON_FALLBACK_PATH = Path("data/geojson/mossoro_bairros.geojson")
-_BOUNDARY_MEMO: dict[str, Any] | None = None
-_BOUNDARY_MEMO_MTIME_NS: int | None = None
+_boundary_memo: dict[str, Any] | None = None
+_boundary_mtime_ns: int | None = None
 
 
 def _norm_bairro_name(value: str | None) -> str:
@@ -139,23 +139,23 @@ def _boundary_from_bairros_bbox(path: Path) -> dict[str, Any] | None:
 
 def get_municipality_boundary() -> dict[str, Any]:
     """Return Mossoro municipality boundary with cache and offline fallback."""
-    global _BOUNDARY_MEMO, _BOUNDARY_MEMO_MTIME_NS
+    global _boundary_memo, _boundary_mtime_ns
 
     cache_mtime_ns = (
         BOUNDARY_CACHE_PATH.stat().st_mtime_ns if BOUNDARY_CACHE_PATH.exists() else None
     )
     if (
-        _BOUNDARY_MEMO is not None
-        and _BOUNDARY_MEMO_MTIME_NS is not None
-        and cache_mtime_ns == _BOUNDARY_MEMO_MTIME_NS
+        _boundary_memo is not None
+        and _boundary_mtime_ns is not None
+        and cache_mtime_ns == _boundary_mtime_ns
     ):
-        return _BOUNDARY_MEMO
+        return _boundary_memo
 
     if BOUNDARY_CACHE_PATH.exists():
         cached = json.loads(BOUNDARY_CACHE_PATH.read_text(encoding="utf-8"))
         if isinstance(cached, dict):
-            _BOUNDARY_MEMO = cached
-            _BOUNDARY_MEMO_MTIME_NS = cache_mtime_ns
+            _boundary_memo = cached
+            _boundary_mtime_ns = cache_mtime_ns
             return cached
 
     try:
@@ -170,14 +170,14 @@ def get_municipality_boundary() -> dict[str, Any]:
             json.dumps(payload, ensure_ascii=False),
             encoding="utf-8",
         )
-        _BOUNDARY_MEMO = payload
-        _BOUNDARY_MEMO_MTIME_NS = BOUNDARY_CACHE_PATH.stat().st_mtime_ns
+        _boundary_memo = payload
+        _boundary_mtime_ns = BOUNDARY_CACHE_PATH.stat().st_mtime_ns
         return payload
     except requests.RequestException, ValueError, json.JSONDecodeError:
         fallback = _boundary_from_bairros_bbox(BAIRROS_GEOJSON_FALLBACK_PATH)
         if fallback is not None:
-            _BOUNDARY_MEMO = fallback
-            _BOUNDARY_MEMO_MTIME_NS = None
+            _boundary_memo = fallback
+            _boundary_mtime_ns = None
             return fallback
 
         raise

@@ -23,6 +23,7 @@ def empty_df():
 
 # --- tests for srag.pipelines.validation ---
 
+
 def test_validate_srag_data_empty(empty_df) -> None:
     is_valid, warnings = validate_srag_data(empty_df)
     assert not is_valid
@@ -31,67 +32,73 @@ def test_validate_srag_data_empty(empty_df) -> None:
 
 def test_validate_srag_data_future_date() -> None:
     future_date = date.today() + timedelta(days=10)
-    df = pd.DataFrame({
-        "unique_hash": ["123"],
-        "DT_NOTIFIC": [future_date.strftime("%Y-%m-%d")],
-        "ID_MUNICIP": ["123456"],
-        "CLASSI_FIN": ["1"]
-    })
+    df = pd.DataFrame(
+        {
+            "unique_hash": ["123"],
+            "DT_NOTIFIC": [future_date.strftime("%Y-%m-%d")],
+            "ID_MUNICIP": ["123456"],
+            "CLASSI_FIN": ["1"],
+        }
+    )
     is_valid, warnings = validate_srag_data(df)
     assert is_valid
     assert any("data futura" in w for w in warnings)
 
 
 def test_validate_srag_data_inconsistent_dates() -> None:
-    df = pd.DataFrame({
-        "unique_hash": ["123"],
-        "DT_NOTIFIC": ["2023-01-01"],
-        "DT_INTERNA": ["2023-01-10"],
-        "DT_EVOLUCA": ["2023-01-05"],
-        "ID_MUNICIP": ["123456"],
-        "CLASSI_FIN": ["1"]
-    })
+    df = pd.DataFrame(
+        {
+            "unique_hash": ["123"],
+            "DT_NOTIFIC": ["2023-01-01"],
+            "DT_INTERNA": ["2023-01-10"],
+            "DT_EVOLUCA": ["2023-01-05"],
+            "ID_MUNICIP": ["123456"],
+            "CLASSI_FIN": ["1"],
+        }
+    )
     is_valid, warnings = validate_srag_data(df)
     assert is_valid
     assert any("desfecho ocorre antes" in w for w in warnings)
 
 
 def test_validate_srag_data_extreme_age() -> None:
-    df = pd.DataFrame({
-        "unique_hash": ["123"],
-        "DT_NOTIFIC": ["2023-01-01"],
-        "IDADE_ANOS": [120],
-        "ID_MUNICIP": ["123456"],
-        "CLASSI_FIN": ["1"]
-    })
+    df = pd.DataFrame(
+        {
+            "unique_hash": ["123"],
+            "DT_NOTIFIC": ["2023-01-01"],
+            "IDADE_ANOS": [120],
+            "ID_MUNICIP": ["123456"],
+            "CLASSI_FIN": ["1"],
+        }
+    )
     is_valid, warnings = validate_srag_data(df)
     assert is_valid
     assert any("idade superior a 115" in w for w in warnings)
 
 
 def test_validate_srag_data_missing_critical_cols() -> None:
-    df = pd.DataFrame({
-        "DT_NOTIFIC": ["2023-01-01"],
-        "ID_MUNICIP": ["123456"]
-    })
+    df = pd.DataFrame({"DT_NOTIFIC": ["2023-01-01"], "ID_MUNICIP": ["123456"]})
     is_valid, warnings = validate_srag_data(df)
     assert not is_valid
     assert any("Colunas críticas ausentes" in w for w in warnings)
 
 
 def test_validate_srag_data_valid() -> None:
-    df = pd.DataFrame({
-        "unique_hash": ["123"],
-        "DT_NOTIFIC": ["2023-01-01"],
-        "ID_MUNICIP": ["123456"],
-        "CLASSI_FIN": ["1"]
-    })
+    df = pd.DataFrame(
+        {
+            "unique_hash": ["123"],
+            "DT_NOTIFIC": ["2023-01-01"],
+            "ID_MUNICIP": ["123456"],
+            "CLASSI_FIN": ["1"],
+        }
+    )
     is_valid, warnings = validate_srag_data(df)
     assert is_valid
     assert not warnings
 
 
 # --- tests for srag.pipelines.weekly_update ---
+
 
 @patch("srag.pipelines.weekly_update.load_and_clean_srag_data")
 @patch("srag.pipelines.weekly_update.save_cases")
@@ -188,18 +195,24 @@ def test_run_weekly_update_with_output(mock_build, mock_load, mock_ingest, tmp_p
 
 # --- tests for srag.pipelines.surveillance ---
 
+
 @patch("srag.pipelines.surveillance.validate_srag_data")
 @patch("srag.pipelines.surveillance.duckdb.connect")
 @patch("srag.pipelines.surveillance.sqlite3.connect")
 @patch("srag.pipelines.surveillance.init_db")
-def test_run_surveillance_pipeline_no_data(mock_init_db, mock_sqlite, mock_duckdb, mock_validate, tmp_path) -> None:
+def test_run_surveillance_pipeline_no_data(
+    mock_init_db, mock_sqlite, mock_duckdb, mock_validate, tmp_path
+) -> None:
     # Setup mocks
     mock_con = MagicMock()
     mock_duckdb.return_value = mock_con
 
     mock_sqlite_conn = MagicMock()
     mock_sqlite.return_value.__enter__.return_value = mock_sqlite_conn
-    mock_sqlite_conn.execute.return_value.fetchall.return_value = [(0, "unique_hash"), (1, "DT_NOTIFIC")]
+    mock_sqlite_conn.execute.return_value.fetchall.return_value = [
+        (0, "unique_hash"),
+        (1, "DT_NOTIFIC"),
+    ]
 
     # Empty df from temp_raw
     mock_con.execute.return_value.df.return_value = pd.DataFrame()
@@ -218,7 +231,9 @@ def test_run_surveillance_pipeline_no_data(mock_init_db, mock_sqlite, mock_duckd
 @patch("srag.pipelines.surveillance.duckdb.connect")
 @patch("srag.pipelines.surveillance.sqlite3.connect")
 @patch("srag.pipelines.surveillance.init_db")
-def test_run_surveillance_pipeline_blocked_by_warnings(mock_init_db, mock_sqlite, mock_duckdb, mock_validate, tmp_path) -> None:
+def test_run_surveillance_pipeline_blocked_by_warnings(
+    mock_init_db, mock_sqlite, mock_duckdb, mock_validate, tmp_path
+) -> None:
     mock_con = MagicMock()
     mock_duckdb.return_value = mock_con
     mock_sqlite_conn = MagicMock()
@@ -259,7 +274,9 @@ def test_run_surveillance_pipeline_success(
     mock_con.execute.return_value.df.return_value = pd.DataFrame({"unique_hash": ["123"]})
 
     # SQLite intelligence pass mock
-    mock_read_sql.return_value = pd.DataFrame({"rowid": [1], "NM_BAIRRO": ["Centro"], "CS_ZONA": [1]})
+    mock_read_sql.return_value = pd.DataFrame(
+        {"rowid": [1], "NM_BAIRRO": ["Centro"], "CS_ZONA": [1]}
+    )
 
     mock_severity.return_value = {"total": 1}
 
@@ -286,3 +303,80 @@ def test_run_surveillance_pipeline_exception(mock_duckdb, tmp_path) -> None:
     result = run_surveillance_pipeline(tmp_path / "db.db", [])
     assert result["status"] == "error"
     assert "Crash" in result["error"]
+
+
+@patch("srag.pipelines.surveillance.pd.read_excel")
+@patch("srag.pipelines.surveillance.validate_srag_data")
+@patch("srag.pipelines.surveillance.duckdb.connect")
+@patch("srag.pipelines.surveillance.sqlite3.connect")
+@patch("srag.pipelines.surveillance.init_db")
+@patch("srag.pipelines.surveillance.pd.read_sql")
+@patch("srag.pipelines.surveillance.compute_severity_metrics")
+def test_run_surveillance_pipeline_reads_xlsx(
+    mock_severity: MagicMock,
+    mock_read_sql: MagicMock,
+    mock_init_db: MagicMock,
+    mock_sqlite: MagicMock,
+    mock_duckdb: MagicMock,
+    mock_validate: MagicMock,
+    mock_read_excel: MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_con = MagicMock()
+    mock_duckdb.return_value = mock_con
+
+    mock_sqlite_conn = MagicMock()
+    mock_sqlite.return_value.__enter__.return_value = mock_sqlite_conn
+    mock_sqlite_conn.execute.return_value.fetchall.return_value = [
+        (0, "unique_hash"),
+        (1, "DT_NOTIFIC"),
+    ]
+
+    mock_validate.return_value = (True, [])
+    mock_severity.return_value = {"total": 1}
+
+    xlsx_df = pd.DataFrame(
+        {
+            "CO_MUN_NOT": ["240800"],
+            "DT_NOTIFIC": ["2023-01-01"],
+            "DT_SIN_PRI": ["2023-01-01"],
+            "NU_IDADE_N": [30],
+            "CS_SEXO": ["M"],
+        }
+    )
+    mock_read_excel.return_value = {"2025 Mossoró": xlsx_df}
+
+    def execute_side_effect(sql: str) -> MagicMock:
+        if sql.startswith("DESCRIBE SELECT * FROM xlsx_"):
+            result = MagicMock()
+            result.fetchall.return_value = [
+                ("CO_MUN_NOT",),
+                ("DT_NOTIFIC",),
+                ("DT_SIN_PRI",),
+                ("NU_IDADE_N",),
+                ("CS_SEXO",),
+            ]
+            return result
+        if sql.startswith("SELECT * FROM temp_raw"):
+            result = MagicMock()
+            result.df.return_value = pd.DataFrame({"unique_hash": ["123"]})
+            return result
+        if sql.startswith("SELECT * FROM sqlite_db.casos_srag"):
+            result = MagicMock()
+            result.df.return_value = pd.DataFrame({"unique_hash": ["123"]})
+            return result
+        return MagicMock()
+
+    mock_con.execute.side_effect = execute_side_effect
+
+    mock_read_sql.return_value = pd.DataFrame(
+        {"rowid": [1], "NM_BAIRRO": ["Centro"], "CS_ZONA": [1]}
+    )
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "source.xlsx").write_bytes(b"xlsx")
+
+    result = run_surveillance_pipeline(tmp_path / "test.db", [data_dir], force=True)
+    assert result["status"] == "success"
+    mock_read_excel.assert_called_once()

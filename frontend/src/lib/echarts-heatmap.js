@@ -1,10 +1,10 @@
 import * as echarts from "echarts/core";
-import { 
-  HeatmapChart, 
-  SankeyChart, 
-  BarChart, 
-  LineChart, 
-  PieChart, 
+import {
+  HeatmapChart,
+  SankeyChart,
+  BarChart,
+  LineChart,
+  PieChart,
   BoxplotChart,
   ScatterChart,
   EffectScatterChart

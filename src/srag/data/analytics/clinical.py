@@ -65,9 +65,8 @@ def compute_clinical_timing_metrics(df: pd.DataFrame) -> dict[str, float | int]:
             return 0.0
         return float(round(clean.median(), 1))
 
-    antiviral_mask = pd.to_numeric(out.get("ANTIVIRAL"), errors="coerce") == 1
+    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
 
-    # Check if necessary columns exist for the 48h adherence metric
     protocol_48h_adherence = 0.0
     if "DT_SIN_PRI" in out.columns and "DT_ANTIVIR" in out.columns:
         out_treated = out[antiviral_mask].dropna(subset=["DT_SIN_PRI", "DT_ANTIVIR"])
@@ -175,10 +174,10 @@ def compute_maternal_profile(df: pd.DataFrame) -> dict[str, object]:
         }
 
     def get_maternal_group(row: pd.Series) -> str:
-        puerp = pd.to_numeric(row.get("PUERPERA"), errors="coerce")
+        puerp = pd.to_numeric(row["PUERPERA"], errors="coerce")
         if puerp == 1:
             return "Puérpera"
-        gest = pd.to_numeric(row.get("CS_GESTANT"), errors="coerce")
+        gest = pd.to_numeric(row["CS_GESTANT"], errors="coerce")
         if gest == 1:
             return "Gest. 1º Tri"
         if gest == 2:
@@ -192,11 +191,11 @@ def compute_maternal_profile(df: pd.DataFrame) -> dict[str, object]:
     fem["maternal_group"] = fem.apply(get_maternal_group, axis=1)
 
     def get_severity_outcome(row: pd.Series) -> str:
-        if outcome_death_mask(pd.Series([row.get("EVOLUCAO")])).iloc[0]:
+        if outcome_death_mask(pd.Series([row["EVOLUCAO"]])).iloc[0]:
             return "Óbito"
-        if pd.to_numeric(row.get("UTI"), errors="coerce") == 1:
+        if pd.to_numeric(row["UTI"], errors="coerce") == 1:
             return "UTI (Sobrevivente)"
-        if pd.to_numeric(row.get("EVOLUCAO"), errors="coerce") == 1:
+        if pd.to_numeric(row["EVOLUCAO"], errors="coerce") == 1:
             return "Cura (Sem UTI)"
         return "Outro/Em Aberto"
 
@@ -214,15 +213,15 @@ def compute_maternal_profile(df: pd.DataFrame) -> dict[str, object]:
     for g in group_order:
         if g in grouped.index:
             row = grouped.loc[g]
-            total = int(row.sum())
+            total = int(row.sum())  # type: ignore[arg-type]
             if total == 0:
                 continue
             outcomes.append(
                 {
                     "group": g,
-                    "cure": int(row["Cura (Sem UTI)"]),
-                    "icu": int(row["UTI (Sobrevivente)"]),
-                    "death": int(row["Óbito"]),
+                    "cure": int(row["Cura (Sem UTI)"]),  # type: ignore[arg-type]
+                    "icu": int(row["UTI (Sobrevivente)"]),  # type: ignore[arg-type]
+                    "death": int(row["Óbito"]),  # type: ignore[arg-type]
                     "total": total,
                 }
             )
@@ -249,7 +248,7 @@ def compute_antiviral_latency(df: pd.DataFrame) -> dict[str, Any]:
             out[col] = pd.to_datetime(out[col], errors="coerce")
 
     # Filter only treated cases with valid therapeutic window (0 to 14 days)
-    antiviral_mask = pd.to_numeric(out.get("ANTIVIRAL"), errors="coerce") == 1
+    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
 
     if "DT_SIN_PRI" not in out.columns or "DT_ANTIVIR" not in out.columns:
         return {"boxplot_data": [], "median": 0.0}
@@ -279,7 +278,7 @@ def compute_antiviral_outcome_impact(df: pd.DataFrame) -> list[dict[str, Any]]:
         return []
 
     out = df.copy()
-    out["used_antivir"] = pd.to_numeric(out.get("ANTIVIRAL"), errors="coerce").map(
+    out["used_antivir"] = pd.to_numeric(out["ANTIVIRAL"], errors="coerce").map(
         {1: "Usou Antiviral", 2: "Não Usou"}
     )
     out = out[out["used_antivir"].notna()]
@@ -384,7 +383,9 @@ def compute_symptoms_heatmap(df: pd.DataFrame) -> dict[str, object]:
 
 
 def compute_symptoms_signature(
-    df: pd.DataFrame, profile_type: str = "all", pathogens_mask_func: Callable[..., Any] | None = None
+    df: pd.DataFrame,
+    profile_type: str = "all",
+    pathogens_mask_func: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     """Calculate symptom prevalence (%) side-by-side for COVID, Flu, and VSR."""
     if df.empty:
@@ -485,7 +486,7 @@ def compute_symptoms_signature(
                     row.append([0.0, 0])
                     continue
 
-                has_symptom = (pd.to_numeric(subset.get(field_id), errors="coerce") == 1).sum()
+                has_symptom = (pd.to_numeric(subset.get(field_id), errors="coerce") == 1).sum()  # type: ignore[arg-type]
                 prevalence = round((has_symptom / len(subset)) * 100, 1)
                 row.append([prevalence, int(has_symptom)])
                 symptom_avg_freq[field_id] += prevalence

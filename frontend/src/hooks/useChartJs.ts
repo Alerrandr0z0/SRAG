@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 type ChartLike = { destroy: () => void };
-type ChartCtor = { 
+type ChartCtor = {
   new (el: HTMLCanvasElement, options: unknown): ChartLike;
   defaults: {
     color: string;
@@ -63,8 +63,8 @@ export function useChartJs<TOptions>(buildOptions: () => TOptions, dependencies:
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && canvasRef.current && canvasRef.current.parentElement) {
       resizeObserver = new ResizeObserver(() => {
-        if (chartInstance.current && 'resize' in chartInstance.current) {
-          (chartInstance.current as any).resize();
+        if (chartInstance.current) {
+          (chartInstance.current as unknown as { resize: () => void }).resize();
         }
       });
       resizeObserver.observe(canvasRef.current.parentElement);

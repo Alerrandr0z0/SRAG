@@ -34,7 +34,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
 
   const closureTotal = (laboratoryNetwork?.closure_criteria || []).reduce((s, c) => s + c.count, 0) || 1;
   const criteriaColors = ["#0f766e", "#888780", "#b4b2a9", "#d3d1c7"];
-  
+
   const performanceData: QualidadePerformanceData = {
     criterios: (laboratoryNetwork?.closure_criteria || []).map((c, i) => ({
       label: c.label,
@@ -110,7 +110,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
             <div className="filters"></div>
           </div>
           <div style={{ marginTop: '1.5rem', height: '400px' }}>
-            <HeatmapChart 
+            <HeatmapChart
               xLabels={laboratoryNetwork?.agent_lethality_heatmap?.age_bands || []}
               yLabels={laboratoryNetwork?.agent_lethality_heatmap?.agents || []}
               matrix={laboratoryNetwork?.agent_lethality_heatmap?.matrix || []}

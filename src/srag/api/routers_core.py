@@ -2,11 +2,11 @@
 
 # ruff: noqa
 
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
@@ -127,7 +127,9 @@ def get_trends(
 
 @router.get("/virus")
 def get_virus(
-    detail_level: str = "summary",
+    detail_level: Literal["summary", "detailed", "covid_detailed", "influenza_detailed"] = Query(
+        "summary"
+    ),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> list[VirusDistributionItem]:
     df = get_df()
@@ -172,4 +174,3 @@ def get_data_completeness(
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
     return compute_data_completeness(df)
-

@@ -1,6 +1,6 @@
 """API dependency injections for SRAG Mossoró."""
 
-from fastapi import Query
+from fastapi import HTTPException, Query
 from pydantic import BaseModel
 
 
@@ -19,6 +19,22 @@ class CommonFilters(BaseModel):
     occupations: list[str] | None = None
 
 
+def _validate_years(years: list[int] | None) -> None:
+    if years is None:
+        return
+    for y in years:
+        if not (1900 <= y <= 2030):
+            raise HTTPException(status_code=422, detail=f"Year {y} out of range [1900, 2030]")
+
+
+def _validate_string_lists(v: list[str] | None) -> None:
+    if v is None:
+        return
+    for item in v:
+        if len(item) > 100:
+            raise HTTPException(status_code=422, detail=f"Filter value too long: {item[:50]}...")
+
+
 def get_common_filters(
     profile: list[str] | None = Query(None),  # noqa: B008
     race: list[str] | None = Query(None),  # noqa: B008
@@ -32,6 +48,16 @@ def get_common_filters(
     occupations: list[str] | None = Query(None),  # noqa: B008
 ) -> CommonFilters:
     """Dependency provider for common filters across endpoints."""
+    _validate_years(years)
+    _validate_string_lists(profile)
+    _validate_string_lists(race)
+    _validate_string_lists(gender)
+    _validate_string_lists(zonas)
+    _validate_string_lists(bairros)
+    _validate_string_lists(unidades)
+    _validate_string_lists(agents)
+    _validate_string_lists(maternal)
+    _validate_string_lists(occupations)
     return CommonFilters(
         profile=profile,
         race=race,

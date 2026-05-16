@@ -14,19 +14,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# List of sensitive fields that MUST be dropped for LGPD compliance
-# These are standard SIVEP-Gripe fields containing personal identifiers
+# List of sensitive fields that MUST be dropped for LGPD compliance.
+# Address fields are intentionally kept because the application uses
+# territorial data for analysis and geospatial views.
 SENSITIVE_FIELDS = [
     "NM_PACIENT",  # Nome do Paciente
     "NU_CPF",  # CPF
     "NU_CNS",  # Cartão Nacional de Saúde
     "NM_MAE_PAC",  # Nome da Mãe
-    "NM_LOGRADO",  # Logradouro (Endereço)
-    "ID_LOGRADO",  # Logradouro (Endereço)
-    "NU_NUMERO",  # Número da residência
-    "NM_COMPLEM",  # Complemento do endereço
-    "NM_BAIRRO",  # Bairro
-    "NU_CEP",  # CEP
     "NU_DDD_TEL",  # DDD Telefone
     "NU_TELEFON",  # Telefone
     "ID_RG_RESI",  # Registro de Residência
@@ -87,7 +82,6 @@ def _normalize_zone(cs_zona: int | None) -> str | None:
         3: "Periurbana",
     }
     return zone_map.get(cs_zona)
-
 
 
 def _normalize_age_to_years(nu_idade_n: int | None, tp_idade: int | None) -> float | None:

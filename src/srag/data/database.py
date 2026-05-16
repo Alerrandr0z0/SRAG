@@ -1,13 +1,22 @@
 """Database management for SRAG Mossoró historical data."""
 
 import hashlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Database path (local SQLite file)
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 DB_URL = "sqlite:///data/processed/srag_mossoro.db"
+CASE_HASH_FIELDS = (
+    "DT_NOTIFIC",
+    "ID_MUNICIP",
+    "DT_SIN_PRI",
+    "NU_IDADE_N",
+    "CS_SEXO",
+)
 
 
 class Base(DeclarativeBase):
@@ -161,29 +170,21 @@ class SragRecord(Base):
 
 def generate_case_hash(record: dict[str, Any]) -> str:
     """Generate a unique hash for a case to prevent duplicates."""
-    # Key fields that identify a case (even after anonymization)
-    key_fields = [
-        str(record.get("DT_NOTIFIC")),
-        str(record.get("ID_MUNICIP")),
-        str(record.get("DT_SIN_PRI")),
-        str(record.get("NU_IDADE_N")),
-        str(record.get("CS_SEXO")),
-    ]
+    key_fields = [str(record.get(field)) for field in CASE_HASH_FIELDS]
     hash_input = "|".join(key_fields).encode("utf-8")
     return hashlib.md5(hash_input, usedforsecurity=False).hexdigest()
 
-def _generate_legacy_case_hash(record: dict[str, Any]) -> str:
-    """Compatibility hash for older records that included ID_UNIDADE."""
-    key_fields = [
-        str(record.get("DT_NOTIFIC")),
-        str(record.get("ID_MUNICIP")),
-        str(record.get("DT_SIN_PRI")),
-        str(record.get("NU_IDADE_N")),
-        str(record.get("CS_SEXO")),
-        str(record.get("ID_UNIDADE")),
-    ]
-    hash_input = "|".join(key_fields).encode("utf-8")
-    return hashlib.md5(hash_input, usedforsecurity=False).hexdigest()
+
+def build_case_hash_sql(resolve_field: Callable[[str], str]) -> str:
+    """Build the DuckDB SQL expression for the case hash."""
+    return (
+        "md5("
+        + " || '|' || ".join(
+            f"COALESCE(CAST({resolve_field(field)} AS VARCHAR), '')" for field in CASE_HASH_FIELDS
+        )
+        + ")"
+    )
+
 
 def init_db() -> None:
     """Initialize the SQLite database and create tables with automated migrations."""
@@ -219,17 +220,12 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
     model_columns = {c.name for c in SragRecord.__table__.columns if c.name != "unique_hash"}
 
     new_count = 0
+    duplicate_count = 0
+    enriched_count = 0
     with session_factory() as session:
         for case_dict in cases:
             case_hash = generate_case_hash(case_dict)
-            legacy_hash = _generate_legacy_case_hash(case_dict)
-
-            # Check if exists
-            exists = (
-                session.query(SragRecord)
-                .filter(SragRecord.unique_hash.in_([case_hash, legacy_hash]))
-                .first()
-            )
+            exists = session.query(SragRecord).filter(SragRecord.unique_hash == case_hash).first()
 
             if not exists:
                 # Map dict to model automatically based on column names
@@ -243,12 +239,22 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
                 session.add(record)
                 new_count += 1
             else:
+                duplicate_count += 1
+                was_enriched = False
                 # Lightweight enrichment for already-seen cases:
                 # fill missing fields if new data is available.
                 for col in model_columns:
                     val = case_dict.get(col)
                     if val is not None and getattr(exists, col) is None:
                         setattr(exists, col, val)
+                        was_enriched = True
+
+                if was_enriched:
+                    enriched_count += 1
 
         session.commit()
+    print(
+        "save_cases summary: "
+        f"new={new_count}, duplicates={duplicate_count}, enriched={enriched_count}"
+    )
     return new_count

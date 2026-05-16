@@ -11,10 +11,10 @@ interface BoxPlotChartProps {
   targetLabel?: string;
 }
 
-const BoxPlotChart: React.FC<BoxPlotChartProps> = ({ 
-  data, 
-  yAxisName = 'Dias', 
-  seriesName = 'Distribuição', 
+const BoxPlotChart: React.FC<BoxPlotChartProps> = ({
+  data,
+  yAxisName = 'Dias',
+  seriesName = 'Distribuição',
   color = COLORS.PRIMARY,
   targetValue,
   targetLabel = 'Meta'
@@ -58,9 +58,9 @@ const BoxPlotChart: React.FC<BoxPlotChartProps> = ({
         markLine: targetValue !== undefined ? {
           silent: true,
           symbol: 'none',
-          data: [{ 
-            yAxis: targetValue, 
-            label: { formatter: targetLabel, position: 'end' } 
+          data: [{
+            yAxis: targetValue,
+            label: { formatter: targetLabel, position: 'end' }
           }],
           lineStyle: { color: '#ef4444', type: 'dashed', width: 2 }
         } : undefined

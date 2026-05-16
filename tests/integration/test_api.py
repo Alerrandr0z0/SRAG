@@ -134,9 +134,11 @@ def test_clinical_flow_ignores_code_3_as_death(mock_df: pd.DataFrame) -> None:
 
     {n["name"]: n for n in json_data["nodes"]}
 
-    # Baseado no nosso mock_df, criamos 1 óbito por SRAG (código 2, i=0) e 1 Óbito por outras causas (código 3, i=1). O resto são curas.
+    # Baseado no nosso mock_df, criamos 1 óbito por SRAG (código 2, i=0)
+    # e 1 Óbito por outras causas (código 3, i=1). O resto são curas.
     # Como confirmado: Para Quantidade de óbitos (82) estamos utilizando apenas parametro 2.
-    # O SIVEP-Gripe regra diz que código 3 NÃO PODE ser listado no nó final de "Óbito" como mortalidade pela doença.
+    # O SIVEP-Gripe regra diz que código 3 NÃO PODE ser listado no nó final
+    # de "Óbito" como mortalidade pela doença.
 
     obito_count = sum(link["value"] for link in json_data["links"] if link["target"] == "Óbito")
     assert obito_count == 1

@@ -31,10 +31,10 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ loading, completeness }) => {
                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{group.group}</h3>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: 800, 
-                  color: getScoreColor(group.overall_score) 
+                <span style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  color: getScoreColor(group.overall_score)
                 }}>
                   {group.overall_score}%
                 </span>
@@ -50,9 +50,9 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ loading, completeness }) => {
                     <span style={{ fontWeight: 700, color: getScoreColor(field.rate) }}>{field.rate}%</span>
                   </div>
                   <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ 
-                      width: `${field.rate}%`, 
-                      height: '100%', 
+                    <div style={{
+                      width: `${field.rate}%`,
+                      height: '100%',
                       background: getScoreColor(field.rate),
                       borderRadius: '4px',
                       transition: 'width 1s ease-out'
@@ -68,8 +68,8 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ loading, completeness }) => {
       <article className="panel" style={{ background: '#f8fafc', border: '1px dashed #cbd5e1' }}>
         <h4 style={{ margin: '0 0 0.5rem 0' }}>💡 Nota Metodológica</h4>
         <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
-          A completude é calculada como a razão entre registros com valores válidos e o total de casos filtrados. 
-          Valores como "Ignorado" (geralmente código 9), strings vazias ou nulos são considerados dados incompletos. 
+          A completude é calculada como a razão entre registros com valores válidos e o total de casos filtrados.
+          Valores como "Ignorado" (geralmente código 9), strings vazias ou nulos são considerados dados incompletos.
           Uma alta completude (acima de 90%) é essencial para análises epidemiológicas confiáveis.
         </p>
       </article>
