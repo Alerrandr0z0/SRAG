@@ -25,7 +25,6 @@ from srag.data.analytics import (
 )
 from srag.data.loader import _normalize_age_to_years
 
-
 # ── Estratégias baseadas no dicionário SIVEP ──────────────────────
 
 SIVEP_CODES = {
@@ -42,11 +41,13 @@ SIVEP_CODES = {
 # SIVEP rule: TP_IDADE=1 (dias) → idade 0-30 dias
 # SIVEP rule: TP_IDADE=2 (meses) → idade 0-11 meses
 # SIVEP rule: TP_IDADE=3 (anos) → idade 0-150 anos
-tp_idade_valor = st.sampled_from([
-    (1, st.integers(0, 30)),
-    (2, st.integers(0, 11)),
-    (3, st.integers(0, 150)),
-]).flatmap(lambda x: st.tuples(st.just(x[0]), x[1]))
+tp_idade_valor = st.sampled_from(
+    [
+        (1, st.integers(0, 30)),
+        (2, st.integers(0, 11)),
+        (3, st.integers(0, 150)),
+    ]
+).flatmap(lambda x: st.tuples(st.just(x[0]), x[1]))
 
 # Datas no período SIVEP Mossoró (2020-2025)
 data_sivep = st.dates(min_value=date(2020, 1, 1), max_value=date(2025, 12, 31))
@@ -57,6 +58,7 @@ PERFIS = ["crianca", "adolescente", "adulto", "idoso"]
 
 
 # ── HELPERS ───────────────────────────────────────────────────────
+
 
 def _row(**kwargs) -> dict:
     """Build a row dict with defaults that exercise the happy path."""
@@ -87,8 +89,8 @@ def _df_with_column(col: str, values: list, extra: dict | None = None) -> pd.Dat
 
 # ── CATEGORIZE_AGE: todos os buckets + fronteiras ─────────────────
 
-class TestCategorizeAgeHypothesis:
 
+class TestCategorizeAgeHypothesis:
     @given(age=st.floats(min_value=0, max_value=150, allow_nan=False, allow_infinity=False))
     @settings(max_examples=200, suppress_health_check=[HealthCheck.differing_executors])
     def test_categorize_age_never_fails(self, age) -> None:
@@ -189,8 +191,8 @@ class TestCategorizeAgeHypothesis:
 
 # ── NORMALIZE_AGE: co-restrição SIVEP real ────────────────────────
 
-class TestNormalizeAgeHypothesis:
 
+class TestNormalizeAgeHypothesis:
     @given(nu_idade=st.integers(0, 150), tp_idade=st.sampled_from([1, 2, 3]))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.differing_executors])
     def test_normalize_age_never_fails(self, nu_idade, tp_idade) -> None:
@@ -261,8 +263,8 @@ class TestNormalizeAgeHypothesis:
 
 # ── OUTCOME_DEATH_MASK: EVOLUCAO rules ────────────────────────────
 
-class TestOutcomeDeathMaskHypothesis:
 
+class TestOutcomeDeathMaskHypothesis:
     @given(values=st.lists(SIVEP_CODES["EVOLUCAO"], min_size=0, max_size=50))
     @settings(max_examples=50)
     def test_only_code_2_counts_as_death(self, values) -> None:
@@ -285,7 +287,9 @@ class TestOutcomeDeathMaskHypothesis:
         result = outcome_death_mask(pd.Series([], dtype=int))
         assert len(result) == 0
 
-    @given(values=st.lists(st.sampled_from(["1", "2", "3", "9", None, np.nan, "foo"]), max_size=30))
+    @given(
+        values=st.lists(st.sampled_from(["1", "2", "3", "9", None, np.nan, "foo"]), max_size=30)
+    )
     @settings(max_examples=30)
     def test_non_numeric_values_are_coerced(self, values) -> None:
         """PD.to_numeric com errors='coerce' não deve lançar exceção."""
@@ -318,24 +322,27 @@ dt_dose_st = st.dates(min_value=date(2019, 1, 1), max_value=date(2025, 12, 31))
 
 
 class TestClassificarStatusGripeHypothesis:
-
     @given(
         vacina=SIVEP_CODES["VACINA"],
         tp_idade_valor=tp_idade_valor,
         dt_sin_pri=dt_sintoma_st,
     )
     @settings(max_examples=100, deadline=5000)
-    def test_never_raises(
-        self, vacina, tp_idade_valor, dt_sin_pri
-    ) -> None:
+    def test_never_raises(self, vacina, tp_idade_valor, dt_sin_pri) -> None:
         """Nunca lança exceção com qualquer combinação válida de inputs."""
         tp_idade, nu_idade_n = tp_idade_valor
         row = _row(VACINA=vacina, TP_IDADE=tp_idade, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri)
         try:
             result = classificar_status_gripe(row)
             assert result in [
-                "protegido", "dose_1", "dose_2", "dose_unica",
-                "vencida", "nao_vacinado", "ignorado", "inconsistencia",
+                "protegido",
+                "dose_1",
+                "dose_2",
+                "dose_unica",
+                "vencida",
+                "nao_vacinado",
+                "ignorado",
+                "inconsistencia",
             ]
         except Exception:
             pytest.fail(f"classificar_status_gripe falhou com inputs {row}")
@@ -360,8 +367,11 @@ class TestClassificarStatusGripeHypothesis:
         """VACINA=2 + DT_UT_DOSE presente → 'inconsistencia'."""
         tp_idade, nu_idade_n = tp_idade_valor
         row = _row(
-            VACINA=2, DT_UT_DOSE=dt_dose,
-            TP_IDADE=tp_idade, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=2,
+            DT_UT_DOSE=dt_dose,
+            TP_IDADE=tp_idade,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         assert classificar_status_gripe(row) == "inconsistencia"
 
@@ -376,8 +386,11 @@ class TestClassificarStatusGripeHypothesis:
         """VACINA=9 ou VACINA=1 sem DT_UT_DOSE → 'ignorado'."""
         tp_idade, nu_idade_n = tp_idade_valor
         row = _row(
-            VACINA=vacina, DT_UT_DOSE=None,
-            TP_IDADE=tp_idade, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=vacina,
+            DT_UT_DOSE=None,
+            TP_IDADE=tp_idade,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         assert classificar_status_gripe(row) == "ignorado"
 
@@ -388,16 +401,17 @@ class TestClassificarStatusGripeHypothesis:
         tp_idade_valor=tp_idade_valor,
     )
     @settings(max_examples=30, deadline=5000)
-    def test_inconsistencia_dose_apos_sintoma(
-        self, dt_dose, dias_antes, tp_idade_valor
-    ) -> None:
+    def test_inconsistencia_dose_apos_sintoma(self, dt_dose, dias_antes, tp_idade_valor) -> None:
         """DT_UT_DOSE > DT_SIN_PRI → 'inconsistencia'."""
         tp_idade, nu_idade_n = tp_idade_valor
         dt_sin_pri = dt_dose - timedelta(days=dias_antes)
         assume(dt_sin_pri >= date(2020, 1, 1))
         row = _row(
-            VACINA=1, DT_UT_DOSE=dt_dose,
-            TP_IDADE=tp_idade, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=dt_dose,
+            TP_IDADE=tp_idade,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         assert classificar_status_gripe(row) == "inconsistencia"
 
@@ -408,9 +422,7 @@ class TestClassificarStatusGripeHypothesis:
         nu_idade_n=st.integers(18, 100),
     )
     @settings(max_examples=50, deadline=5000)
-    def test_protegido_adulto(
-        self, ano, dias_sintoma_apos_dose, nu_idade_n
-    ) -> None:
+    def test_protegido_adulto(self, ano, dias_sintoma_apos_dose, nu_idade_n) -> None:
         """Adulto vacinado após campanha → 'protegido'.
 
         A funcao classificar_status_gripe compara dt_dose contra
@@ -423,8 +435,11 @@ class TestClassificarStatusGripeHypothesis:
         assume(dt_sin_pri.year == ano)  # Mesmo ano → mesma campanha
         assume(dt_sin_pri <= date(2025, 12, 31))
         row = _row(
-            VACINA=1, DT_UT_DOSE=dt_dose,
-            TP_IDADE=3, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=dt_dose,
+            TP_IDADE=3,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         assert classificar_status_gripe(row) == "protegido"
 
@@ -436,9 +451,7 @@ class TestClassificarStatusGripeHypothesis:
         nu_idade_n=st.integers(18, 100),
     )
     @settings(max_examples=30, deadline=5000)
-    def test_vencida(
-        self, ano, dias_antes, dias_sintoma_apos_dose, nu_idade_n
-    ) -> None:
+    def test_vencida(self, ano, dias_antes, dias_sintoma_apos_dose, nu_idade_n) -> None:
         """Dose antes da campanha → 'vencida'.
 
         A funcao compara dt_dose contra CAMPANHAS_GRIPE[ano_sintoma].
@@ -451,8 +464,11 @@ class TestClassificarStatusGripeHypothesis:
         assume(dt_sin_pri >= dt_dose)
         assume(dt_sin_pri.year == ano)  # Mesmo ano → mesma campanha
         row = _row(
-            VACINA=1, DT_UT_DOSE=dt_dose,
-            TP_IDADE=3, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=dt_dose,
+            TP_IDADE=3,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         assert classificar_status_gripe(row) == "vencida"
 
@@ -469,9 +485,13 @@ class TestClassificarStatusGripeHypothesis:
         dt_sin_pri = dt_vac_mae + timedelta(days=30)
         assume(dt_sin_pri <= date(2025, 12, 31))
         row = _row(
-            VACINA=None, DT_UT_DOSE=None,
-            TP_IDADE=2, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
-            MAE_VAC=mae_vac, DT_VAC_MAE=dt_vac_mae,
+            VACINA=None,
+            DT_UT_DOSE=None,
+            TP_IDADE=2,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
+            MAE_VAC=mae_vac,
+            DT_VAC_MAE=dt_vac_mae,
         )
         result = classificar_status_gripe(row)
         # Se MAE_VAC=1 e DT_VAC_MAE tem data, tenta fluxo de protegido
@@ -492,9 +512,13 @@ class TestClassificarStatusGripeHypothesis:
         """TP_IDADE=1: sempre < 6 meses. Usa MAE_VAC."""
         assume(dt_sin_pri >= dt_dose)
         row = _row(
-            VACINA=vacina, DT_UT_DOSE=dt_dose,
-            TP_IDADE=1, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
-            MAE_VAC=1, DT_VAC_MAE=dt_dose,
+            VACINA=vacina,
+            DT_UT_DOSE=dt_dose,
+            TP_IDADE=1,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
+            MAE_VAC=1,
+            DT_VAC_MAE=dt_dose,
         )
         result = classificar_status_gripe(row)
         assert isinstance(result, str)
@@ -520,9 +544,14 @@ class TestClassificarStatusGripeHypothesis:
         assume(dt_sin_pri.year == ano)
         assume(dt_sin_pri <= date(2025, 12, 31))
         row = _row(
-            VACINA=1, DT_UT_DOSE=None,
-            DT_1_DOSE=dt_1_dose, DT_2_DOSE=dt_2_dose, DT_DOSEUNI=dt_doseuni,
-            TP_IDADE=3, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=None,
+            DT_1_DOSE=dt_1_dose,
+            DT_2_DOSE=dt_2_dose,
+            DT_DOSEUNI=dt_doseuni,
+            TP_IDADE=3,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         result = classificar_status_gripe(row)
         # Com DT_2_DOSE presente, label_prefix='dose_2' + protecao → 'dose_2'
@@ -535,18 +564,28 @@ class TestClassificarStatusGripeHypothesis:
         dt_sin_pri=dt_sintoma_st,
     )
     @settings(max_examples=30, deadline=5000)
-    def test_crianca_6m_8a_dose_1(
-        self, dt_1_dose, dt_doseuni, nu_idade_n, dt_sin_pri
-    ) -> None:
+    def test_crianca_6m_8a_dose_1(self, dt_1_dose, dt_doseuni, nu_idade_n, dt_sin_pri) -> None:
         """Criança 6m-8a com DT_1_DOSE (sem DT_2_DOSE) → 'dose_1'."""
         assume(dt_sin_pri >= dt_1_dose)
         row = _row(
-            VACINA=1, DT_UT_DOSE=None,
-            DT_1_DOSE=dt_1_dose, DT_2_DOSE=None, DT_DOSEUNI=dt_doseuni,
-            TP_IDADE=3, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=None,
+            DT_1_DOSE=dt_1_dose,
+            DT_2_DOSE=None,
+            DT_DOSEUNI=dt_doseuni,
+            TP_IDADE=3,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         result = classificar_status_gripe(row)
-        assert result in {"dose_1", "dose_unica", "protegido", "vencida", "ignorado", "inconsistencia"}
+        assert result in {
+            "dose_1",
+            "dose_unica",
+            "protegido",
+            "vencida",
+            "ignorado",
+            "inconsistencia",
+        }
 
     @given(
         dt_doseuni=dt_dose_st,
@@ -554,15 +593,18 @@ class TestClassificarStatusGripeHypothesis:
         dt_sin_pri=dt_sintoma_st,
     )
     @settings(max_examples=30, deadline=5000)
-    def test_crianca_6m_8a_dose_unica(
-        self, dt_doseuni, nu_idade_n, dt_sin_pri
-    ) -> None:
+    def test_crianca_6m_8a_dose_unica(self, dt_doseuni, nu_idade_n, dt_sin_pri) -> None:
         """Criança 6m-8a só com DT_DOSEUNI → 'dose_unica'."""
         assume(dt_sin_pri >= dt_doseuni)
         row = _row(
-            VACINA=1, DT_UT_DOSE=None,
-            DT_1_DOSE=None, DT_2_DOSE=None, DT_DOSEUNI=dt_doseuni,
-            TP_IDADE=3, NU_IDADE_N=nu_idade_n, DT_SIN_PRI=dt_sin_pri,
+            VACINA=1,
+            DT_UT_DOSE=None,
+            DT_1_DOSE=None,
+            DT_2_DOSE=None,
+            DT_DOSEUNI=dt_doseuni,
+            TP_IDADE=3,
+            NU_IDADE_N=nu_idade_n,
+            DT_SIN_PRI=dt_sin_pri,
         )
         result = classificar_status_gripe(row)
         assert result in {"dose_unica", "protegido", "vencida", "ignorado", "inconsistencia"}
@@ -570,8 +612,8 @@ class TestClassificarStatusGripeHypothesis:
 
 # ── INFER_ETIOLOGIC_AGENT: CLASSI_FIN + VSR override ──────────────
 
-class TestInferEtiologicAgentHypothesis:
 
+class TestInferEtiologicAgentHypothesis:
     @given(
         classi_fin_list=st.lists(SIVEP_CODES["CLASSI_FIN"], min_size=1, max_size=50),
     )
@@ -581,7 +623,13 @@ class TestInferEtiologicAgentHypothesis:
         df = pd.DataFrame({"CLASSI_FIN": classi_fin_list})
         result = infer_etiologic_agent(df)
         assert len(result) == len(classi_fin_list)
-        expected_map = {1: "Influenza", 2: "Outros Vírus", 3: "Outro Agente", 4: "Não Especificada", 5: "COVID-19"}
+        expected_map = {
+            1: "Influenza",
+            2: "Outros Vírus",
+            3: "Outro Agente",
+            4: "Não Especificada",
+            5: "COVID-19",
+        }
         for i, val in enumerate(classi_fin_list):
             expected = expected_map.get(val, "Não Especificada")
             assert result.iloc[i] == expected
@@ -593,21 +641,27 @@ class TestInferEtiologicAgentHypothesis:
         an_vsr=st.sampled_from([1, 2, None, np.nan]),
     )
     @settings(max_examples=50)
-    def test_vsr_overrides_classi_fin(
-        self, n_rows, classi_fin, pcr_vsr, an_vsr
-    ) -> None:
+    def test_vsr_overrides_classi_fin(self, n_rows, classi_fin, pcr_vsr, an_vsr) -> None:
         """PCR_VSR=1 ou AN_VSR=1 sobrescreve CLASSI_FIN para 'VSR'."""
-        df = pd.DataFrame({
-            "CLASSI_FIN": [classi_fin] * n_rows,
-            "PCR_VSR": [pcr_vsr] * n_rows,
-            "AN_VSR": [an_vsr] * n_rows,
-        })
+        df = pd.DataFrame(
+            {
+                "CLASSI_FIN": [classi_fin] * n_rows,
+                "PCR_VSR": [pcr_vsr] * n_rows,
+                "AN_VSR": [an_vsr] * n_rows,
+            }
+        )
         result = infer_etiologic_agent(df)
         has_vsr = (pcr_vsr == 1) or (an_vsr == 1)
         if has_vsr:
             assert all(r == "VSR" for r in result)
         else:
-            expected_map = {1: "Influenza", 2: "Outros Vírus", 3: "Outro Agente", 4: "Não Especificada", 5: "COVID-19"}
+            expected_map = {
+                1: "Influenza",
+                2: "Outros Vírus",
+                3: "Outro Agente",
+                4: "Não Especificada",
+                5: "COVID-19",
+            }
             expected = expected_map.get(classi_fin, "Não Especificada")
             assert all(r == expected for r in result)
 
@@ -626,8 +680,8 @@ class TestInferEtiologicAgentHypothesis:
 
 # ── APPLY_GLOBAL_FILTERS: todos os 9 tipos de filtro ─────────────
 
-class TestApplyGlobalFiltersHypothesis:
 
+class TestApplyGlobalFiltersHypothesis:
     @given(
         n_cases=st.integers(1, 30),
         profile=st.lists(st.sampled_from(PERFIS), max_size=4, unique=True),
@@ -636,16 +690,22 @@ class TestApplyGlobalFiltersHypothesis:
     def test_filter_by_profile(self, n_cases, profile) -> None:
         """Filtro por perfil demográfico nunca amplia o DataFrame."""
         ages = [2, 8, 15, 30, 50, 70]
-        df = pd.DataFrame({
-            "NU_IDADE_N": ages * (n_cases // len(ages) + 1),
-            "TP_IDADE": [3] * (len(ages) * (n_cases // len(ages) + 1)),
-        })
+        df = pd.DataFrame(
+            {
+                "NU_IDADE_N": ages * (n_cases // len(ages) + 1),
+                "TP_IDADE": [3] * (len(ages) * (n_cases // len(ages) + 1)),
+            }
+        )
         result = apply_global_filters(df, profiles=profile)
         assert 0 <= len(result) <= len(df)
 
     @given(
         n_cases=st.integers(1, 30),
-        races=st.lists(st.sampled_from(["Branca", "Preta", "Amarela", "Parda", "Indígena"]), max_size=5, unique=True),
+        races=st.lists(
+            st.sampled_from(["Branca", "Preta", "Amarela", "Parda", "Indígena"]),
+            max_size=5,
+            unique=True,
+        ),
     )
     @settings(max_examples=30)
     def test_filter_by_race(self, n_cases, races) -> None:
@@ -654,9 +714,13 @@ class TestApplyGlobalFiltersHypothesis:
         codes_pool = [race_map[r] for r in races]
         if not races:
             return  # Lista vazia → sem filtro, sempre passa
-        df = pd.DataFrame({
-            "CS_RACA": [race_map.get(r, 9) for r in (races * (n_cases // len(races) + 1))[:n_cases]],
-        })
+        df = pd.DataFrame(
+            {
+                "CS_RACA": [
+                    race_map.get(r, 9) for r in (races * (n_cases // len(races) + 1))[:n_cases]
+                ],
+            }
+        )
         result = apply_global_filters(df, races=races)
         assert 0 <= len(result) <= len(df)
         if len(result) > 0:
@@ -680,7 +744,9 @@ class TestApplyGlobalFiltersHypothesis:
 
     @given(
         n_cases=st.integers(1, 30),
-        zonas=st.lists(st.sampled_from(["URBANA", "RURAL", "PERIURBANA"]), max_size=3, unique=True),
+        zonas=st.lists(
+            st.sampled_from(["URBANA", "RURAL", "PERIURBANA"]), max_size=3, unique=True
+        ),
     )
     @settings(max_examples=30)
     def test_filter_by_zona(self, n_cases, zonas) -> None:
@@ -699,10 +765,12 @@ class TestApplyGlobalFiltersHypothesis:
         """Filtro maternal requer CS_SEXO=F (2) e CS_GESTANT nos códigos corretos."""
         values_sexo = [2] * n_cases  # Todas feminino
         values_gest = [1, 2, 3, 4, 5, 6, 9] * (n_cases // 7 + 1)
-        df = pd.DataFrame({
-            "CS_SEXO": values_sexo,
-            "CS_GESTANT": values_gest[:n_cases],
-        })
+        df = pd.DataFrame(
+            {
+                "CS_SEXO": values_sexo,
+                "CS_GESTANT": values_gest[:n_cases],
+            }
+        )
         result = apply_global_filters(df, maternal=maternal, genders=["F"])
         assert 0 <= len(result) <= len(df)
         # Resultados devem ser apenas mulheres
@@ -713,7 +781,8 @@ class TestApplyGlobalFiltersHypothesis:
         n_cases=st.integers(1, 30),
         occupations=st.lists(
             st.sampled_from(["MEDICO", "ENFERMEIRO", "PROFESSOR", "MOTORISTA"]),
-            max_size=4, unique=True,
+            max_size=4,
+            unique=True,
         ),
     )
     @settings(max_examples=30)
@@ -747,11 +816,18 @@ class TestApplyGlobalFiltersHypothesis:
     @settings(max_examples=30)
     def test_filter_by_years(self, n_cases, years) -> None:
         """Filtro por ano de DT_SIN_PRI."""
-        df = pd.DataFrame({
-            "DT_SIN_PRI": pd.to_datetime(
-                [f"{y}-06-15" for y in ([2020, 2021, 2022, 2023, 2024, 2025] * (n_cases // 6 + 1))[:n_cases]]
-            ),
-        })
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": pd.to_datetime(
+                    [
+                        f"{y}-06-15"
+                        for y in ([2020, 2021, 2022, 2023, 2024, 2025] * (n_cases // 6 + 1))[
+                            :n_cases
+                        ]
+                    ]
+                ),
+            }
+        )
         result = apply_global_filters(df, years=years)
         assert 0 <= len(result) <= len(df)
 
@@ -759,7 +835,8 @@ class TestApplyGlobalFiltersHypothesis:
         n_cases=st.integers(1, 30),
         bairros=st.lists(
             st.sampled_from(["CENTRO", "ALTO DE SÃO MANOEL", "COSTA E SILVA", "BARROCAS"]),
-            max_size=4, unique=True,
+            max_size=4,
+            unique=True,
         ),
     )
     @settings(max_examples=30)
@@ -779,18 +856,18 @@ class TestApplyGlobalFiltersHypothesis:
         genders=st.lists(st.sampled_from(["M", "F"]), max_size=2, unique=True),
     )
     @settings(max_examples=30)
-    def test_combined_filters_never_expand(
-        self, n_cases, profile, races, genders
-    ) -> None:
+    def test_combined_filters_never_expand(self, n_cases, profile, races, genders) -> None:
         """Múltiplos filtros simultâneos nunca ampliam o DataFrame."""
         ages = [2, 8, 15, 30, 50, 70] * (n_cases // 6 + 1)
         race_values = [1, 2, 3, 4, 5, 9] * (n_cases // 6 + 1)
         gender_values = [1, 2, 9] * (n_cases // 3 + 1)
-        df = pd.DataFrame({
-            "NU_IDADE_N": ages[:n_cases],
-            "TP_IDADE": [3] * n_cases,
-            "CS_RACA": race_values[:n_cases],
-            "CS_SEXO": gender_values[:n_cases],
-        })
+        df = pd.DataFrame(
+            {
+                "NU_IDADE_N": ages[:n_cases],
+                "TP_IDADE": [3] * n_cases,
+                "CS_RACA": race_values[:n_cases],
+                "CS_SEXO": gender_values[:n_cases],
+            }
+        )
         result = apply_global_filters(df, profiles=profile, races=races, genders=genders)
         assert 0 <= len(result) <= len(df)
