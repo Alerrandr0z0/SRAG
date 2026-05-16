@@ -127,7 +127,9 @@ def get_trends(
 
 @router.get("/virus")
 def get_virus(
-    detail_level: Literal["summary", "detailed", "covid_detailed", "influenza_detailed"] = Query("summary"),
+    detail_level: Literal["summary", "detailed", "covid_detailed", "influenza_detailed"] = Query(
+        "summary"
+    ),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> list[VirusDistributionItem]:
     df = get_df()
