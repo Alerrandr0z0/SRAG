@@ -2,11 +2,14 @@
 
 # ruff: noqa
 
+import logging
 from typing import Any
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+
+logger = logging.getLogger(__name__)
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
@@ -34,7 +37,7 @@ router = APIRouter()
 
 @router.get("/occupations")
 def get_occupations(
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> list[dict[str, Any]]:
     """Retorna as ocupações mais frequentes, permitindo filtragem por ano/zona."""
@@ -141,8 +144,8 @@ def hospitalization_duration(
         df["DT_EVOLUCA"] = pd.to_datetime(df["DT_EVOLUCA"], errors="coerce")
         dur = (df["DT_EVOLUCA"] - df["DT_INTERNA"]).dt.days
         return [float(x) for x in dur[(dur >= 0) & (dur <= 90)].dropna()]
-    except Exception as e:
-        print(f"Erro no cálculo de duração: {e}")
+    except Exception:
+        logger.exception("Failed to compute hospitalization duration")
         return []
 
 

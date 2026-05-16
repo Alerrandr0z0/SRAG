@@ -2,13 +2,13 @@
 
 # ruff: noqa
 
-from typing import Any
+from typing import Any, Literal
 
 import json
 from pathlib import Path
 
 import pandas as pd
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 
 from srag.api.dependencies import CommonFilters, get_common_filters
@@ -26,8 +26,8 @@ router = APIRouter()
 
 @router.get("/geo/macrosector_heatpoints")
 def macrosector_heatpoints(
-    zone: str = "Rural",
-    min_cases: int = 1,
+    zone: Literal["Urbana", "Rural", "Periurbana"] = Query("Rural"),
+    min_cases: int = Query(1, ge=1),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()

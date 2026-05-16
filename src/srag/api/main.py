@@ -1,4 +1,5 @@
 import contextlib
+import logging
 
 import logfire
 from fastapi import FastAPI
@@ -10,6 +11,8 @@ from srag.api.routes import register_routes
 from srag.data import analytics as _analytics
 from srag.data.database import DB_URL
 from srag.models import forecasting as _forecasting
+
+logger = logging.getLogger(__name__)
 
 _cache = _core._cache
 apply_surveillance_filters = _core.apply_surveillance_filters
@@ -74,7 +77,7 @@ try:
     logfire.instrument_fastapi(app)
     logfire.instrument_pydantic()
 except Exception as e:
-    print(f"⚠️ Logfire not configured: {e}")
+    logger.warning("Logfire not configured: %s", e)
 
 engine = create_engine(DB_URL, pool_pre_ping=True)
 with contextlib.suppress(Exception):
@@ -82,10 +85,10 @@ with contextlib.suppress(Exception):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000"],
+    allow_credentials=False,
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type"],
 )
 
 register_routes(app)
