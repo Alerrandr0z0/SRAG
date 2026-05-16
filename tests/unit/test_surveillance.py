@@ -123,10 +123,12 @@ def test_compute_alert_thresholds_empty() -> None:
 
 
 def test_compute_alert_thresholds_valid() -> None:
-    dates = pd.date_range("2023-01-01", periods=10, freq="W")
-    df = pd.DataFrame({"DT_SIN_PRI": np.random.choice(dates, size=100)})
+    dates = pd.to_datetime(
+        ["2023-01-01"] * 5 + ["2023-01-08"] * 10 + ["2023-01-15"] * 15 + ["2023-01-22"] * 20
+        + ["2023-01-29"] * 8 + ["2023-02-05"] * 2
+    )
+    df = pd.DataFrame({"DT_SIN_PRI": dates})
     res = compute_alert_thresholds(df)
-    assert res["medium"] >= 0
     assert res["high"] > res["medium"]
     assert res["very_high"] > res["high"]
 

@@ -26,6 +26,7 @@ make fix                # Backend + Frontend auto-fix
 make security           # Bandit (vulnerabilidades) + Gitleaks (segredos)
 make hooks              # Todos os pre-commit hooks manualmente (inclui Pyright)
 make mutation           # Testes de mutação (Mutmut) — lento (~30min), usar antes de PR
+make mutation-incr      # Mutação incremental — rápido, para agent (ver seção abaixo)
 make mutation-score     # Ver score da última execução de mutação
 make property-test      # Testes de propriedade (Hypothesis) — críticos para métricas de saúde
 ```
@@ -143,6 +144,73 @@ STAGE 0 (local — pre-commit)    STAGE 1 (PR — CI)       STAGE 2 (pós-merge)
 
 **Ordem obrigatória:** `make lint-back` → `make test-back` (falha bloqueia)
 **Antes de PR:** `make mutation` (lento, ~30min) — ver score com `make mutation-score`
+
+## Mutation Testing Workflow (para agent)
+
+### Alvo ideal: **mutation score ≥ 70%**
+
+### Modo incremental (agent): `make mutation-incr`
+
+NUNCA rode `make mutation` (full suite, ~30min) durante desenvolvimento. Use o alvo incremental:
+
+```bash
+# Após editar surveillance.py, testar só os mutantes desse arquivo:
+make mutation-incr PATHS="src/srag/data/analytics/surveillance.py"
+
+# Com testes específicos (mais rápido que rodar tudo):
+make mutation-incr PATHS="src/srag/data/analytics/surveillance.py" \
+                   TESTS="tests/unit/test_surveillance.py"
+
+# Múltiplos arquivos:
+make mutation-incr PATHS="src/srag/api/routers_core.py src/srag/api/core.py" \
+                   TESTS="tests/unit/test_core.py"
+```
+
+### Workflow completo do agent
+
+```
+1. git stash                      # guarda edições em progresso
+2. mutation-incr PATHS=<alvos>    # snapshot: quantos mutantes sobrevivem ANTES
+3. git stash pop                  # restaura edições
+4. [edita código + testes]
+5. lint-back                      # SEMPRE antes de testar
+6. test-back                      # garantir que não quebrou nada
+7. mutation-incr PATHS=<alvos>    # comparar: menos sobreviventes?
+8. [repete 4-7 até满意]
+```
+
+### Estratégia para matar mutantes
+
+| Mutante sobrevivente comum | Como matar |
+|----------------------------|------------|
+| `if x > 0` → `if x >= 0` | Teste com valor exato no boundary (`x=0`) |
+| `return a` → `return None` | Teste que verifica o valor de retorno (`assert result == a`) |
+| `pandas.Series.any()` → `all()` | Monte DataFrame com casos True e False misturados |
+| `dict[key]` → `dict.get(key)` | Teste com chave ausente |
+| `and` → `or` | Monte True/False table cobrindo todas as combinações |
+| Remoção de `dropna()` / `fillna()` | Inclua NaN nos dados de teste |
+
+### Como funciona `make mutation-incr`
+
+O alvo incremental **patcheia temporariamente** o `pyproject.toml`:
+- Substitui `paths_to_mutate` pelos arquivos em `PATHS`
+- Adiciona `pytest_add_cli_args_test_selection` com os testes em `TESTS`
+- Roda mutmut com `--max-children 4`
+- Restaura o `pyproject.toml` original via `trap` (mesmo em caso de Ctrl+C ou erro)
+
+### Otimizações manuais
+
+Sem `PATHS`/`TESTS`, mutmut varre `src/` inteiro e roda TODOS os 327 testes para cada mutante (~30min). Com `PATHS` e `TESTS` bem escolhidos:
+
+| Cenário | Tempo estimado |
+|---------|---------------|
+| `make mutation` (sem args) | ~30 min |
+| `PATHS` + `TESTS` bem escolhidos | 1-5 min |
+| Só `PATHS` (todos os testes) | 5-15 min |
+
+A economia vem de dois lados:
+1. **Menos mutantes** — `paths_to_mutate` limita quantos arquivos geram mutantes
+2. **Menos testes por mutante** — `pytest_add_cli_args_test_selection` limita quais testes rodam (cada mutante roda N testes, então reduzir N corta proporcionalmente)
 
 ## Regras Críticas
 
