@@ -279,11 +279,7 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[Any, Any]]:
     out = df.copy()
     pcr_res = pd.to_numeric(out["PCR_RESUL"], errors="coerce")
     an_res = pd.to_numeric(out["RES_AN"], errors="coerce")
-    pd.to_numeric(out["AMOSTRA"], errors="coerce")
 
-    # Apenas casos que coletaram amostra (1=Sim) são considerados para
-    # o denominador de positividade
-    # Fallback para o nome da coluna conforme o dicionário/schema
     if "AMOSTRA" not in out.columns:
         out["is_tested"] = True
     else:
@@ -496,10 +492,11 @@ def compute_virus_detailed_distribution(
     an_sars2 = pd.to_numeric(out.get("AN_SARS2"), errors="coerce")  # type: ignore[arg-type]
     out.loc[(pcr_sars2 == 1) | (an_sars2 == 1), "virus"] = "SARS-CoV-2"
 
-    tp_flu_pcr = pd.to_numeric(out.get("TP_FLU_PCR"), errors="coerce")  # type: ignore[arg-type]
-    tp_flu_an = pd.to_numeric(out.get("TP_FLU_AN"), errors="coerce")  # type: ignore[arg-type]
-    out.loc[(tp_flu_pcr == 2) | (tp_flu_an == 2), "virus"] = "Influenza B"
-    out.loc[(tp_flu_pcr == 1) | (tp_flu_an == 1), "virus"] = "Influenza A"
+    if "TP_FLU_PCR" in out.columns or "TP_FLU_AN" in out.columns:
+        tp_flu_pcr = pd.to_numeric(out.get("TP_FLU_PCR"), errors="coerce")  # type: ignore[arg-type]
+        tp_flu_an = pd.to_numeric(out.get("TP_FLU_AN"), errors="coerce")  # type: ignore[arg-type]
+        out.loc[(tp_flu_pcr == 2) | (tp_flu_an == 2), "virus"] = "Influenza B"
+        out.loc[(tp_flu_pcr == 1) | (tp_flu_an == 1), "virus"] = "Influenza A"
 
     classi = pd.to_numeric(out["CLASSI_FIN"], errors="coerce")
     out.loc[(out["virus"] == "Em investigacao") & (classi == 1), "virus"] = (
@@ -831,7 +828,9 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
 
     # Cálculo de Reinfecções (Campo 96: VG_REINF == 1)
     reinfection_ts = []
+    reinfection_total = 0
     if "VG_REINF" in out.columns:
+        reinfection_total = int((pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum())
         reinf_df = out[pd.to_numeric(out["VG_REINF"], errors="coerce") == 1].copy()
         if not reinf_df.empty:
             reinf_df["se_year_week"] = reinf_df["DT_SIN_PRI"].apply(get_epi_week)
@@ -850,7 +849,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
             "codetection_cases": codetec_count,
-            "reinfection_total": int((pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum()),
+            "reinfection_total": reinfection_total,
         },
         "reinfection_trend": reinfection_ts,
     }

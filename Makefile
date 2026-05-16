@@ -2,7 +2,7 @@
 
 .PHONY: help setup ingest start stop status start-docker stop-docker test lint fix mutation bench update-graph \
         setup-back setup-front test-back test-front lint-back lint-front \
-        fix-back fix-front mutation-back mutation-front \
+        fix-back fix-front mutation-back mutation-front mutation-incr mutation-score \
         observability property-test property-test-back property-test-front \
         security security-back security-secrets hooks
 
@@ -21,7 +21,9 @@ help:
 	@echo "  lint              Run all quality checks"
 	@echo "  security          Run all security scanners (Bandit + Gitleaks)"
 	@echo "  hooks             Run all pre-commit hooks on all files"
-	@echo "  mutation          Run all mutation tests"
+	@echo "  mutation          Run all mutation tests (full suite, ~30min)"
+	@echo "  mutation-incr     Incremental mutation (agent: PATHS= src/... [TESTS= tests/...])"
+	@echo "  mutation-score    Show last mutation score"
 	@echo "  update-graph      Update knowledge graph (Graphify)"
 
 # --- Setup ---
@@ -102,6 +104,9 @@ mutation-back:
 	uv run mutmut run --max-children 4
 	@echo "\n=== Mutation Score ==="
 	-uv run mutmut results --no-pager 2>/dev/null | tail -5
+mutation-incr:
+	@if [ -z "$(PATHS)" ]; then echo "Uso: make mutation-incr PATHS='...' [TESTS='tests/...']"; exit 1; fi
+	cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" uv run python scripts/_patch_mutmut_config.py && uv run mutmut run --max-children 4 && uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-score:
 	uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-front:
