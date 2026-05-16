@@ -12,16 +12,16 @@
   --bg-pill: #f1f5f9;
   --bg-status: #f8fafc;
   --bg-active-pill: #f0fdfa;
-  
+
   --text-main: #102a2f;
   --text-muted: #64748b;
   --text-eyebrow: #475569;
   --text-active-pill: #0d9488;
-  
+
   --border-color: #d7e4df;
   --border-subtle: #e2e8f0;
   --border-active-pill: #99f6e4;
-  
+
   --shadow-panel: 0 8px 24px rgba(16, 42, 47, 0.06);
 }
 
@@ -33,16 +33,16 @@
   --bg-pill: #334155;
   --bg-status: #334155;
   --bg-active-pill: #134e4a;
-  
+
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-eyebrow: #cbd5e1;
   --text-active-pill: #5eead4;
-  
+
   --border-color: #334155;
   --border-subtle: #475569;
   --border-active-pill: #0f766e;
-  
+
   --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.3);
   --primary-teal-light: #134e4a;
 }

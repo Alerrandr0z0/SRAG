@@ -5,25 +5,30 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import duckdb
 
 # Add src to path to import geospatial helpers
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-try:
-    from srag.data.geospatial import get_municipality_boundary
-except ImportError:
-    print("Warning: Could not import srag.data.geospatial. Boundary fetching might fail.")
-
-    def get_municipality_boundary():
-        path = Path("data/processed/mossoro_municipality_boundary.geojson")
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-        raise FileNotFoundError("Municipality boundary not found and import failed.")
+SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
 def main() -> None:
     """Create visualization GeoJSONs in `data/geojson/`."""
+    try:
+        from srag.data.geospatial import get_municipality_boundary
+    except ImportError:
+        print("Warning: Could not import srag.data.geospatial. Boundary fetching might fail.")
+
+        def get_municipality_boundary() -> dict[str, Any]:
+            """Fallback if srag.data.geospatial is not available."""
+            path = Path("data/processed/mossoro_municipality_boundary.geojson")
+            if path.exists():
+                return json.loads(path.read_text(encoding="utf-8"))  # type: ignore
+            raise FileNotFoundError("Municipality boundary not found and import failed.")
+
     src_gpkg = Path("data/external/geospacial/neighborhoods_2022_simplified.gpkg")
     out_dir = Path("data/geojson")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -47,7 +52,7 @@ def main() -> None:
         FROM ST_Read('{src_gpkg}')
         WHERE code_muni='2408003'
         ORDER BY name_neighborhood
-        """
+        """  # nosec B608
     ).fetchall()
 
     features = [
@@ -68,17 +73,28 @@ def main() -> None:
     print("Gerando zona rural como complemento...")
     try:
         boundary_geo = get_municipality_boundary()
+        boundary_json = json.dumps(boundary_geo["features"][0]["geometry"])
         con.execute(
-            f"CREATE TABLE urban_neighborhoods AS SELECT geom FROM ST_Read('{src_gpkg}') WHERE code_muni='2408003' AND ST_Area(geom) > 0.00001;"
+            f"""
+            CREATE TABLE urban_neighborhoods AS
+            SELECT geom FROM ST_Read('{src_gpkg}')
+            WHERE code_muni='2408003' AND ST_Area(geom) > 0.00001;
+            """  # nosec B608
         )
         con.execute(
-            f"CREATE TABLE municipality_boundary AS SELECT ST_GeomFromGeoJSON('{json.dumps(boundary_geo['features'][0]['geometry'])}') as geom;"
+            f"""
+            CREATE TABLE municipality_boundary AS
+            SELECT ST_GeomFromGeoJSON('{boundary_json}') as geom;
+            """
         )
         con.execute("""
             CREATE TABLE rural_base AS
             SELECT ST_Difference(
                 (SELECT geom FROM municipality_boundary),
-                (SELECT ST_Buffer(ST_Buffer(ST_Union_Agg(geom), 0.0005), -0.0005) FROM urban_neighborhoods)
+                (
+                    SELECT ST_Buffer(ST_Buffer(ST_Union_Agg(geom), 0.0005), -0.0005)
+                    FROM urban_neighborhoods
+                )
             ) as geom;
         """)
 
@@ -99,35 +115,43 @@ def main() -> None:
         # 3. Setores Rurais
         print("Gerando fatias de 90°...")
         bbox = con.execute(
-            "SELECT ST_XMin(geom), ST_XMax(geom), ST_YMin(geom), ST_YMax(geom) FROM municipality_boundary"
+            """
+            SELECT ST_XMin(geom), ST_XMax(geom), ST_YMin(geom), ST_YMax(geom)
+            FROM municipality_boundary
+            """
         ).fetchone()
         min_x, max_x, min_y, max_y = bbox
         cx, cy = (min_x + max_x) / 2, (min_y + max_y) / 2
         dx, dy = (max_x - min_x) * 2, (max_y - min_y) * 2
 
+        line_n = (
+            f"LINESTRING({cx} {cy}, {min_x - dx} {max_y + dy}, "
+            f"{max_x + dx} {max_y + dy}, {cx} {cy})"
+        )
+        line_s = (
+            f"LINESTRING({cx} {cy}, {min_x - dx} {min_y - dy}, "
+            f"{max_x + dx} {min_y - dy}, {cx} {cy})"
+        )
+        line_l = (
+            f"LINESTRING({cx} {cy}, {max_x + dx} {max_y + dy}, "
+            f"{max_x + dx} {min_y - dy}, {cx} {cy})"
+        )
+        line_o = (
+            f"LINESTRING({cx} {cy}, {min_x - dx} {max_y + dy}, "
+            f"{min_x - dx} {min_y - dy}, {cx} {cy})"
+        )
+
         sector_defs = [
-            (
-                "N",
-                f"ST_MakePolygon(ST_GeomFromText('LINESTRING({cx} {cy}, {min_x - dx} {max_y + dy}, {max_x + dx} {max_y + dy}, {cx} {cy})'))",
-            ),
-            (
-                "S",
-                f"ST_MakePolygon(ST_GeomFromText('LINESTRING({cx} {cy}, {min_x - dx} {min_y - dy}, {max_x + dx} {min_y - dy}, {cx} {cy})'))",
-            ),
-            (
-                "L",
-                f"ST_MakePolygon(ST_GeomFromText('LINESTRING({cx} {cy}, {max_x + dx} {max_y + dy}, {max_x + dx} {min_y - dy}, {cx} {cy})'))",
-            ),
-            (
-                "O",
-                f"ST_MakePolygon(ST_GeomFromText('LINESTRING({cx} {cy}, {min_x - dx} {max_y + dy}, {min_x - dx} {min_y - dy}, {cx} {cy})'))",
-            ),
+            ("N", f"ST_MakePolygon(ST_GeomFromText('{line_n}'))"),
+            ("S", f"ST_MakePolygon(ST_GeomFromText('{line_s}'))"),
+            ("L", f"ST_MakePolygon(ST_GeomFromText('{line_l}'))"),
+            ("O", f"ST_MakePolygon(ST_GeomFromText('{line_o}'))"),
         ]
 
         sector_features = []
         for name, poly_sql in sector_defs:
             res = con.execute(
-                f"SELECT ST_AsGeoJSON(ST_Intersection(geom, {poly_sql})) FROM rural_base"
+                f"SELECT ST_AsGeoJSON(ST_Intersection(geom, {poly_sql})) FROM rural_base"  # nosec B608
             ).fetchone()
             if res and res[0]:
                 sector_features.append(

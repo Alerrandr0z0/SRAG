@@ -5,11 +5,16 @@ import echarts from '../lib/echarts-heatmap';
  * Hook robusto para gerenciar o ciclo de vida do ECharts no React.
  * Utiliza callback ref para detectar a montagem tardia e MutationObserver para o tema.
  */
-export function useEcharts(opt: any, dependencies: any[] = []) {
+export function useEcharts(opt: Record<string, unknown> | undefined | null, dependencies: unknown[] = []) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [currentTheme, setCurrentTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-  const chartInstance = useRef<any>(null);
+  const chartInstance = useRef<ReturnType<typeof echarts.init> | null>(null);
   const dependencyKey = JSON.stringify(dependencies);
+  const optRef = useRef(opt);
+
+  useEffect(() => {
+    optRef.current = opt;
+  }, [opt]);
 
   // Escuta mudanças de tema no <html>
   useEffect(() => {
@@ -47,9 +52,9 @@ export function useEcharts(opt: any, dependencies: any[] = []) {
     });
     resizeObserver.observe(container);
 
-    if (opt) {
+    if (optRef.current) {
       // Forçamos o background transparente para não conflitar com os cards do dashboard
-      instance.setOption({ ...opt, backgroundColor: 'transparent' }, true);
+      instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
     }
 
     return () => {

@@ -76,13 +76,13 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {!hasData && (
-        <div style={{ 
-          position: 'absolute', 
-          inset: 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          color: '#94a3b8', 
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#94a3b8',
           fontSize: '0.8rem',
           zIndex: 10,
           background: 'var(--bg-panel)'

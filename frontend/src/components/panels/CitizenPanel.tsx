@@ -37,21 +37,21 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
   const isOnlyMale = genderFilter.length === 1 && (genderFilter[0] === 'M' || genderFilter[0] === 'Masculino');
 
   // Logic to find the main manufacturer for the KPI
-  const topManufacturer = vaccination?.manufacturers && vaccination.manufacturers.length > 0 
+  const topManufacturer = vaccination?.manufacturers && vaccination.manufacturers.length > 0
     ? vaccination.manufacturers.sort((a, b) => b.count - a.count)[0]
     : null;
 
   const topSchooling = [...schooling].sort((a, b) => b.count - a.count)[0]?.label || "N/A";
-  
+
   // Risk factors use .factor instead of .label
   const topRisk = [...riskFactors].sort((a, b) => (b.count as number) - (a.count as number))[0]?.factor || "N/A";
-  
+
   const sortedAnimalContact = [...animalContact].sort((a, b) => b.count - a.count);
   const topAnimal = sortedAnimalContact[0]?.label || "N/A";
-  
+
   const noAnimalContactItem = animalContact.find(a => a.label === "Sem Contato");
   const totalAnimalContact = animalContact.reduce((acc, curr) => acc + curr.count, 0);
-  const noAnimalPct = totalAnimalContact > 0 && noAnimalContactItem 
+  const noAnimalPct = totalAnimalContact > 0 && noAnimalContactItem
     ? ((noAnimalContactItem.count / totalAnimalContact) * 100).toFixed(1) + "%"
     : "0%";
 
@@ -157,9 +157,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         <div className="panel" style={{ padding: "1.25rem" }}>
           <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Ocupação (Top 15)</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
-            <BarChart 
-              labels={occupation.map(o => o.label)} 
-              data={occupation.map(o => o.count)} 
+            <BarChart
+              labels={occupation.map(o => o.label)}
+              data={occupation.map(o => o.count)}
               horizontal={true}
               color="#378ADD"
             />
@@ -169,9 +169,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         <div className="panel" style={{ padding: "1.25rem" }}>
           <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Fatores de Risco</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
-            <BarChart 
-              labels={riskFactors.map(r => String(r.factor))} 
-              data={riskFactors.map(r => Number(r.count))} 
+            <BarChart
+              labels={riskFactors.map(r => String(r.factor))}
+              data={riskFactors.map(r => Number(r.count))}
               horizontal={true}
               color="#EF9F27"
             />
@@ -181,9 +181,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         <div className="panel" style={{ padding: "1.25rem" }}>
           <p className="chart-label" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 16px" }}>Contato com Animais</p>
           <div className="chart-wrap" style={{ height: "300px", marginTop: 0 }}>
-            <BarChart 
-              labels={animalContact.map(a => a.label)} 
-              data={animalContact.map(a => a.count)} 
+            <BarChart
+              labels={animalContact.map(a => a.label)}
+              data={animalContact.map(a => a.count)}
               horizontal={true}
               color="#D85A30"
             />
@@ -194,7 +194,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       {/* SEÇÃO DE DISTRIBUIÇÃO PROPORCIONAL (DONUTS) */}
       <section className="panel" style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
         <p className="chart-label" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-eyebrow)", marginBottom: "1.5rem", textAlign: 'center' }}>Distribuição Proporcional</p>
-        
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
           <div style={{ textAlign: 'center' }}>
             <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Escolaridade</p>
@@ -202,7 +202,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
               <VigilanceDonutChart title="" data={schooling || []} />
             </div>
           </div>
-          
+
           <div style={{ textAlign: 'center' }}>
             <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Ocupação</p>
             <div style={{ height: '180px' }}>
@@ -213,9 +213,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           <div style={{ textAlign: 'center' }}>
             <p className="meta" style={{ marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>Fatores de Risco</p>
             <div style={{ height: '180px' }}>
-              <VigilanceDonutChart 
-                title="" 
-                data={riskFactors.map(r => ({ label: r.factor as string, count: r.count as number }))} 
+              <VigilanceDonutChart
+                title=""
+                data={riskFactors.map(r => ({ label: r.factor as string, count: r.count as number }))}
               />
             </div>
           </div>
@@ -243,11 +243,11 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           <div className="vigilance-insight-grid" style={{ gridTemplateColumns: '1fr' }}>
             <article className="panel">
               <div className="chart-wrap" style={{ height: '300px' }}>
-                <BarChart 
+                <BarChart
                   labels={traditionalCommunities.map(c => c.label)}
                   data={traditionalCommunities.map(c => c.count)}
                   horizontal={true}
-                  color="#8b5cf6" 
+                  color="#8b5cf6"
                 />
               </div>
             </article>
@@ -261,10 +261,10 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         <h3 className="block-title">Perfil de Imunização</h3>
         <div className="vigilance-insight-grid" style={{ gridTemplateColumns: 'minmax(240px, 0.7fr) minmax(0, 1.3fr)' }}>
           <div className="stack" style={{ gap: '1rem' }}>
-            <KpiCard 
-              label="Fabricante Predominante" 
-              value={topManufacturer ? topManufacturer.label.split('/')[0] : 'N/A'} 
-              className="vigilance-metric vigilance-metric--teal" 
+            <KpiCard
+              label="Fabricante Predominante"
+              value={topManufacturer ? topManufacturer.label.split('/')[0] : 'N/A'}
+              className="vigilance-metric vigilance-metric--teal"
             />
             <article className="panel" style={{ padding: '1.25rem', flexGrow: 1 }}>
               <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>Distribuição de Fabricantes</p>

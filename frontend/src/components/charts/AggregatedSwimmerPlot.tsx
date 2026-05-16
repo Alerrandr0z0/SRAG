@@ -424,7 +424,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       const barX = Math.min(desfX + 14, CW - INLINE_W - 28);
       row.append('rect').attr('x', barX).attr('y', cy - 6).attr('width', INLINE_W * d.taxa_cura).attr('height', 12).attr('fill', COLORS.SUCCESS).attr('rx', 2);
       row.append('rect').attr('x', barX + INLINE_W * d.taxa_cura).attr('y', cy - 6).attr('width', INLINE_W * d.taxa_obito).attr('height', 12).attr('fill', COLORS.DANGER).attr('rx', 0);
-      
+
       const pct = isObito(d) ? d.taxa_obito : d.taxa_cura;
       row.append('text').attr('x', Math.min(barX + INLINE_W + 6, CW - 4)).attr('y', cy + 4).attr('font-size', '10px').attr('font-weight', '700').attr('fill', isObito(d) ? COLORS.DANGER : COLORS.SUCCESS).text(`${(pct * 100).toFixed(0)}%`);
 

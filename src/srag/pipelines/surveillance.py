@@ -51,7 +51,7 @@ def _load_surveillance_sources(con: duckdb.DuckDBPyConnection, pf: Path) -> list
     if ext in {".xls", ".xlsx"}:
         sheets = pd.read_excel(pf, sheet_name=None, dtype=str)
         relation_names: list[str] = []
-        for idx, (sheet_name, df) in enumerate(sheets.items()):
+        for idx, (_sheet_name, df) in enumerate(sheets.items()):
             relation_name = f"xlsx_{pf.stem}_{idx}"
             con.register(relation_name, df)
             relation_names.append(relation_name)
@@ -60,10 +60,16 @@ def _load_surveillance_sources(con: duckdb.DuckDBPyConnection, pf: Path) -> list
     return ["read_parquet" if ext == ".parquet" else "read_csv_auto"]
 
 
-def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool = False) -> dict[str, Any]:
+def run_surveillance_pipeline(
+    db_path: Path, data_dirs: list[Path], force: bool = False
+) -> dict[str, Any]:
     """Execute the full surveillance lifecycle: Ingest -> Validate -> Snapshot -> Load."""
     start_time = datetime.now()
-    report: dict[str, Any] = {"timestamp": start_time.isoformat(), "steps": [], "status": "starting"}
+    report: dict[str, Any] = {
+        "timestamp": start_time.isoformat(),
+        "steps": [],
+        "status": "starting",
+    }
 
     try:
         # 1. Setup & Extraction (DuckDB Engine)
@@ -95,15 +101,15 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
                 if source.startswith("read_"):
                     cols = [
                         c[0]
-                        for c in con.execute(
-                            f"DESCRIBE SELECT * FROM {source}('{pf}')"
-                        ).fetchall()  # nosec: B608
+                        for c in con.execute(f"DESCRIBE SELECT * FROM {source}('{pf}')").fetchall()  # nosec: B608
                     ]
                     source_expr = f"{source}('{pf}')"
                 else:
                     cols = [
-                        c[0] for c in con.execute(f"DESCRIBE SELECT * FROM {source}").fetchall()
+                        c[0]
+                        for c in con.execute(f"DESCRIBE SELECT * FROM {source}").fetchall()  # nosec B608
                     ]
+
                     source_expr = source
 
                 file_map = {c.upper(): c for c in cols}
@@ -112,10 +118,14 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
                     return mapping.get(name.upper(), "NULL")
 
                 s_mun = (
-                    get_src("CO_MUN_NOT") if get_src("CO_MUN_NOT") != "NULL" else get_src("ID_MUNICIP")
+                    get_src("CO_MUN_NOT")
+                    if get_src("CO_MUN_NOT") != "NULL"
+                    else get_src("ID_MUNICIP")
                 )
                 s_res = (
-                    get_src("CO_MUN_RES") if get_src("CO_MUN_RES") != "NULL" else get_src("ID_MN_RESI")
+                    get_src("CO_MUN_RES")
+                    if get_src("CO_MUN_RES") != "NULL"
+                    else get_src("ID_MN_RESI")
                 )
                 select_parts = []
                 for col in target_cols:
@@ -178,14 +188,18 @@ def run_surveillance_pipeline(db_path: Path, data_dirs: list[Path], force: bool 
             df = pd.read_sql("SELECT rowid, NM_BAIRRO, CS_ZONA FROM casos_srag", conn)
             if not df.empty:
                 df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
-                df["ZONA"] = cast(Any, df).apply(
-                    lambda r: (
-                        _normalize_zone(int(r["CS_ZONA"]))
-                        if pd.notna(r["CS_ZONA"])
-                        else _infer_zone_from_bairro(r["BAIRRO_REF"])
-                    ),
-                    axis=1,
-                ).fillna("Nao informado")
+                df["ZONA"] = (
+                    cast("Any", df)
+                    .apply(
+                        lambda r: (
+                            _normalize_zone(int(r["CS_ZONA"]))
+                            if pd.notna(r["CS_ZONA"])
+                            else _infer_zone_from_bairro(r["BAIRRO_REF"])
+                        ),
+                        axis=1,
+                    )
+                    .fillna("Nao informado")
+                )
                 conn.executemany(
                     "UPDATE casos_srag SET BAIRRO_REF = ?, ZONA = ? WHERE rowid = ?",
                     df[["BAIRRO_REF", "ZONA", "rowid"]].values.tolist(),

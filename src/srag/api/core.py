@@ -10,7 +10,7 @@ from srag.data.database import DB_URL
 
 engine = create_engine(DB_URL, pool_pre_ping=True)
 
-_cache: dict[str, Any] = {"df": None, "loaded_at": None} # Cache invalidated at 2026-05-09
+_cache: dict[str, Any] = {"df": None, "loaded_at": None}  # Cache invalidated at 2026-05-09
 
 
 def sanitize_data(obj: object) -> object:
@@ -19,9 +19,9 @@ def sanitize_data(obj: object) -> object:
         return {k: sanitize_data(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [sanitize_data(i) for i in obj]
-    if isinstance(obj, (np.integer, np.int64, np.int32)):
+    if isinstance(obj, (np.integer, np.int64, np.int32)):  # type: ignore[arg-type]
         return int(obj)
-    if isinstance(obj, (np.floating, np.float64, np.float32)):
+    if isinstance(obj, (np.floating, np.float64, np.float32)):  # type: ignore[arg-type]
         return float(obj)
     if isinstance(obj, np.ndarray):
         return sanitize_data(obj.tolist())
@@ -43,8 +43,7 @@ def apply_surveillance_filters(
     """Apply year and etiologic-agent filters consistently across surveillance endpoints."""
     out = df
     if years and "DT_SIN_PRI" in out.columns:
-        # Robust conversion: keep only items that can be converted to int
-        year_values = {int(y) for y in years if y is not None and str(y).isdigit()}
+        year_values = set(years)
         out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year.isin(year_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
@@ -165,7 +164,6 @@ def get_df() -> pd.DataFrame:
             "TP_AMOSTRA",
             "RAIOX_RES",
             "TOMO_RES",
-
             "TP_SOR",
             "RES_IGG",
             "RES_IGM",

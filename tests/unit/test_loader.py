@@ -49,10 +49,11 @@ def test_normalize_age_to_years() -> None:
     assert _normalize_age_to_years(None, 3) is None
     assert _normalize_age_to_years(-1, 3) is None
 
+
 def get_valid_srag_row():
     return {
         "NM_PACIENT": "John Doe",
-        "CO_MUN_RES": "2408003", # Mossoro
+        "CO_MUN_RES": "2408003",  # Mossoro
         "ID_MUNICIP": "2408003",
         "DT_NOTIFIC": "01/01/2024",
         "DT_SIN_PRI": "01/01/2024",
@@ -60,8 +61,9 @@ def get_valid_srag_row():
         "NM_BAIRRO": "CENTRO",
         "NU_IDADE_N": "25",
         "TP_IDADE": "3",
-        "CS_SEXO": "M"
+        "CS_SEXO": "M",
     }
+
 
 class TestLoadAndCleanSragData:
     def test_load_csv(self, monkeypatch) -> None:
@@ -80,6 +82,7 @@ class TestLoadAndCleanSragData:
             if sep is None:
                 raise Exception("auto-detect failed")
             return pd.DataFrame([get_valid_srag_row()])
+
         monkeypatch.setattr("pandas.read_csv", mock_read_csv)
         result = load_and_clean_srag_data(Path("test.csv"))
         assert len(result) == 1
@@ -103,8 +106,8 @@ class TestLoadAndCleanSragData:
     def test_filter_mossoro(self, monkeypatch) -> None:
         row1 = get_valid_srag_row()
         row2 = get_valid_srag_row()
-        row2["CO_MUN_RES"] = "1234567" # Not Mossoro
-        row2["ID_MUNICIP"] = "1234567" # Not Mossoro
+        row2["CO_MUN_RES"] = "1234567"  # Not Mossoro
+        row2["ID_MUNICIP"] = "1234567"  # Not Mossoro
         df_mock = pd.DataFrame([row1, row2])
         monkeypatch.setattr("pandas.read_csv", lambda *args, **kwargs: df_mock)
         result = load_and_clean_srag_data(Path("test.csv"), filter_mossoro=True)
@@ -130,11 +133,12 @@ class TestLoadAndCleanSragData:
     def test_invalid_records(self, monkeypatch) -> None:
         row1 = get_valid_srag_row()
         row2 = get_valid_srag_row()
-        row2["DT_SIN_PRI"] = "invalid_date" # Will cause validation error
+        row2["DT_SIN_PRI"] = "invalid_date"  # Will cause validation error
         df_mock = pd.DataFrame([row1, row2])
         monkeypatch.setattr("pandas.read_csv", lambda *args, **kwargs: df_mock)
         result = load_and_clean_srag_data(Path("test.csv"))
-        assert len(result) == 1 # Only valid record is kept
+        assert len(result) == 1  # Only valid record is kept
+
 
 class TestExportSecureDataset:
     def test_export_csv(self, monkeypatch, tmp_path) -> None:

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -8,17 +8,18 @@ repos:
       - id: check-toml
       - id: check-added-large-files
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.5
+    rev: v0.15.13
     hooks:
       - id: ruff
       - id: ruff-format
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.3
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: [-q, -r, src]
+        exclude: ^tests/
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.25.1
+    rev: v8.30.0
     hooks:
       - id: gitleaks
   - repo: local
@@ -27,5 +28,5 @@ repos:
         name: Frontend (ESLint + Typecheck)
         entry: bash -c 'cd frontend && npm run lint && npm run typecheck'
         language: system
-        pass_filenot_regex: '^(?!frontend/)'
+        exclude: '^(?!frontend/)'
         stages: [pre-commit]

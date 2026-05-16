@@ -143,15 +143,17 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Uso de Antiviral", calc_rate("ANTIVIRAL", [9])),
             ("Vacina COVID-19", calc_rate("VACINA_COV", [9])),
             ("Vacina Gripe", calc_rate("VACINA", [9])),
-        ]
+        ],
     }
 
     for block_name, fields in audit_blocks.items():
         block_score = round(sum(f[1] for f in fields) / len(fields), 1) if fields else 0.0
-        results.append({
-            "group": block_name,
-            "overall_score": block_score,
-            "fields": [{"field": f[0], "rate": f[1]} for f in fields]
-        })
+        results.append(
+            {
+                "group": block_name,
+                "overall_score": block_score,
+                "fields": [{"field": f[0], "rate": f[1]} for f in fields],
+            }
+        )
 
     return results

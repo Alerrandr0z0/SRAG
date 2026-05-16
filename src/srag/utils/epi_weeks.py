@@ -1,12 +1,11 @@
 """Utilities for epidemiological week (SE) calculations."""
 
 from datetime import date, timedelta
-from typing import Any
 
 import pandas as pd
 
 
-def get_epi_week(dt: Any) -> tuple[int, int]:
+def get_epi_week(dt: object) -> tuple[int, int]:
     """Calculate the epidemiological week (SE) and year for a given date.
 
     In Brazil, SE follows the international standard (Sunday to Saturday),
@@ -24,24 +23,24 @@ def get_epi_week(dt: Any) -> tuple[int, int]:
     if dt is None:
         return 0, 0
     try:
-        if pd.isna(dt): # type: ignore
+        if pd.isna(dt):  # type: ignore
             return 0, 0
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0, 0
 
     # Ensure we have a datetime.date object
     try:
-        if hasattr(dt, "date") and callable(dt.date):
-            dt = dt.date()
+        date_attr = getattr(dt, "date", None)
+        if date_attr and callable(date_attr):
+            dt = date_attr()
         elif isinstance(dt, str):
             dt_converted = pd.to_datetime(dt)
-            dt = dt_converted.date() if hasattr(dt_converted, "date") else None
-    except (TypeError, ValueError, AttributeError, Exception):
+            dt = getattr(dt_converted, "date", lambda: None)()
+    except TypeError, ValueError, AttributeError, Exception:
         return 0, 0
 
-    if dt is None or pd.isna(dt): # type: ignore
+    if dt is None or pd.isna(dt):  # type: ignore
         return 0, 0
-
 
     if not isinstance(dt, date):
         return 0, 0

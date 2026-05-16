@@ -95,10 +95,13 @@ class TestApplySurveillanceFilters:
                 "CLASSI_FIN": [1, 5],
             }
         )
+
         def monkeypatch_agents(df):
             return pd.Series(["COVID-19", "Influenza"])
+
         # Even if agents contains None, it should filter the valid ones
         import srag.api.core
+
         original = srag.api.core.infer_etiologic_agent
         try:
             srag.api.core.infer_etiologic_agent = monkeypatch_agents
@@ -121,6 +124,7 @@ class TestGetDf:
 
         def fake_read_sql(*args, **kwargs) -> Never:
             raise ValueError("Should not be called")
+
         monkeypatch.setattr("pandas.read_sql", fake_read_sql)
 
         result = get_df()
@@ -136,21 +140,18 @@ class TestGetDf:
         assert len(result) == 1
 
     def test_get_df_success(self, monkeypatch) -> None:
-        df_mock = pd.DataFrame({
-            "DT_NOTIFIC": ["2024-01-01"],
-            "DT_SIN_PRI": ["2024-01-01"],
-            "DT_INTERNA": [None]
-        })
+        df_mock = pd.DataFrame(
+            {"DT_NOTIFIC": ["2024-01-01"], "DT_SIN_PRI": ["2024-01-01"], "DT_INTERNA": [None]}
+        )
         monkeypatch.setattr("pandas.read_sql", lambda *args, **kwargs: df_mock)
         result = get_df()
         assert len(result) == 1
         assert result["DT_NOTIFIC"].iloc[0] == date(2024, 1, 1)
 
     def test_get_df_filters_na_dt_sin_pri(self, monkeypatch) -> None:
-        df_mock = pd.DataFrame({
-            "DT_NOTIFIC": ["2024-01-01", "2024-01-02"],
-            "DT_SIN_PRI": ["2024-01-01", None]
-        })
+        df_mock = pd.DataFrame(
+            {"DT_NOTIFIC": ["2024-01-01", "2024-01-02"], "DT_SIN_PRI": ["2024-01-01", None]}
+        )
         monkeypatch.setattr("pandas.read_sql", lambda *args, **kwargs: df_mock)
         result = get_df()
         assert len(result) == 1
@@ -158,6 +159,7 @@ class TestGetDf:
     def test_get_df_error_without_cache(self, monkeypatch) -> None:
         def fake_read_sql(*args, **kwargs) -> Never:
             raise Exception("DB Error")
+
         monkeypatch.setattr("pandas.read_sql", fake_read_sql)
         result = get_df()
         assert len(result) == 0
@@ -166,8 +168,10 @@ class TestGetDf:
         df_mock = pd.DataFrame({"DT_NOTIFIC": ["2024-01-01"]})
         _cache["df"] = df_mock
         _cache["loaded_at"] = datetime.now(UTC) - timedelta(minutes=20)
+
         def fake_read_sql(*args, **kwargs) -> Never:
             raise Exception("DB Error")
+
         monkeypatch.setattr("pandas.read_sql", fake_read_sql)
         result = get_df()
         assert result is df_mock

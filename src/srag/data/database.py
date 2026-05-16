@@ -1,10 +1,13 @@
 """Database management for SRAG Mossoró historical data."""
 
 import hashlib
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 DB_URL = "sqlite:///data/processed/srag_mossoro.db"
 CASE_HASH_FIELDS = (
@@ -174,9 +177,14 @@ def generate_case_hash(record: dict[str, Any]) -> str:
 
 def build_case_hash_sql(resolve_field: Callable[[str], str]) -> str:
     """Build the DuckDB SQL expression for the case hash."""
-    return "md5(" + " || '|' || ".join(
-        f"COALESCE(CAST({resolve_field(field)} AS VARCHAR), '')" for field in CASE_HASH_FIELDS
-    ) + ")"
+    return (
+        "md5("
+        + " || '|' || ".join(
+            f"COALESCE(CAST({resolve_field(field)} AS VARCHAR), '')" for field in CASE_HASH_FIELDS
+        )
+        + ")"
+    )
+
 
 def init_db() -> None:
     """Initialize the SQLite database and create tables with automated migrations."""
