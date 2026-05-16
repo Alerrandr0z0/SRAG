@@ -86,7 +86,7 @@ hooks:
 # --- Testing ---
 test: test-back test-front
 test-back:
-	uv run pytest tests/
+	uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
 test-front:
 	cd frontend && npm run test
 
@@ -98,7 +98,12 @@ property-test-front:
 
 mutation: mutation-back mutation-front
 mutation-back:
-	uv run mutmut run
+	rm -rf mutants .mutmut-cache
+	uv run mutmut run --max-children 4
+	@echo "\n=== Mutation Score ==="
+	-uv run mutmut results --no-pager 2>/dev/null | tail -5
+mutation-score:
+	uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-front:
 	cd frontend && npm run test:mutation
 

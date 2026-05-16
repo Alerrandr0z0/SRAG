@@ -3,7 +3,7 @@
 # ruff: noqa
 
 import logging
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import pandas as pd
 
@@ -70,9 +70,8 @@ def laboratory_network(
     timing_metrics = compute_clinical_timing_metrics(df)
 
     # Adiciona a taxa de adesão 48h ao resumo geral
-    base_summary["overall"]["protocol_48h_adherence_rate"] = timing_metrics[
-        "protocol_48h_adherence_rate"
-    ]  # type: ignore[index]
+    overall = cast(dict[str, object], base_summary["overall"])
+    overall["protocol_48h_adherence_rate"] = timing_metrics["protocol_48h_adherence_rate"]
 
     # Novos indicadores de qualidade e tratamento (Blocos 3 e 6)
     quality_metrics = {

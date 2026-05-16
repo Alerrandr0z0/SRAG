@@ -15,7 +15,7 @@ make setup-front       # Só frontend (npm install)
 ```bash
 make lint-back          # Ruff + Pyright Strict — SEMPRE antes de testar
 make fix-back           # Ruff auto-fix + format (corrige estilo automaticamente)
-make test-back          # Pytest (262+ testes unitários/integração)
+make test-back          # Pytest + coverage (84%+, threshold 80%)
 make bench              # Benchmarks de performance (test_benchmark.py)
 ```
 
@@ -24,8 +24,9 @@ make bench              # Benchmarks de performance (test_benchmark.py)
 make lint               # Backend + Frontend lint
 make fix                # Backend + Frontend auto-fix
 make security           # Bandit (vulnerabilidades) + Gitleaks (segredos)
-make hooks              # Todos os pre-commit hooks manualmente
-make mutation           # Testes de mutação (Mutmut) — lento, usar antes de PR
+make hooks              # Todos os pre-commit hooks manualmente (inclui Pyright)
+make mutation           # Testes de mutação (Mutmut) — lento (~30min), usar antes de PR
+make mutation-score     # Ver score da última execução de mutação
 make property-test      # Testes de propriedade (Hypothesis) — críticos para métricas de saúde
 ```
 
@@ -51,8 +52,6 @@ make fix-back            make fix-front
 make mutation-back       make mutation-front
 make property-test-back  make property-test-front
 ```
-
-**Ordem obrigatória:** `make lint-back` → `make test-back`
 
 ## Arquitetura
 
@@ -125,6 +124,25 @@ SRAG/
 │   └── geojson/               # Gold: bairros, rural sectors (dashboard-ready)
 └── docker-compose.yml         # Infra: API, Frontend, Nginx, Jupyter
 ```
+
+## Quality Gates
+
+```
+STAGE 0 (local — pre-commit)    STAGE 1 (PR — CI)       STAGE 2 (pós-merge)
+────────────────────────────     ─────────────────        ─────────────────────
+✓ trailing whitespace            ✗ (não implementado)    mutation ≥ 70% (lento)
+✓ end-of-files                   Ideal: GitHub Actions   property-test obrigatório
+✓ yaml + toml                    lint → test → cobertura coverage ≥ 80% (já enforce)
+✓ ruff-check                     security → mutation    pyright = 0 erros (já enforce)
+✓ ruff-format
+✓ bandit (s/ B101)
+✓ gitleaks
+✓ pyright (strict)
+✓ frontend (ESLint + typecheck)
+```
+
+**Ordem obrigatória:** `make lint-back` → `make test-back` (falha bloqueia)
+**Antes de PR:** `make mutation` (lento, ~30min) — ver score com `make mutation-score`
 
 ## Regras Críticas
 
