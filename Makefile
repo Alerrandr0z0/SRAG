@@ -76,7 +76,7 @@ security-back:
 security-secrets:
 	uv run pre-commit run gitleaks --all-files
 security-deps:
-	uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit not installed — run 'uv pip install pip-audit'"
+	uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed (vulnerabilities found or tool not available)"
 security-frontend:
 	cd frontend && npm audit --audit-level=high 2>/dev/null || echo "npm audit completed with warnings"
 
