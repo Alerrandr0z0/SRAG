@@ -225,7 +225,9 @@ def main(
 
     # 2. Desduplicação e Carga Final
     print("💎 Removendo duplicatas e salvando no banco final...")
-    temp_count = con.execute("SELECT count(*) FROM temp_cases").fetchone()[0]
+    temp_row = con.execute("SELECT count(*) FROM temp_cases").fetchone()
+    assert temp_row is not None
+    temp_count = temp_row[0]
     con.execute(f"""
         INSERT INTO sqlite_db.casos_srag ({", ".join(target_cols)})
         SELECT {", ".join(target_cols)} FROM (
@@ -233,7 +235,9 @@ def main(
             FROM temp_cases
         ) WHERE rn = 1
     """)  # nosec B608
-    final_count = con.execute("SELECT count(*) FROM sqlite_db.casos_srag").fetchone()[0]
+    final_row = con.execute("SELECT count(*) FROM sqlite_db.casos_srag").fetchone()
+    assert final_row is not None
+    final_count = final_row[0]
     duplicates = temp_count - final_count
     print(
         "📊 Ingestão consolidada: "

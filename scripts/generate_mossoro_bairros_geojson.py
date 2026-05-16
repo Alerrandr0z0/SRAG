@@ -98,7 +98,9 @@ def main() -> None:
             ) as geom;
         """)
 
-        rural_geom_json = con.execute("SELECT ST_AsGeoJSON(geom) FROM rural_base").fetchone()[0]
+        rural_row = con.execute("SELECT ST_AsGeoJSON(geom) FROM rural_base").fetchone()
+        assert rural_row is not None
+        rural_geom_json = rural_row[0]  # type: ignore[index]
         rural_fc = {
             "type": "FeatureCollection",
             "features": [
@@ -114,13 +116,14 @@ def main() -> None:
 
         # 3. Setores Rurais
         print("Gerando fatias de 90°...")
-        bbox = con.execute(
+        bbox_row = con.execute(
             """
             SELECT ST_XMin(geom), ST_XMax(geom), ST_YMin(geom), ST_YMax(geom)
             FROM municipality_boundary
             """
         ).fetchone()
-        min_x, max_x, min_y, max_y = bbox
+        assert bbox_row is not None
+        min_x, max_x, min_y, max_y = bbox_row
         cx, cy = (min_x + max_x) / 2, (min_y + max_y) / 2
         dx, dy = (max_x - min_x) * 2, (max_y - min_y) * 2
 

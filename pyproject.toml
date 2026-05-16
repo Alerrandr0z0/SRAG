@@ -34,6 +34,7 @@ dev = [
     "pandas-stubs>=2.2",
     "pre-commit>=4.1",
     "bandit>=1.8.3",
+    "pip-audit>=2.10",
     "ipykernel>=6.29",
     "jupyter>=1.0",
 ]

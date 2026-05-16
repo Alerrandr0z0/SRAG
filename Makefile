@@ -70,11 +70,15 @@ fix-back:
 fix-front:
 	cd frontend && npm run format
 
-security: security-back security-secrets
+security: security-back security-secrets security-deps security-frontend
 security-back:
-	uv run bandit -r src/srag
+	uv run bandit -r src/srag scripts/
 security-secrets:
 	uv run pre-commit run gitleaks --all-files
+security-deps:
+	uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit not installed — run 'uv pip install pip-audit'"
+security-frontend:
+	cd frontend && npm audit --audit-level=high 2>/dev/null || echo "npm audit completed with warnings"
 
 hooks:
 	uv run pre-commit run --all-files

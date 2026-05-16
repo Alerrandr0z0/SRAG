@@ -2,11 +2,14 @@
 
 # ruff: noqa
 
-from typing import Any
+import logging
+from typing import Any, Literal
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+
+logger = logging.getLogger(__name__)
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
@@ -122,10 +125,10 @@ def laboratory_network(
 
 @router.get("/context_trends")
 def context_trends(
-    key: str,
-    last_n_weeks: int = 26,
-    weeks_to_predict: int = 4,
-    lookback_weeks: int = 0,
+    key: str = Query(pattern=r"^(BAIRRO::|ZONA::)"),
+    last_n_weeks: int = Query(26, ge=1, le=104),
+    weeks_to_predict: int = Query(4, ge=1, le=52),
+    lookback_weeks: int = Query(0, ge=0),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
@@ -169,7 +172,7 @@ def context_trends(
 
 @router.get("/timeline_agg")
 def timeline_agg(
-    virus: str = "covid",
+    virus: Literal["covid", "gripe"] = Query("covid"),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
@@ -234,6 +237,6 @@ def icu_bottleneck(
 
         result = df_valid[["date", "wait_days"]].to_dict(orient="records")
         return sanitize_data(result)
-    except Exception as e:
-        print(f"ERRO ICU_BOTTLENECK: {e}")
+    except Exception:
+        logger.exception("ICU bottleneck calculation failed")
         return []

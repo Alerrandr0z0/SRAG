@@ -7,7 +7,7 @@ from typing import Any
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
@@ -24,9 +24,9 @@ router = APIRouter()
 
 @router.get("/territory_bootstrap")
 def territory_bootstrap(
-    min_cases: int = 5,
-    entities_min_cases: int = 3,
-    entities_limit: int = 40,
+    min_cases: int = Query(5, ge=1),
+    entities_min_cases: int = Query(3, ge=1),
+    entities_limit: int = Query(40, ge=1, le=500),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
