@@ -10,8 +10,25 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DB_URL = f"sqlite:///{BASE_DIR / 'data' / 'processed' / 'srag_mossoro.db'}"
+
+def _find_project_root() -> Path:
+    """Find the project root by looking for .git directory first, then pyproject.toml."""
+    current = Path(__file__).resolve()
+    # Check current directory and all parents
+    for parent in [current] + list(current.parents):
+        # Prefer .git as it won't be copied to mutants/ directory
+        if (parent / ".git").exists():
+            return parent
+    # Fallback to pyproject.toml if .git not found
+    for parent in [current] + list(current.parents):
+        if (parent / "pyproject.toml").exists():
+            return parent
+    # Fallback to current directory if no marker found
+    return current
+
+
+PROJECT_ROOT = _find_project_root()
+DB_URL = f"sqlite:///{PROJECT_ROOT / 'data' / 'processed' / 'srag_mossoro.db'}"
 CASE_HASH_FIELDS = (
     "DT_NOTIFIC",
     "ID_MUNICIP",
