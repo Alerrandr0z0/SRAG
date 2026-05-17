@@ -66,6 +66,7 @@ def clinical_flow(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -133,6 +134,7 @@ def hospitalization_duration(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -163,6 +165,7 @@ def vaccination_profile(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -229,6 +232,7 @@ def citizen_bootstrap(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -267,6 +271,7 @@ def clinical_timing(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -288,6 +293,7 @@ def vaccine_survival(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )

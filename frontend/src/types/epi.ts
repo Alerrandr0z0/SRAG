@@ -200,7 +200,7 @@ export interface VaccineSurvival {
 export interface AggregatedTimeline {
   perfil: string;
   status_key: string;
-  gripe_status?: 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado';
+  gripe_status?: 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado' | 'inconsistencia';
   mediana_dose_sintoma: number | null;
   doseP25?: number | null;
   doseP75?: number | null;
