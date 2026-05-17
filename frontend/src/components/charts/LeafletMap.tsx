@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
 import * as d3 from 'd3';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 interface ChoroplethType {
   feature_collection?: FeatureCollection;
@@ -44,7 +45,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const boundaryLayer = useRef<L.GeoJSON | null>(null);
   const overlayLayer = useRef<L.LayerGroup | null>(null);
-  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  const theme = useThemeMode();
 
   // Calculate the color scale based on intensity
   const colorScale = useMemo(() => {

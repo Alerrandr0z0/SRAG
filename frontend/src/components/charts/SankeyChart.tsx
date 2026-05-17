@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useEcharts } from "../../hooks/useEcharts";
+import { useThemeMode } from "../../hooks/useThemeMode";
 
 interface SankeyChartProps {
   nodes: { name: string }[];
@@ -7,6 +8,8 @@ interface SankeyChartProps {
 }
 
 const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
+  const theme = useThemeMode();
+
   const option = useMemo(() => {
     if (!nodes.length || !links.length) return {};
 
@@ -75,7 +78,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       };
     });
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = theme === 'dark';
     const tooltipBg = isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)';
     const tooltipBorder = isDark ? '#475569' : '#e2e8f0';
     const mainTextColor = isDark ? '#f8fafc' : '#1e293b';
@@ -145,9 +148,9 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         },
       ],
     };
-  }, [nodes, links]);
+  }, [nodes, links, theme]);
 
-  const { chartRef } = useEcharts(option, [nodes, links]);
+  const { chartRef } = useEcharts(option, [nodes, links, theme]);
 
   return <div ref={chartRef} className="echart-host" />;
 };

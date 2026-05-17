@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { COLORS } from '../../constants';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 type HistogramTooltip = Array<{ seriesName?: string; value?: [number, number] }>;
 
@@ -9,6 +10,8 @@ interface HospitalizationHistogramProps {
 }
 
 const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ data }) => {
+  const theme = useThemeMode();
+
   const option = useMemo(() => {
     if (!data.length) return {};
 
@@ -38,7 +41,7 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       return [val[0], sum / count];
     });
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = theme === 'dark';
     const axisColor = isDark ? '#475569' : '#e2e8f0';
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
@@ -97,9 +100,9 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
         }
       ]
     };
-  }, [data]);
+  }, [data, theme]);
 
-  const { chartRef } = useEcharts(option, [data]);
+  const { chartRef } = useEcharts(option, [data, theme]);
 
   return <div ref={chartRef} className="echart-host" />;
 };
