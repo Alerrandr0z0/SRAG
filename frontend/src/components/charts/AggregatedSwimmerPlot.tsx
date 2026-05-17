@@ -4,7 +4,7 @@ import { AggregatedTimeline } from '../../types/epi';
 import { COLORS } from '../../constants';
 import { useThemeMode } from '../../hooks/useThemeMode';
 
-type GripeStatus = 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado';
+type GripeStatus = 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado' | 'inconsistencia';
 
 export interface EnrichedTimeline extends AggregatedTimeline {
   gripe_status?: GripeStatus;
@@ -53,22 +53,24 @@ const GRIPE_LABELS: Record<GripeStatus, string> = {
   vencida: 'Vencida',
   nao_vacinado: 'Não vacinada',
   ignorado: 'Ignorado',
+  inconsistencia: 'Inconsistente',
 };
 
-const MARKER_LEGEND: Array<{ kind: MarkerKind; label: string; hint: string }> = [
-  { kind: 'dose', label: 'Última dose', hint: 'Círculo' },
-  { kind: 'internacao', label: 'Internação', hint: 'Losango' },
-  { kind: 'cura', label: 'Cura predominante', hint: 'Estrela' },
-  { kind: 'obito', label: 'Óbito predominante', hint: 'X' },
-  { kind: 'presintoma', label: 'Pré-sintoma', hint: 'Traço pontilhado' },
+const MARKER_LEGEND: Array<{ kind: MarkerKind; label: string; hint?: string }> = [
+  { kind: 'dose', label: 'Última dose' },
+  { kind: 'internacao', label: 'Internação' },
+  { kind: 'cura', label: 'Cura predominante' },
+  { kind: 'obito', label: 'Óbito predominante' },
+  { kind: 'presintoma', label: 'Pré-sintoma' },
   { kind: 'bandaiqr', label: 'Banda IQR', hint: 'Faixa P25–P75' },
 ];
 
 const GRIPE_LEGEND: Array<{ status: GripeStatus; label: string; hint: string }> = [
   { status: 'protegido', label: 'Protegida', hint: '≤365d da campanha' },
   { status: 'vencida', label: 'Vencida', hint: '>365d da campanha' },
-  { status: 'nao_vacinado', label: 'Não vacinada', hint: 'Sem vacina' },
-  { status: 'ignorado', label: 'Ignorado', hint: 'Sem classificação' },
+  { status: 'nao_vacinado', label: 'Não vacinada', hint: 'Sem registro de vacinação' },
+  { status: 'ignorado', label: 'Ignorado', hint: 'Dados não informados' },
+  { status: 'inconsistencia', label: 'Inconsistente', hint: 'Dados conflitantes' },
 ];
 
 const LEGEND_DIAMOND_PATH = d3.symbol().type(d3.symbolDiamond).size(92)() ?? undefined;
@@ -85,6 +87,8 @@ const getGripeColor = (status: GripeStatus | undefined): string => {
       return '#d97706';
     case 'nao_vacinado':
       return '#dc2626';
+    case 'inconsistencia':
+      return '#7c3aed';
     default:
       return '#94a3b8';
   }
@@ -177,9 +181,10 @@ const SwimmerLegendIcon: React.FC<{ kind: MarkerKind }> = ({ kind }) => {
 
 interface AggregatedSwimmerPlotProps {
   data: EnrichedTimeline[];
+  swimmerVirus?: 'covid' | 'gripe';
 }
 
-const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) => {
+const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data, swimmerVirus = 'gripe' }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -222,11 +227,12 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
     const nMax = d3.max(sorted, d => d.n) ?? 1;
     const strokeW = (d: EnrichedTimeline) => 1.5 + (d.n / nMax) * 4.5;
 
-    const MARGIN = { top: 76, right: 96, bottom: 76, left: 250 };
+    const totalWidth = svgRef.current.clientWidth || 900;
+    const leftMargin = totalWidth < 600 ? 140 : 250;
+    const MARGIN = { top: 76, right: 96, bottom: 76, left: leftMargin };
     const ROW_H = 68;
     const INLINE_W = 52;
-    const totalWidth = svgRef.current.clientWidth || 900;
-    const CW = Math.max(320, totalWidth - MARGIN.left - MARGIN.right);
+    const CW = Math.max(280, totalWidth - MARGIN.left - MARGIN.right);
     const CH = sorted.length * ROW_H;
 
     const svg = d3.select(svgRef.current);
@@ -379,7 +385,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       row.append('text')
         .attr('x', -MARGIN.left + 12)
         .attr('y', cy - 4)
-        .attr('font-size', '13px')
+        .attr('font-size', totalWidth < 600 ? '11px' : '13px')
         .attr('font-weight', '700')
         .attr('fill', themeColors.main)
         .text(perfilLabel(d.perfil));
@@ -387,7 +393,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       const sub = row.append('text')
         .attr('x', -MARGIN.left + 12)
         .attr('y', cy + 10)
-        .attr('font-size', '10px')
+        .attr('font-size', totalWidth < 600 ? '9px' : '10px')
         .attr('fill', themeColors.text)
         .style('font-variant-numeric', 'tabular-nums');
 
@@ -446,16 +452,8 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
 
   return (
     <div style={{ background: themeColors.bg, borderRadius: '12px', padding: '8px 0', boxShadow: 'var(--shadow-panel)', border: `1px solid ${themeColors.border}` }}>
-      <div style={{ padding: '16px 24px 4px' }}>
-        <p style={{ margin: 0, fontSize: '12px', color: themeColors.text, lineHeight: 1.6 }}>
-          Mediana de tempo entre eventos por coorte vacinal. Passe o mouse sobre uma linha para ver os detalhes.
-          {' '}<strong>Cor</strong> = status vacinal Influenza. <strong>Espessura</strong> = volume de casos (N).
-          {' '}<strong>Banda</strong> = IQR (P25–P75). <strong>Barra</strong> = composição cura/óbito.
-        </p>
-      </div>
-
       {hasData ? (
-        <div ref={chartWrapRef} style={{ position: 'relative', padding: '0 24px' }}>
+        <div ref={chartWrapRef} style={{ position: 'relative', padding: '0 clamp(12px, 3vw, 24px)' }}>
           <svg ref={svgRef} style={{ width: '100%', display: 'block', overflow: 'visible' }} />
           {tooltip && (
             <div style={{ position: 'absolute', zIndex: 20, minWidth: '260px', maxWidth: '330px', background: themeColors.bg, border: `1px solid ${themeColors.border}`, borderRadius: '12px', padding: '12px 14px', boxShadow: '0 12px 30px rgba(0,0,0,0.2)', pointerEvents: 'none', left: tooltip.x, top: tooltip.y }}>
@@ -476,37 +474,39 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
           )}
         </div>
       ) : (
-        <div style={{ margin: '0 24px 16px', padding: '28px 16px', textAlign: 'center', color: themeColors.text, fontSize: '13px', background: themeColors.panel, border: `1px dashed ${themeColors.muted}`, borderRadius: '12px' }}>Sem coortes para exibir.</div>
+        <div style={{ margin: '0 clamp(12px, 3vw, 24px) 16px', padding: '28px 16px', textAlign: 'center', color: themeColors.text, fontSize: '13px', background: themeColors.panel, border: `1px dashed ${themeColors.muted}`, borderRadius: '12px' }}>Sem coortes para exibir.</div>
       )}
 
       {hasData && (
-        <div style={{ padding: '12px 24px 18px', display: 'grid', gap: '12px' }}>
+        <div style={{ padding: '12px clamp(12px, 3vw, 24px) 18px', display: 'grid', gap: '12px' }}>
           <div style={{ background: themeColors.panel, border: `1px solid ${themeColors.border}`, borderRadius: '14px', padding: '12px 14px' }}>
             <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: 700, color: themeColors.text, textTransform: 'uppercase' }}>Marcadores</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
               {MARKER_LEGEND.map(item => (
-                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1px solid ${themeColors.border}`, borderRadius: '12px', background: themeColors.bg }}>
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: `1px solid ${themeColors.border}`, borderRadius: '10px', background: themeColors.bg }}>
                    <SwimmerLegendIcon kind={item.kind} />
-                   <div><div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div><div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div></div>
+                   <div>
+                     <div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div>
+                     {item.hint && <div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div>}
+                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: themeColors.panel, border: `1px solid ${themeColors.border}`, borderRadius: '14px', padding: '12px 14px' }}>
-            <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: 700, color: themeColors.text, textTransform: 'uppercase' }}>Status vacinal da gripe</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              {GRIPE_LEGEND.map(item => (
-                <div key={item.status} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1px solid ${themeColors.border}`, borderRadius: '12px', background: themeColors.bg }}>
-                   <span style={{ display: 'inline-block', width: 28, height: 3, borderRadius: 999, background: getGripeColor(item.status), flexShrink: 0 }} />
-                   <div><div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div><div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div></div>
-                </div>
-              ))}
+          {swimmerVirus === 'gripe' && (
+            <div style={{ background: themeColors.panel, border: `1px solid ${themeColors.border}`, borderRadius: '14px', padding: '12px 14px' }}>
+              <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: 700, color: themeColors.text, textTransform: 'uppercase' }}>Status vacinal da gripe</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                {GRIPE_LEGEND.map(item => (
+                  <div key={item.status} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: `1px solid ${themeColors.border}`, borderRadius: '10px', background: themeColors.bg }}>
+                     <span style={{ display: 'inline-block', width: 28, height: 3, borderRadius: 999, background: getGripeColor(item.status), flexShrink: 0 }} />
+                     <div><div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div><div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div></div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ marginTop: '10px', fontSize: '11px', color: themeColors.text }}>
-              A cor da linha representa o status vacinal; a espessura, o volume de casos (N).
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -267,7 +267,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
           </div>
         </div>
         <div style={{ marginTop: "20px" }}>
-          <AggregatedSwimmerPlot data={timelineData} />
+          <AggregatedSwimmerPlot data={timelineData} swimmerVirus={swimmerVirus} />
         </div>
       </article>
     </div>

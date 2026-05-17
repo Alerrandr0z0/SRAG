@@ -14,9 +14,7 @@ import { useAuditData } from './hooks/useAuditData';
 // UI Components
 import Sidebar from './components/ui/Sidebar';
 import KpiCard from './components/ui/KpiCard';
-import CitizenFilterBar from './components/ui/CitizenFilterBar';
-import TerritoryFilterBar from './components/ui/TerritoryFilterBar';
-import UnitsFilterBar from './components/ui/UnitsFilterBar';
+import GlobalFilterBar from './components/ui/GlobalFilterBar';
 
 // Charts
 import TrendChart from './components/charts/TrendChart';
@@ -41,7 +39,7 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
-  const [weeksWindow, setWeeksWindow] = useState('0'); // Init in 'Tudo'
+  const [weeksWindow, setWeeksWindow] = useState('0');
   const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [virusDetail, setVirusDetail] = useState('summary');
@@ -71,7 +69,7 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
-    undefined, // agents
+    undefined,
     maternalFilter,
     occupationFilter
   );
@@ -88,7 +86,6 @@ function App() {
       ...(territoryData.entities?.urban_bairros || []),
       ...(territoryData.entities?.rural_comunidades || [])
     ];
-    // Remove duplicates by label (keeping the one with highest count)
     const uniqueMap = new Map<string, number>();
     combined.forEach(item => {
       const current = uniqueMap.get(item.label) || 0;
@@ -96,6 +93,10 @@ function App() {
     });
     return Array.from(uniqueMap.entries()).map(([name, count]) => ({ name, count }));
   }, [territoryData.entities]);
+
+  const unitsList = useMemo(() => {
+    return (unitsData.units || []).map((item) => ({ id_unidade: item.id_unidade, count: item.count }));
+  }, [unitsData.units]);
 
   useEffect(() => {
     if (panel === 'cidadao') {
@@ -152,46 +153,39 @@ function App() {
         setPanel={setPanel}
         theme={theme}
         setTheme={setTheme}
+        status={status}
+        lastUpdate={lastUpdate}
       />
 
       <main className="app-shell">
         {panel !== 'notebooks' && (
           <>
-            <section className="panel header-panel">
-              <div style={{ flex: 1 }}>
-                <h1>Painel SRAG - Mossoró/RN</h1>
-                {activeFilters.length === 0 ? (
-                  <p className="sub">Monitoramento de gravidade e perfil viral.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginRight: '4px', letterSpacing: '0.05em' }}>FILTROS ATIVOS:</span>
-                    {activeFilters.map(f => (
-                      <div key={`${f.type}-${f.val}`} className="global-filter-chip">
-                        <span style={{ opacity: 0.6, marginRight: '3px' }}>{f.type}:</span>
-                        <strong>{f.val}</strong>
-                        <button onClick={f.remover} className="global-filter-close">
-                          <svg viewBox="0 0 14 14" width="12" height="12"><path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                        </button>
-                      </div>
-                    ))}
-                    <button onClick={clearAllFilters} className="global-filter-clear">Limpar Tudo</button>
-                  </div>
-                )}
-              </div>
-              <div className="status-grid status-grid--wide">
-                <div><p>Sincronização</p><strong>{status === 'online' ? 'BANCO ATIVO' : 'OFFLINE'}</strong></div>
-                <div><p>Atualização</p><strong>{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</strong></div>
-                <div className="status-year">
-                  <p>Ano</p>
-                  <select value={dashboardYear[0] ? String(dashboardYear[0]) : ''} onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}>
-                    <option value="">Todos</option>
-                    {availableYears.map((year) => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </section>
+            <GlobalFilterBar
+              years={availableYears}
+              dashboardYear={dashboardYear}
+              setDashboardYear={setDashboardYear}
+              citizenTab={citizenTab}
+              setCitizenTab={setCitizenTab}
+              raceFilter={raceFilter}
+              setRaceFilter={setRaceFilter}
+              genderFilter={genderFilter}
+              setGenderFilter={setGenderFilter}
+              maternalFilter={maternalFilter}
+              setMaternalFilter={setMaternalFilter}
+              occupationFilter={occupationFilter}
+              setOccupationFilter={setOccupationFilter}
+              zoneFilter={zoneFilter}
+              setZoneFilter={setZoneFilter}
+              bairroFilter={bairroFilter}
+              setBairroFilter={setBairroFilter}
+              bairrosList={bairrosList}
+              unitFilter={unitFilter}
+              setUnitFilter={setUnitFilter}
+              unitsList={unitsList}
+              occupationOptions={availableOccupations}
+              activeFilters={activeFilters}
+              clearAllFilters={clearAllFilters}
+            />
 
             <section className="kpi-grid">
               <KpiCard label="Total Notificações" value={kpis.notif} />
@@ -254,149 +248,96 @@ function App() {
           </>
         )}
 
-      {/* FILTROS GLOBAIS (Cards Próprios) */}
-      {panel === 'territorio' && (
+        {panel !== 'notebooks' && (
+          <section className="secondary-grid">
+            <article className="panel viral-profile-panel">
+              <div className="section-header">
+                <h3>Perfil viral</h3>
+                <select value={virusDetail} onChange={(e) => setVirusDetail(e.target.value)}>
+                  <option value="summary">Resumido</option>
+                  <option value="detailed">Detalhado (Geral)</option>
+                  <option value="covid_detailed">Detalhado COVID-19</option>
+                  <option value="influenza_detailed">Detalhado Influenza</option>
+                </select>
+              </div>
+              <div className="chart-wrap">
+                {data?.virus && <VirusProfileChart data={data.virus} />}
+              </div>
+            </article>
+          </section>
+        )}
+
         <section className="main-grid">
-          <article className="panel">
-            <TerritoryFilterBar
-              zoneFilter={zoneFilter} setZoneFilter={setZoneFilter}
-              bairroFilter={bairroFilter} setBairroFilter={setBairroFilter}
-              bairrosList={bairrosList}
+          {panel === 'territorio' && (
+            <article className="panel">
+              <TerritoryPanel
+                loading={territoryData.loading}
+                territory={territoryData.territory}
+                boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
+                choropleth={territoryData.choropleth}
+                ruralData={territoryData.ruralData}
+                ruralSectorsGeo={territoryData.ruralSectorsGeo as import('geojson').FeatureCollection}
+              />
+            </article>
+          )}
+
+          {panel === 'unidades' && (
+            <article className="panel">
+              <UnitsPanel
+                loading={unitsData.loading}
+                units={unitsData.units}
+                hospitalization={unitsData.hospitalization}
+                clinicalFlow={unitsData.clinicalFlow}
+                timelineData={unitsData.timelineData}
+                icuBottleneck={unitsData.icuBottleneck}
+                swimmerVirus={swimmerVirus}
+                setSwimmerVirus={setSwimmerVirus}
+                dashboardYear={dashboardYear}
+              />
+            </article>
+          )}
+
+          {panel === 'cidadao' && (
+            <article className="panel">
+              <CitizenPanel
+                loading={citizenData.loading}
+                pyramid={citizenData.pyramid}
+                schooling={citizenData.schooling}
+                occupation={citizenData.occupation}
+                animalContact={citizenData.animalContact}
+                symptomsSignature={citizenData.symptomsSignature}
+                riskFactors={citizenData.riskFactors}
+                maternalProfile={citizenData.maternalProfile}
+                vaccination={citizenData.vaccination}
+                genderFilter={genderFilter}
+              />
+            </article>
+          )}
+
+          {panel === 'vigilancia' && (
+            <article className="panel">
+              <VigilancePanel
+                loading={vigilanceLoading}
+                laboratoryNetwork={data?.laboratoryNetwork}
+              />
+            </article>
+          )}
+
+          {panel === 'auditoria' && (
+            <AuditPanel
+              loading={auditData.loading}
+              completeness={auditData.completeness}
             />
-          </article>
+          )}
+
+          {panel === 'notebooks' && (
+            <NotebooksPanel />
+          )}
         </section>
-      )}
-
-      {panel === 'unidades' && (
-        <section className="main-grid">
-          <article className="panel">
-            <UnitsFilterBar
-              unitFilter={unitFilter} setUnitFilter={setUnitFilter}
-              unitsList={(unitsData.units || []).map((item) => ({ id_unidade: item.id_unidade, count: item.count }))}
-            />
-          </article>
-        </section>
-      )}
-
-      {panel === 'cidadao' && (
-        <section className="main-grid">
-          <article className="panel">
-            <CitizenFilterBar
-              citizenTab={citizenTab}
-              setCitizenTab={setCitizenTab}
-              raceFilter={raceFilter}
-              setRaceFilter={setRaceFilter}
-              genderFilter={genderFilter}
-              setGenderFilter={setGenderFilter}
-              maternalFilter={maternalFilter}
-              setMaternalFilter={setMaternalFilter}
-              occupationFilter={occupationFilter}
-              setOccupationFilter={setOccupationFilter}
-              occupationOptions={availableOccupations}
-            />
-          </article>
-        </section>
-      )}
-      {panel !== 'notebooks' && (
-        <section className="secondary-grid">
-          <article className="panel">
-            <div className="section-header">
-              <h3>Perfil viral</h3>
-              <select value={virusDetail} onChange={(e) => setVirusDetail(e.target.value)}>
-                <option value="summary">Resumido</option>
-                <option value="detailed">Detalhado (Geral)</option>
-                <option value="covid_detailed">Detalhado COVID-19</option>
-                <option value="influenza_detailed">Detalhado Influenza</option>
-              </select>
-            </div>
-            <div className="chart-wrap">
-              {data?.virus && <VirusProfileChart data={data.virus} />}
-            </div>
-          </article>
-
-          <article className="panel alerts">
-            <h3>Resumo operacional</h3>
-            {error ? <p className="error-box">{error}</p> : (
-              <ul className="list">
-                <li><span>Total UTI</span><span>{kpis.uti}</span></li>
-                <li><span>Taxa de óbito</span><span>{kpis.death}</span></li>
-                <li><span>Projeção próxima semana</span><span>{kpis.next}</span></li>
-              </ul>
-            )}
-          </article>
-        </section>
-      )}
-
-      <section className="main-grid">
-        {panel === 'territorio' && (
-          <article className="panel">
-            <TerritoryPanel
-              loading={territoryData.loading}
-              territory={territoryData.territory}
-              boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
-              choropleth={territoryData.choropleth}
-              ruralData={territoryData.ruralData}
-              ruralSectorsGeo={territoryData.ruralSectorsGeo as import('geojson').FeatureCollection}
-            />
-          </article>
-        )}
-
-        {panel === 'unidades' && (
-          <article className="panel">
-            <UnitsPanel
-              loading={unitsData.loading}
-              units={unitsData.units}
-              hospitalization={unitsData.hospitalization}
-              clinicalFlow={unitsData.clinicalFlow}
-              timelineData={unitsData.timelineData}
-              icuBottleneck={unitsData.icuBottleneck}
-              swimmerVirus={swimmerVirus}
-              setSwimmerVirus={setSwimmerVirus}
-              dashboardYear={dashboardYear}
-            />
-          </article>
-        )}
-
-        {panel === 'cidadao' && (
-          <article className="panel">
-            <CitizenPanel
-              loading={citizenData.loading}
-              pyramid={citizenData.pyramid}
-              schooling={citizenData.schooling}
-              occupation={citizenData.occupation}
-              animalContact={citizenData.animalContact}
-              symptomsSignature={citizenData.symptomsSignature}
-              riskFactors={citizenData.riskFactors}
-              maternalProfile={citizenData.maternalProfile}
-              vaccination={citizenData.vaccination}
-              genderFilter={genderFilter}
-            />
-          </article>
-        )}
-
-        {panel === 'vigilancia' && (
-          <article className="panel">
-            <VigilancePanel
-              loading={vigilanceLoading}
-              laboratoryNetwork={data?.laboratoryNetwork}
-            />
-          </article>
-        )}
-
-        {panel === 'auditoria' && (
-          <AuditPanel
-            loading={auditData.loading}
-            completeness={auditData.completeness}
-          />
-        )}
-
-        {panel === 'notebooks' && (
-          <NotebooksPanel />
-        )}
-      </section>
-    </main>
-  </div>
+      </main>
+    </div>
   );
 }
 
 export default App;
+

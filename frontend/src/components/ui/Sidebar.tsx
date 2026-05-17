@@ -5,6 +5,8 @@ interface SidebarProps {
   setPanel: (panel: string) => void;
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
+  status: string;
+  lastUpdate: string | null;
 }
 
 interface MenuItem {
@@ -15,7 +17,7 @@ interface MenuItem {
   url?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setTheme }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setTheme, status, lastUpdate }) => {
   const menuItems: MenuItem[] = [
     {
       key: 'territorio',
@@ -115,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setThem
         <button
           onClick={toggleTheme}
           className="nav-item"
-          style={{ width: '100%', marginBottom: '1rem', border: '1px solid var(--border-subtle)', background: 'var(--bg-pill)' }}
+          style={{ width: '100%', marginBottom: '0.75rem', border: '1px solid var(--border-subtle)', background: 'var(--bg-pill)' }}
         >
           <span className="nav-icon">
             {theme === 'light' ? (
@@ -138,7 +140,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, setPanel, theme, setThem
           </span>
           <span className="nav-label" style={{ fontSize: '0.8rem' }}>{theme === 'light' ? 'Escuro' : 'Claro'}</span>
         </button>
-        <div className="v-badge">v0.1.0</div>
+
+        <div className="sb-meta">
+          <div className="sb-meta-item">
+            <span className={`sb-dot ${status === 'online' ? 'online' : 'offline'}`} />
+            <span className="sb-meta-label">Base</span>
+            <span className="sb-meta-value">{lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}</span>
+          </div>
+        </div>
+
+        <div className="sb-version">
+          <span className="v-badge">v0.1.0</span>
+          <span className={`sb-sync-badge ${status === 'online' ? 'sync-ok' : 'sync-off'}`}>
+            <span className="sb-sync-dot" />
+            {status === 'online' ? 'ATIVO' : 'OFFLINE'}
+          </span>
+        </div>
       </div>
     </aside>
   );
