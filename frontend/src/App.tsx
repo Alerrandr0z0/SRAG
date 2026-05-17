@@ -108,10 +108,11 @@ function App() {
   // KPIs Memo
   const kpis = useMemo(() => {
     if (!data?.summary) {
-      return { total: 0, uti: '0%', death: '0%', next: '--' };
+      return { total: 0, notif: 0, uti: '0%', death: '0%', next: '--' };
     }
     return {
       total: data.summary.total ?? 0,
+      notif: data.summary.notification_total ?? 0,
       uti: data.summary.uti_total ?? 0,
       death: `${data.summary.death_rate ?? 0}%`,
       next: data.trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
@@ -193,6 +194,7 @@ function App() {
             </section>
 
             <section className="kpi-grid">
+              <KpiCard label="Total Notificações" value={kpis.notif} />
               <KpiCard label="Total Internações" value={kpis.total} />
               <KpiCard label="Total UTI" value={kpis.uti} />
               <KpiCard label="Letalidade" value={kpis.death} />

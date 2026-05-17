@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { AggregatedTimeline } from '../../types/epi';
 import { COLORS } from '../../constants';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 type GripeStatus = 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado';
 
@@ -182,15 +183,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
   const svgRef = useRef<SVGSVGElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTheme(document.documentElement.getAttribute('data-theme') || 'light');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
+  const theme = useThemeMode();
 
   const themeColors = useMemo(() => {
     const isDark = theme === 'dark';

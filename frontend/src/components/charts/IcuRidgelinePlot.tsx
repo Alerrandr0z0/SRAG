@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { IcuBottleneckRecord, TemporalGrouping } from "../../types/epi";
+import { useThemeMode } from "../../hooks/useThemeMode";
 
 interface IcuRidgelinePlotProps {
   data?: IcuBottleneckRecord[];
@@ -92,15 +93,7 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({
     p90: number;
   } | null>(null);
 
-  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTheme(document.documentElement.getAttribute('data-theme') || 'light');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
+  const theme = useThemeMode();
 
   const themeColors = useMemo(() => {
     const isDark = theme === 'dark';

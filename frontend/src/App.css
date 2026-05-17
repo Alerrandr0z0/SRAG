@@ -23,6 +23,7 @@
   --border-active-pill: #99f6e4;
 
   --shadow-panel: 0 8px 24px rgba(16, 42, 47, 0.06);
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
@@ -45,6 +46,31 @@
 
   --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.3);
   --primary-teal-light: #134e4a;
+  color-scheme: dark;
+}
+
+html,
+body,
+.app-layout,
+.sidebar,
+.app-shell,
+.panel,
+.nav-item,
+.status-grid div,
+.status-year,
+.global-filter-chip,
+.global-filter-clear,
+.status-year select,
+.pill-btn,
+.filters select,
+.filters button,
+.chart-wrap,
+.meta,
+.select,
+button,
+input,
+textarea {
+  transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), opacity 180ms var(--ease-out);
 }
 
 .app-layout {
@@ -325,8 +351,12 @@ h1 {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+.kpi-grid > article {
+  min-width: 0;
 }
 
 .kpi-grid article p {

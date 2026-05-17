@@ -3,6 +3,7 @@ export interface SummaryData {
   uti_total: number;
   death_rate: number;
   total: number;
+  notification_total: number;
   available_years: number[];
 }
 

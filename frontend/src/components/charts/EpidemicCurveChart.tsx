@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { COLORS } from '../../constants';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 interface EpidemicCurveChartProps {
   virusTrends: Array<{ epi_week: string; virus: string; count: number }>;
@@ -21,6 +22,7 @@ const AGENT_COLORS: Record<string, string> = {
 const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, positivityTrend }) => {
   const [mode, setMode] = useState<Mode>('positividade');
   const [weeksWindow, setWeeksWindow] = useState('0'); // 0 = Tudo
+  const theme = useThemeMode();
 
   const getOption = () => {
     // 1. Get full sorted weeks
@@ -32,7 +34,7 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
       allWeeks = allWeeks.slice(-limit);
     }
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = theme === 'dark';
     const axisColor = isDark ? '#475569' : '#e2e8f0';
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
@@ -160,7 +162,7 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({ virusTrends, po
     }
   };
 
-  const { chartRef } = useEcharts(getOption(), [virusTrends, positivityTrend, mode, weeksWindow]);
+  const { chartRef } = useEcharts(getOption(), [virusTrends, positivityTrend, mode, weeksWindow, theme]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

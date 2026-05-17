@@ -214,6 +214,7 @@ A economia vem de dois lados:
 
 ## Regras Críticas
 
+- **NUNCA desativar assinatura GPG** (`commit.gpgsign=false`, `--no-gpg-sign`, `--no-verify`) sem permissão explícita do usuário. Se o commit falhar por GPG, informe o erro e pergunte como proceder.
 - **NÃO usar Python loops** sobre DataFrames — usar operações vetorizadas (Pandas/DuckDB).
 - Não manter código de compatibilidade/legado sem persistência real, consumidor externo ou requisito explícito.
 - **Novos endpoints:** adicionar TypedDict em `src/srag/api/types.py` + `CommonFilters` em `src/srag/api/dependencies.py`.

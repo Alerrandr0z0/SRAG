@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { COLORS } from '../../constants';
 import { buildBand } from '../../utils/math';
 import * as Epi from '../../types/epi';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 type ChartLike = { destroy: () => void };
 type ChartCtor = { new (el: HTMLCanvasElement, _options: unknown): ChartLike };
@@ -43,6 +44,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<ChartLike | null>(null);
+  const theme = useThemeMode();
 
   useEffect(() => {
     let cancelled = false;
@@ -188,6 +190,12 @@ const TrendChart: React.FC<TrendChartProps> = ({
 
       if (chartInstance.current) chartInstance.current.destroy();
 
+      const isDark = theme === 'dark';
+      const axisColor = isDark ? '#475569' : '#e2e8f0';
+      const textColor = isDark ? '#cbd5e1' : '#64748b';
+      const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)';
+      const tooltipBorder = isDark ? '#475569' : '#e2e8f0';
+      const tooltipText = isDark ? '#f8fafc' : '#1e293b';
       const statusPlugin = {
         id: 'statusPlugin',
           beforeDraw: (chart: { ctx: CanvasRenderingContext2D; chartArea: { top: number; bottom: number; right: number }; scales: { x?: { getPixelForValue: (value: string) => number } } }) => {
@@ -201,10 +209,10 @@ const TrendChart: React.FC<TrendChartProps> = ({
           if (isNaN(lastHistX) || !isFinite(lastHistX)) return;
 
           ctx.save();
-          ctx.fillStyle = 'rgba(241, 245, 249, 0.6)';
+          ctx.fillStyle = isDark ? 'rgba(15, 23, 42, 0.55)' : 'rgba(241, 245, 249, 0.6)';
           ctx.fillRect(lastHistX, top, right - lastHistX, bottom - top);
 
-          ctx.strokeStyle = '#64748b';
+          ctx.strokeStyle = isDark ? '#cbd5e1' : '#64748b';
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 2]);
           ctx.beginPath();
@@ -212,7 +220,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
           ctx.lineTo(lastHistX, bottom);
           ctx.stroke();
 
-          ctx.fillStyle = '#64748b';
+          ctx.fillStyle = isDark ? '#cbd5e1' : '#64748b';
           ctx.font = 'bold 9px sans-serif';
           ctx.textAlign = 'left';
           ctx.fillText('PREVISÃO', lastHistX + 10, top + 15);
@@ -267,11 +275,19 @@ const TrendChart: React.FC<TrendChartProps> = ({
             legend: {
               position: 'bottom',
               labels: {
+                color: textColor,
+                usePointStyle: true,
+                boxWidth: 10,
                 filter: (item: { text: string }) => !['Limite inferior', 'Faixa prevista', 'Previsão'].includes(item.text),
               },
             },
             tooltip: {
-            callbacks: {
+              backgroundColor: tooltipBg,
+              borderColor: tooltipBorder,
+              borderWidth: 1,
+              titleColor: tooltipText,
+              bodyColor: tooltipText,
+              callbacks: {
                 title: (items: Array<{ label?: string }>) => `Semana: ${items[0]?.label ?? ''}`,
                 beforeBody: (items: Array<{ dataset: { label?: string }; dataIndex: number; raw: unknown }>) => {
                   const isForecast = (items[0]?.dataIndex ?? 0) >= historyLen;
@@ -311,9 +327,14 @@ const TrendChart: React.FC<TrendChartProps> = ({
               beginAtZero: true,
               stacked: seriesMode === 'composition',
               suggestedMax: maxVal * 1.1,
-              title: { display: true, text: 'Casos' },
+              title: { display: true, text: 'Casos', color: textColor },
+              ticks: { color: textColor },
+              grid: { color: axisColor },
             },
-            x: { grid: { display: false } },
+            x: {
+              grid: { color: axisColor },
+              ticks: { color: textColor },
+            },
           },
         },
       });
@@ -328,7 +349,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
         chartInstance.current = null;
       }
     };
-  }, [history, forecast, thresholds, composition, baseCumulative, seriesMode]);
+  }, [history, forecast, thresholds, composition, baseCumulative, seriesMode, theme]);
 
   return <canvas ref={canvasRef} />;
 };

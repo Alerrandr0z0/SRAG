@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
+import { useThemeMode } from "../../hooks/useThemeMode";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -346,8 +347,10 @@ const Barra100: React.FC<{
 // ─── Sub-componente: KPI cards antiviral ─────────────────────────────────────
 
 const AntiviralKPIs: React.FC<{ items: AntiviralItem[], themeColors: Record<string, string> }> = ({ items, themeColors }) => {
+  const theme = useThemeMode();
+
   const getBadgeColors = (status: string) => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = theme === 'dark';
     if (status === 'ok') return isDark ? { bg: '#134e4a', color: '#5eead4' } : { bg: "#e1f5ee", color: "#085041" };
     if (status === 'warn') return isDark ? { bg: '#451a03', color: '#fbbf24' } : { bg: "#faeeda", color: "#633806" };
     return isDark ? { bg: '#1e293b', color: '#cbd5e1' } : { bg: "#f1efe8", color: "#444441" };
@@ -424,15 +427,7 @@ interface QualidadePerformanceProps {
 
 const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => {
   const [tooltip, setTooltip] = useState<TooltipState>({ show: false, x: 0, y: 0, content: "" });
-  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTheme(document.documentElement.getAttribute('data-theme') || 'light');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
+  const theme = useThemeMode();
 
   const themeColors = useMemo(() => {
     const isDark = theme === 'dark';
