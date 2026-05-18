@@ -15,18 +15,18 @@ const ReinfectionTrendChart: React.FC<ReinfectionTrendChartProps> = ({ data }) =
       formatter: (params: unknown[]) => {
         const p = params[0] as { name: string; value: number };
         return `Semana: ${p.name}<br/>Reinfecções: <b>${p.value}</b>`;
-      }
+      },
     },
     grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
     xAxis: {
       type: 'category',
       data: weeks,
-      axisLabel: { rotate: 35, fontSize: 10 }
+      axisLabel: { rotate: 35, fontSize: 10 },
     },
     yAxis: {
       type: 'value',
       minInterval: 1,
-      name: 'Casos'
+      name: 'Casos',
     },
     series: [
       {
@@ -41,22 +41,33 @@ const ReinfectionTrendChart: React.FC<ReinfectionTrendChartProps> = ({ data }) =
         areaStyle: {
           color: {
             type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
             colorStops: [
               { offset: 0, color: 'rgba(236, 72, 153, 0.3)' },
-              { offset: 1, color: 'rgba(236, 72, 153, 0)' }
-            ]
-          }
-        }
-      }
-    ]
+              { offset: 1, color: 'rgba(236, 72, 153, 0)' },
+            ],
+          },
+        },
+      },
+    ],
   };
 
   const { chartRef } = useEcharts(option, [data]);
 
   if (!data || data.length === 0) {
     return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#94a3b8',
+        }}
+      >
         <p>Nenhum caso de reinfecção registrado no período.</p>
       </div>
     );

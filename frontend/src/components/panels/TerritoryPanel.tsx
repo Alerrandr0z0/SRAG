@@ -1,8 +1,8 @@
+import type { FeatureCollection } from 'geojson';
 import React, { useMemo, useState } from 'react';
+import * as Epi from '../../types/epi';
 import BairrosChart from '../charts/BairrosChart';
 import LeafletMap from '../charts/LeafletMap';
-import * as Epi from '../../types/epi';
-import type { FeatureCollection } from 'geojson';
 
 const ZONE_COLORS: Record<string, string> = {
   Urbana: '#0f766e',
@@ -15,7 +15,11 @@ interface TerritoryPanelProps {
   territory: Epi.TerritoryBootstrap['territory'];
   boundary: FeatureCollection | null;
   choropleth: Epi.TerritoryBootstrap['choropleth'] | null;
-  ruralData: { sectors: Array<{ sector: string; count: number }>; points: unknown[]; center: { lat: number; lon: number } } | null;
+  ruralData: {
+    sectors: Array<{ sector: string; count: number }>;
+    points: unknown[];
+    center: { lat: number; lon: number };
+  } | null;
   ruralSectorsGeo: FeatureCollection;
 }
 
@@ -49,15 +53,19 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   }, [territory?.zonas]);
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ gap: '1.5rem' }}>
       {loading && <p className="meta">Carregando dados territoriais...</p>}
 
-      <h3>Bairros com mais casos</h3>
-      <div className="chart-wrap">
-        <BairrosChart data={territory?.bairros || []} />
-      </div>
+      <article className="panel">
+        <div className="section-header">
+          <h3>Bairros com mais casos</h3>
+        </div>
+        <div className="chart-wrap">
+          <BairrosChart data={territory?.bairros || []} />
+        </div>
+      </article>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="section-header">
           <div>
             <h3>Mapa territorial</h3>

@@ -82,14 +82,31 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
   const filteredOccupations = useMemo(() => {
     if (!occSearch) return occupationOptions.slice(0, 10);
     return occupationOptions
-      .filter(o => o.toLowerCase().includes(occSearch.toLowerCase()))
+      .filter((o) => o.toLowerCase().includes(occSearch.toLowerCase()))
       .slice(0, 15);
   }, [occupationOptions, occSearch]);
 
   return (
-    <div className="fb" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', width: '100%' }}>
-      <div className="fb-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', width: '100%' }}>
-
+    <div
+      className="fb"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        marginBottom: '1.5rem',
+        width: '100%',
+      }}
+    >
+      <div
+        className="fb-bar"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'center',
+          width: '100%',
+        }}
+      >
         {/* Perfil Group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <span className="fb-label">Perfil</span>
@@ -131,7 +148,7 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
               className={`pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
               onClick={() => {
                 const newList = genderFilter.includes(opt.key)
-                  ? genderFilter.filter(i => i !== opt.key)
+                  ? genderFilter.filter((i) => i !== opt.key)
                   : [...genderFilter, opt.key];
                 setGenderFilter(newList);
                 if (opt.key === 'F' && genderFilter.includes('F')) {
@@ -147,13 +164,28 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
         {/* Maternal Group - Conditional */}
         {isFemaleSelected && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            <div className="fb-sep" style={{ borderLeft: '1px dashed #be185d', opacity: 0.5, height: '20px', width: 0, margin: '0 4px' }}></div>
-            <span className="fb-label" style={{ color: '#be185d' }}>Maternal</span>
+            <div
+              className="fb-sep"
+              style={{
+                borderLeft: '1px dashed #be185d',
+                opacity: 0.5,
+                height: '20px',
+                width: 0,
+                margin: '0 4px',
+              }}
+            ></div>
+            <span className="fb-label" style={{ color: '#be185d' }}>
+              Maternal
+            </span>
             {MATERNAL_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 className={`pill ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
-                style={maternalFilter.includes(opt.key) ? { backgroundColor: '#be185d', borderColor: '#be185d' } : {}}
+                style={
+                  maternalFilter.includes(opt.key)
+                    ? { backgroundColor: '#be185d', borderColor: '#be185d' }
+                    : {}
+                }
                 onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
               >
                 {opt.label}
@@ -165,10 +197,19 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
         <div className="fb-sep"></div>
 
         {/* Ocupação Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: '220px' }}>
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexGrow: 1,
+            minWidth: '220px',
+          }}
+        >
           <span className="fb-label">Ocupação</span>
           <div style={{ position: 'relative', flex: 1 }}>
-             <input
+            <input
               type="text"
               placeholder="Buscar profissão..."
               value={occSearch}
@@ -181,10 +222,23 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
               style={{ width: '100%', paddingRight: '2.5rem' }}
             />
             <svg
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }}
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                opacity: 0.5,
+              }}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
             >
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
             </svg>
           </div>
 
@@ -201,11 +255,11 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
                 padding: '0.6rem',
                 maxHeight: '300px',
                 overflowY: 'auto',
-                boxShadow: '0 12px 30px -5px rgba(0,0,0,0.15)'
+                boxShadow: '0 12px 30px -5px rgba(0,0,0,0.15)',
               }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {filteredOccupations.map(occ => (
+                {filteredOccupations.map((occ) => (
                   <button
                     key={occ}
                     onClick={() => {
@@ -220,13 +274,31 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
                   </button>
                 ))}
                 {filteredOccupations.length === 0 && (
-                  <p style={{ padding: '12px', fontSize: '12px', color: '#64748b', textAlign: 'center' }}>Nenhuma ocupação encontrada.</p>
+                  <p
+                    style={{
+                      padding: '12px',
+                      fontSize: '12px',
+                      color: '#64748b',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Nenhuma ocupação encontrada.
+                  </p>
                 )}
               </div>
               <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '6px', paddingTop: '6px' }}>
                 <button
                   onClick={() => setShowOccDropdown(false)}
-                  style={{ width: '100%', border: 'none', background: '#f8fafc', padding: '6px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                  style={{
+                    width: '100%',
+                    border: 'none',
+                    background: '#f8fafc',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
                 >
                   Fechar
                 </button>
@@ -235,20 +307,34 @@ const CitizenFilterBar: React.FC<CitizenFilterBarProps> = ({
           )}
         </div>
 
-        <button className="fb-clear" onClick={clearAll} title="Limpar Filtros" style={{ flexShrink: 0 }}>
+        <button
+          className="fb-clear"
+          onClick={clearAll}
+          title="Limpar Filtros"
+          style={{ flexShrink: 0 }}
+        >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M2 2l6 6M8 2l-6 6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
 
       {occupationFilter.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', paddingLeft: '4rem' }}>
-          {occupationFilter.map(occ => (
-            <div key={occ} className="global-filter-chip" style={{ fontSize: '10px', padding: '2px 8px' }}>
+          {occupationFilter.map((occ) => (
+            <div
+              key={occ}
+              className="global-filter-chip"
+              style={{ fontSize: '10px', padding: '2px 8px' }}
+            >
               {occ}
               <button
-                onClick={() => setOccupationFilter(occupationFilter.filter(o => o !== occ))}
+                onClick={() => setOccupationFilter(occupationFilter.filter((o) => o !== occ))}
                 className="global-filter-close"
               >
                 ×

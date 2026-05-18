@@ -25,21 +25,22 @@ const SymptomsHeatmap: React.FC<SymptomsHeatmapProps> = ({ labels, matrix }) => 
     return {
       tooltip: {
         position: 'top',
-        formatter: (params: HeatmapTooltip) => `${labels[params.value[1]]} x ${labels[params.value[0]]}: ${params.value[2]}`
+        formatter: (params: HeatmapTooltip) =>
+          `${labels[params.value[1]]} x ${labels[params.value[0]]}: ${params.value[2]}`,
       },
       grid: { top: 40, left: 150, right: 20, bottom: 60 },
       xAxis: {
         type: 'category',
         data: labels,
         splitArea: { show: true },
-        axisLabel: { rotate: 45, interval: 0, fontSize: 10 }
+        axisLabel: { rotate: 45, interval: 0, fontSize: 10 },
       },
       yAxis: {
         type: 'category',
         data: labels,
         splitArea: { show: true },
         inverse: true,
-        axisLabel: { fontSize: 10 }
+        axisLabel: { fontSize: 10 },
       },
       visualMap: {
         min: 0,
@@ -48,15 +49,17 @@ const SymptomsHeatmap: React.FC<SymptomsHeatmapProps> = ({ labels, matrix }) => 
         orient: 'horizontal',
         left: 'center',
         bottom: 0,
-        inRange: { color: ['#eff6ff', '#93c5fd', '#1d4ed8'] }
+        inRange: { color: ['#eff6ff', '#93c5fd', '#1d4ed8'] },
       },
-      series: [{
-        name: 'Sinais e Sintomas',
-        type: 'heatmap',
-        data: plotData,
-        label: { show: true, fontSize: 9, color: '#333' },
-        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.35)' } }
-      }],
+      series: [
+        {
+          name: 'Sinais e Sintomas',
+          type: 'heatmap',
+          data: plotData,
+          label: { show: true, fontSize: 9, color: '#333' },
+          emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.35)' } },
+        },
+      ],
     };
   }, [labels, matrix]);
 

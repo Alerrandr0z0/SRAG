@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import UnitsChart from '../../../../src/components/charts/UnitsChart';
 
 describe('UnitsChart', () => {

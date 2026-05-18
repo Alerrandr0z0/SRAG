@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
@@ -22,7 +22,7 @@ export function useCoreData(
   years?: number[],
   agents?: string[],
   maternal?: string[],
-  occupations?: string[]
+  occupations?: string[],
 ) {
   const [data, setData] = useState<CoreDataState | null>(null);
   const [status, setStatus] = useState('Conectando...');
@@ -38,10 +38,57 @@ export function useCoreData(
         setStatus('Carregando...');
 
         const [summary, trends, virus, lab] = await Promise.all([
-          api.fetchSummary(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
-          api.fetchTrends(weeksWindow, lookback, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
-          api.fetchVirus(virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations),
-          api.fetchLaboratoryNetwork(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations)
+          api.fetchSummary(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchTrends(
+            weeksWindow,
+            lookback,
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchVirus(
+            virusDetail,
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchLaboratoryNetwork(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
         ]);
 
         if (!active) return;
@@ -50,7 +97,7 @@ export function useCoreData(
           summary,
           trends,
           virus,
-          laboratoryNetwork: lab
+          laboratoryNetwork: lab,
         });
 
         setStatus('Conectada');
@@ -63,8 +110,24 @@ export function useCoreData(
     }
 
     loadCore();
-    return () => { active = false; };
-  }, [weeksWindow, lookback, virusDetail, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, agents, maternal, occupations]);
+    return () => {
+      active = false;
+    };
+  }, [
+    weeksWindow,
+    lookback,
+    virusDetail,
+    profile,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    agents,
+    maternal,
+    occupations,
+  ]);
 
   return { data, setData, status, setStatus, lastUpdate, error, setError };
 }

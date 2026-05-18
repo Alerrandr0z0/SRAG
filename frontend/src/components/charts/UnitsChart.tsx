@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../../constants';
-import * as Epi from '../../types/epi';
 import { useChartJs } from '../../hooks/useChartJs';
+import * as Epi from '../../types/epi';
 
 interface UnitsChartProps {
   data: Epi.UnitStats[];
@@ -13,11 +13,13 @@ const UnitsChart: React.FC<UnitsChartProps> = ({ data }) => {
       type: 'bar',
       data: {
         labels: data.map((u) => u.id_unidade),
-        datasets: [{
-          data: data.map((u) => u.count),
-          backgroundColor: COLORS.PRIMARY,
-          borderRadius: 7,
-        }],
+        datasets: [
+          {
+            data: data.map((u) => u.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',

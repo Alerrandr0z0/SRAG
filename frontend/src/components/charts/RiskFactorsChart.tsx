@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../../constants';
-import * as Epi from '../../types/epi';
 import { useChartJs } from '../../hooks/useChartJs';
+import * as Epi from '../../types/epi';
 
 interface RiskFactorsChartProps {
   data: Epi.CitizenBootstrap['risk_factors_full'];
@@ -13,11 +13,13 @@ const RiskFactorsChart: React.FC<RiskFactorsChartProps> = ({ data }) => {
       type: 'bar',
       data: {
         labels: data.map((x) => x.factor),
-        datasets: [{
-          data: data.map((x) => x.count),
-          backgroundColor: COLORS.ACCENT,
-          borderRadius: 7,
-        }],
+        datasets: [
+          {
+            data: data.map((x) => x.count),
+            backgroundColor: COLORS.ACCENT,
+            borderRadius: 7,
+          },
+        ],
       },
       options: {
         indexAxis: 'x',
@@ -43,7 +45,7 @@ const RiskFactorsChart: React.FC<RiskFactorsChartProps> = ({ data }) => {
               minRotation: 45,
               callback: (value: string | number) => {
                 const label = String(value);
-                return label.length > 12 ? label.substring(0, 12) + '...' : label;
+                return label.length > 12 ? `${label.substring(0, 12)}...` : label;
               },
             },
           },

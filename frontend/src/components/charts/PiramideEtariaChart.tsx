@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../../constants';
-import * as Epi from '../../types/epi';
 import { useChartJs } from '../../hooks/useChartJs';
+import * as Epi from '../../types/epi';
 
 interface PiramideEtariaProps {
   data: Epi.PyramidRow[];

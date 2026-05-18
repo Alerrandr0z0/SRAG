@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import RiskFactorsChart from '../../../../src/components/charts/RiskFactorsChart';
 
 describe('RiskFactorsChart', () => {

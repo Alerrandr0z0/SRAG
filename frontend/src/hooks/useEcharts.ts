@@ -1,20 +1,25 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import echarts from '../lib/echarts-heatmap';
 
 /**
  * Hook robusto para gerenciar o ciclo de vida do ECharts no React.
  * Utiliza callback ref para detectar a montagem tardia e MutationObserver para o tema.
  */
-export function useEcharts(opt: Record<string, unknown> | undefined | null, dependencies: unknown[] = []) {
+export function useEcharts(
+  opt: Record<string, unknown> | undefined | null,
+  dependencies: unknown[] = [],
+) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [currentTheme, setCurrentTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
+  const [currentTheme, setCurrentTheme] = useState(
+    document.documentElement.getAttribute('data-theme') || 'light',
+  );
   const chartInstance = useRef<ReturnType<typeof echarts.init> | null>(null);
-  const dependencyKey = JSON.stringify(dependencies);
   const optRef = useRef(opt);
 
+  // Sincroniza o ref com a versão mais recente do objeto de opções
   useEffect(() => {
     optRef.current = opt;
-  }, [opt]);
+  });
 
   // Escuta mudanças de tema no <html>
   useEffect(() => {
@@ -22,7 +27,10 @@ export function useEcharts(opt: Record<string, unknown> | undefined | null, depe
       const theme = document.documentElement.getAttribute('data-theme') || 'light';
       setCurrentTheme(theme);
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
     return () => observer.disconnect();
   }, []);
 
@@ -53,7 +61,6 @@ export function useEcharts(opt: Record<string, unknown> | undefined | null, depe
     resizeObserver.observe(container);
 
     if (optRef.current) {
-      // Forçamos o background transparente para não conflitar com os cards do dashboard
       instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
     }
 
@@ -66,18 +73,18 @@ export function useEcharts(opt: Record<string, unknown> | undefined | null, depe
     };
   }, [container, currentTheme]);
 
-  // 2. Atualização de Dados
+  // 2. Atualização de Dados (Reativo ao array de dependências explícito)
   useEffect(() => {
     const instance = chartInstance.current;
-    if (instance && opt && !instance.isDisposed()) {
+    if (instance && optRef.current && !instance.isDisposed()) {
       try {
-        instance.setOption({ ...opt, backgroundColor: 'transparent' }, true);
+        instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
         instance.resize();
       } catch (err) {
-        console.error("ECharts Error:", err);
+        console.error('ECharts Error:', err);
       }
     }
-  }, [opt, dependencyKey]);
+  }, [...dependencies]);
 
   return { chartRef };
 }
