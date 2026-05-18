@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
@@ -12,7 +12,7 @@ export function useAuditData(
   unitFilter?: string[],
   years?: number[],
   maternal?: string[],
-  occupations?: string[]
+  occupations?: string[],
 ) {
   const [completeness, setCompleteness] = useState<Epi.DataCompletenessGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,19 +24,43 @@ export function useAuditData(
     async function load() {
       setLoading(true);
       try {
-        const data = await api.fetchDataCompleteness(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations);
+        const data = await api.fetchDataCompleteness(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          undefined,
+          maternal,
+          occupations,
+        );
         if (isMounted) {
           setCompleteness(data);
         }
       } catch (error) {
-        console.error("Failed to load audit data", error);
+        console.error('Failed to load audit data', error);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
     load();
-    return () => { isMounted = false; };
-  }, [active, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, maternal, occupations]);
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    active,
+    profile,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    maternal,
+    occupations,
+  ]);
 
   return { completeness, loading };
 }

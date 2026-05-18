@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import AggregatedSwimmerPlot, { type EnrichedTimeline } from '../../../../src/components/charts/AggregatedSwimmerPlot';
+import { describe, expect, it } from 'vitest';
+import AggregatedSwimmerPlot, {
+  type EnrichedTimeline,
+} from '../../../../src/components/charts/AggregatedSwimmerPlot';
 
 describe('AggregatedSwimmerPlot — component', () => {
   const baseData: EnrichedTimeline = {
@@ -49,8 +51,15 @@ describe('AggregatedSwimmerPlot — component', () => {
 
     it('renders all MARKER_LEGEND items', () => {
       render(<AggregatedSwimmerPlot data={[baseData]} debug />);
-      const markers = ['Última dose', 'Internação', 'Cura predominante', 'Óbito predominante', 'Pré-sintoma', 'Banda IQR'];
-      markers.forEach(label => {
+      const markers = [
+        'Última dose',
+        'Internação',
+        'Cura predominante',
+        'Óbito predominante',
+        'Pré-sintoma',
+        'Banda IQR',
+      ];
+      markers.forEach((label) => {
         expect(screen.getByText(label)).toBeInTheDocument();
       });
     });
@@ -58,7 +67,7 @@ describe('AggregatedSwimmerPlot — component', () => {
     it('renders all GRIPE_LEGEND items', () => {
       render(<AggregatedSwimmerPlot data={[baseData]} debug />);
       const statuses = ['Protegida', 'Vencida', 'Não vacinada', 'Ignorado'];
-      statuses.forEach(label => {
+      statuses.forEach((label) => {
         expect(screen.getByText(label)).toBeInTheDocument();
       });
     });
@@ -99,7 +108,11 @@ describe('AggregatedSwimmerPlot — component', () => {
 
   describe('data with null dose', () => {
     it('renders row without dose marker when mediana_dose_sintoma is null', () => {
-      render(<AggregatedSwimmerPlot data={[{ ...baseData, mediana_dose_sintoma: null, doseP25: null, doseP75: null }]} />);
+      render(
+        <AggregatedSwimmerPlot
+          data={[{ ...baseData, mediana_dose_sintoma: null, doseP25: null, doseP75: null }]}
+        />,
+      );
       expect(screen.getByText('Bivalente')).toBeInTheDocument();
     });
   });

@@ -8,8 +8,14 @@ interface VigilanceDonutChartProps {
 }
 
 const DONUT_COLORS = [
-  '#0f766e', '#0d9488', '#2dd4bf', '#99f6e4', '#ccfbf1',
-  '#64748b', '#94a3b8', '#cbd5e1'
+  '#0f766e',
+  '#0d9488',
+  '#2dd4bf',
+  '#99f6e4',
+  '#ccfbf1',
+  '#64748b',
+  '#94a3b8',
+  '#cbd5e1',
 ];
 
 const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }) => {
@@ -26,14 +32,14 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
       title: {
         text: title || '',
         left: 'center',
-        textStyle: { fontSize: 11, fontWeight: 700, color: '#64748b' }
+        textStyle: { fontSize: 11, fontWeight: 700, color: '#64748b' },
       },
       tooltip: {
         trigger: 'item',
-        formatter: '{b}: <b>{c}</b> ({d}%)'
+        formatter: '{b}: <b>{c}</b> ({d}%)',
       },
       legend: {
-        show: false
+        show: false,
       },
       series: [
         {
@@ -45,29 +51,28 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
           itemStyle: {
             borderRadius: 4,
             borderColor: '#fff',
-            borderWidth: 2
+            borderWidth: 2,
           },
           label: {
             show: false,
-            position: 'center'
+            position: 'center',
           },
           emphasis: {
             label: {
               show: true,
               fontSize: 12,
               fontWeight: 'bold',
-              formatter: '{b}'
-            }
+              formatter: '{b}',
+            },
           },
           labelLine: {
-            show: false
+            show: false,
           },
-          data: donutData
-        }
-      ]
+          data: donutData,
+        },
+      ],
     };
   }, [data, title]);
-
 
   const { chartRef } = useEcharts(option, [data, title]);
 
@@ -76,17 +81,19 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {!hasData && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#94a3b8',
-          fontSize: '0.8rem',
-          zIndex: 10,
-          background: 'var(--bg-panel)'
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#94a3b8',
+            fontSize: '0.8rem',
+            zIndex: 10,
+            background: 'var(--bg-panel)',
+          }}
+        >
           <p>Sem dados para exibição.</p>
         </div>
       )}

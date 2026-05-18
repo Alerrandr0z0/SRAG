@@ -50,7 +50,10 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
 
   const summaryText = useMemo(() => {
     const parts: string[] = [];
-    if (zoneFilter.length) parts.push(zoneFilter.map(k => ZONA_OPTIONS.find(o => o.key === k)?.label || k).join(', '));
+    if (zoneFilter.length)
+      parts.push(
+        zoneFilter.map((k) => ZONA_OPTIONS.find((o) => o.key === k)?.label || k).join(', '),
+      );
     if (bairroFilter.length) parts.push(bairroFilter.join(', '));
     return parts.join(' · ');
   }, [zoneFilter, bairroFilter]);
@@ -87,11 +90,18 @@ const TerritoryFilterBar: React.FC<TerritoryFilterBarProps> = ({
           <select
             onChange={addBairro}
             className="pill"
-            style={{ appearance: 'none', cursor: 'pointer', outline: 'none', background: 'transparent' }}
+            style={{
+              appearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+              background: 'transparent',
+            }}
           >
             <option value="">+ Adicionar local...</option>
-            {bairrosList.map(b => (
-              <option key={b.name} value={b.name}>{b.name} ({b.count})</option>
+            {bairrosList.map((b) => (
+              <option key={b.name} value={b.name}>
+                {b.name} ({b.count})
+              </option>
             ))}
           </select>
 

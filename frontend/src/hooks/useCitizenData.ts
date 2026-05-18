@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
@@ -12,7 +12,7 @@ export function useCitizenData(
   unitFilter?: string[],
   years?: number[],
   maternalFilter?: string[],
-  occupationFilter?: string[]
+  occupationFilter?: string[],
 ) {
   const [profiles, setProfiles] = useState<Epi.CitizenProfile[]>([]);
   const [pyramid, setPyramid] = useState<Epi.PyramidRow[]>([]);
@@ -20,10 +20,14 @@ export function useCitizenData(
   const [schooling, setSchooling] = useState<Epi.CitizenBootstrap['schooling_profile']>([]);
   const [occupation, setOccupation] = useState<Epi.CitizenBootstrap['occupation_profile']>([]);
   const [animalContact, setAnimalContact] = useState<Epi.CitizenBootstrap['animal_contact']>([]);
-  const [traditionalCommunities, setTraditionalCommunities] = useState<Epi.CitizenBootstrap['traditional_communities']>([]);
+  const [traditionalCommunities, setTraditionalCommunities] = useState<
+    Epi.CitizenBootstrap['traditional_communities']
+  >([]);
   const [symptomsSignature, setSymptomsSignature] = useState<Epi.SymptomSignature | null>(null);
   const [riskFactors, setRiskFactors] = useState<Epi.CitizenBootstrap['risk_factors_full']>([]);
-  const [maternalProfile, setMaternalProfile] = useState<Epi.CitizenBootstrap['maternal_profile'] | null>(null);
+  const [maternalProfile, setMaternalProfile] = useState<
+    Epi.CitizenBootstrap['maternal_profile'] | null
+  >(null);
   const [vaccination, setVaccination] = useState<Epi.VaccinationProfile | null>(null);
   const [survival, setSurvival] = useState<Epi.VaccineSurvival | null>(null);
   const [timelineData, setTimelineData] = useState<Epi.AggregatedTimeline[]>([]);
@@ -38,10 +42,55 @@ export function useCitizenData(
       setLoading(true);
       try {
         const [bootstrap, vaccine, survivalData, timeline] = await Promise.all([
-          api.fetchCitizenBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
-          api.fetchVaccinationProfile(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
-          api.fetchVaccineSurvival(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter),
-          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternalFilter, occupationFilter)
+          api.fetchCitizenBootstrap(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            undefined,
+            maternalFilter,
+            occupationFilter,
+          ),
+          api.fetchVaccinationProfile(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            undefined,
+            maternalFilter,
+            occupationFilter,
+          ),
+          api.fetchVaccineSurvival(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            undefined,
+            maternalFilter,
+            occupationFilter,
+          ),
+          api.fetchTimelineAgg(
+            swimmerVirus,
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            undefined,
+            maternalFilter,
+            occupationFilter,
+          ),
         ]);
 
         if (isMounted) {
@@ -60,18 +109,45 @@ export function useCitizenData(
           setTimelineData(timeline);
         }
       } catch (error) {
-        console.error("Failed to load citizen data", error);
+        console.error('Failed to load citizen data', error);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
     load();
-    return () => { isMounted = false; };
-  }, [active, profile, raceFilter, genderFilter, swimmerVirus, zoneFilter, bairroFilter, unitFilter, years, maternalFilter, occupationFilter]);
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    active,
+    profile,
+    raceFilter,
+    genderFilter,
+    swimmerVirus,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    maternalFilter,
+    occupationFilter,
+  ]);
 
   return {
-    profiles, pyramid, raceProfile, schooling, occupation, animalContact, traditionalCommunities,
-    symptomsSignature, riskFactors, maternalProfile, vaccination, survival,
-    timelineData, swimmerVirus, setSwimmerVirus, loading
+    profiles,
+    pyramid,
+    raceProfile,
+    schooling,
+    occupation,
+    animalContact,
+    traditionalCommunities,
+    symptomsSignature,
+    riskFactors,
+    maternalProfile,
+    vaccination,
+    survival,
+    timelineData,
+    swimmerVirus,
+    setSwimmerVirus,
+    loading,
   };
 }

@@ -76,7 +76,7 @@ const MATERNAL_OPTS: FilterOption[] = [
 ];
 
 const toggle = (list: string[], key: string, setter: (v: string[]) => void) => {
-  setter(list.includes(key) ? list.filter(i => i !== key) : [...list, key]);
+  setter(list.includes(key) ? list.filter((i) => i !== key) : [...list, key]);
 };
 
 const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
@@ -116,33 +116,33 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
 
   const filteredOccupations = useMemo(() => {
     const search = occSearch.toLowerCase();
-    const filtered = occupationOptions.filter(o => o.toLowerCase().includes(search));
-    
+    const filtered = occupationOptions.filter((o) => o.toLowerCase().includes(search));
+
     // Sort selected to the top, then limit
-    return [
-      ...occupationFilter,
-      ...filtered.filter(o => !occupationFilter.includes(o))
-    ].slice(0, 20);
+    return [...occupationFilter, ...filtered.filter((o) => !occupationFilter.includes(o))].slice(
+      0,
+      20,
+    );
   }, [occupationOptions, occSearch, occupationFilter]);
 
   const filteredBairros = useMemo(() => {
     const search = bairroSearch.toLowerCase();
-    const filtered = bairrosList.filter(b => b.name.toLowerCase().includes(search));
-    
+    const filtered = bairrosList.filter((b) => b.name.toLowerCase().includes(search));
+
     const selectedNames = bairroFilter;
-    const selectedObjs = bairrosList.filter(b => selectedNames.includes(b.name));
-    const unselectedObjs = filtered.filter(b => !selectedNames.includes(b.name));
+    const selectedObjs = bairrosList.filter((b) => selectedNames.includes(b.name));
+    const unselectedObjs = filtered.filter((b) => !selectedNames.includes(b.name));
 
     return [...selectedObjs, ...unselectedObjs].slice(0, 25);
   }, [bairrosList, bairroSearch, bairroFilter]);
 
   const filteredUnits = useMemo(() => {
     const search = unitSearch.toLowerCase();
-    const filtered = unitsList.filter(u => u.id_unidade.toLowerCase().includes(search));
-    
+    const filtered = unitsList.filter((u) => u.id_unidade.toLowerCase().includes(search));
+
     const selectedNames = unitFilter;
-    const selectedObjs = unitsList.filter(u => selectedNames.includes(u.id_unidade));
-    const unselectedObjs = filtered.filter(u => !selectedNames.includes(u.id_unidade));
+    const selectedObjs = unitsList.filter((u) => selectedNames.includes(u.id_unidade));
+    const unselectedObjs = filtered.filter((u) => !selectedNames.includes(u.id_unidade));
 
     return [...selectedObjs, ...unselectedObjs].slice(0, 25);
   }, [unitsList, unitSearch, unitFilter]);
@@ -153,7 +153,18 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
     <article className="gfb">
       <div className="gfb-body">
         <div className="gfb-title">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
           Filtros
         </div>
         <div className="gfb-groups">
@@ -167,18 +178,18 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             >
               <option value="">Todos</option>
               {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
+                <option key={y} value={y}>
+                  {y}
+                </option>
               ))}
             </select>
           </div>
-
-          
 
           {/* Perfil */}
           <div className="gfb-group">
             <span className="gfb-label">Perfil</span>
             <div className="gfb-pills">
-              {PERFIL_OPTS.map(opt => (
+              {PERFIL_OPTS.map((opt) => (
                 <button
                   key={opt.key}
                   className={`gfb-pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
@@ -190,13 +201,11 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
 
-          
-
           {/* Raça */}
           <div className="gfb-group">
             <span className="gfb-label">Raça</span>
             <div className="gfb-pills">
-              {RACA_OPTS.map(opt => (
+              {RACA_OPTS.map((opt) => (
                 <button
                   key={opt.key}
                   className={`gfb-pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
@@ -208,19 +217,17 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
 
-          
-
           {/* Gênero */}
           <div className="gfb-group">
             <span className="gfb-label">Gênero</span>
             <div className="gfb-pills">
-              {GENERO_OPTS.map(opt => (
+              {GENERO_OPTS.map((opt) => (
                 <button
                   key={opt.key}
                   className={`gfb-pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
                   onClick={() => {
                     const newList = genderFilter.includes(opt.key)
-                      ? genderFilter.filter(i => i !== opt.key)
+                      ? genderFilter.filter((i) => i !== opt.key)
                       : [...genderFilter, opt.key];
                     setGenderFilter(newList);
                     if (opt.key === 'F' && genderFilter.includes('F')) {
@@ -236,32 +243,29 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
 
           {/* Maternal */}
           {isFemaleSelected && (
-            <>
-              
-              <div className="gfb-group">
-                <span className="gfb-label" style={{ color: '#be185d' }}>Maternal</span>
-                <div className="gfb-pills">
-                  {MATERNAL_OPTS.map(opt => (
-                    <button
-                      key={opt.key}
-                      className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
-                      onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="gfb-group">
+              <span className="gfb-label" style={{ color: '#be185d' }}>
+                Maternal
+              </span>
+              <div className="gfb-pills">
+                {MATERNAL_OPTS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
+                    onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
-            </>
+            </div>
           )}
-
-          
 
           {/* Zona */}
           <div className="gfb-group">
             <span className="gfb-label">Zona</span>
             <div className="gfb-pills">
-              {ZONA_OPTS.map(opt => (
+              {ZONA_OPTS.map((opt) => (
                 <button
                   key={opt.key}
                   className={`gfb-pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}
@@ -273,8 +277,6 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
 
-          
-
           {/* Bairro */}
           <div className="gfb-group" style={{ position: 'relative' }}>
             <span className="gfb-label">Bairro</span>
@@ -284,16 +286,21 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 className="gfb-input"
                 placeholder="Buscar bairro..."
                 value={bairroSearch}
-                onChange={(e) => { setBairroSearch(e.target.value); setShowBairroDropdown(true); }}
+                onChange={(e) => {
+                  setBairroSearch(e.target.value);
+                  setShowBairroDropdown(true);
+                }}
                 onFocus={() => setShowBairroDropdown(true)}
               />
               {bairroSearch && (
-                <button className="gfb-input-clear" onClick={() => setBairroSearch('')}>×</button>
+                <button className="gfb-input-clear" onClick={() => setBairroSearch('')}>
+                  ×
+                </button>
               )}
               {showBairroDropdown && (
                 <div className="gfb-dropdown">
                   <div className="gfb-dropdown-list">
-                    {filteredBairros.map(b => (
+                    {filteredBairros.map((b) => (
                       <button
                         key={b.name}
                         className={`gfb-dropdown-item ${bairroFilter.includes(b.name) ? 'active' : ''}`}
@@ -306,15 +313,16 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                       <p className="gfb-dropdown-empty">Nenhum bairro encontrado</p>
                     )}
                   </div>
-                  <button className="gfb-dropdown-close" onClick={() => setShowBairroDropdown(false)}>
+                  <button
+                    className="gfb-dropdown-close"
+                    onClick={() => setShowBairroDropdown(false)}
+                  >
                     Concluído
                   </button>
                 </div>
               )}
             </div>
           </div>
-
-          
 
           {/* Unidade */}
           <div className="gfb-group" style={{ position: 'relative' }}>
@@ -325,16 +333,21 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 className="gfb-input"
                 placeholder="Buscar unidade..."
                 value={unitSearch}
-                onChange={(e) => { setUnitSearch(e.target.value); setShowUnitDropdown(true); }}
+                onChange={(e) => {
+                  setUnitSearch(e.target.value);
+                  setShowUnitDropdown(true);
+                }}
                 onFocus={() => setShowUnitDropdown(true)}
               />
               {unitSearch && (
-                <button className="gfb-input-clear" onClick={() => setUnitSearch('')}>×</button>
+                <button className="gfb-input-clear" onClick={() => setUnitSearch('')}>
+                  ×
+                </button>
               )}
               {showUnitDropdown && (
                 <div className="gfb-dropdown">
                   <div className="gfb-dropdown-list">
-                    {filteredUnits.map(u => (
+                    {filteredUnits.map((u) => (
                       <button
                         key={u.id_unidade}
                         className={`gfb-dropdown-item ${unitFilter.includes(u.id_unidade) ? 'active' : ''}`}
@@ -355,8 +368,6 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
 
-          
-
           {/* Ocupação */}
           <div className="gfb-group" style={{ position: 'relative' }}>
             <span className="gfb-label">Ocupação</span>
@@ -366,16 +377,21 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 className="gfb-input"
                 placeholder="Buscar ocupação..."
                 value={occSearch}
-                onChange={(e) => { setOccSearch(e.target.value); setShowOccDropdown(true); }}
+                onChange={(e) => {
+                  setOccSearch(e.target.value);
+                  setShowOccDropdown(true);
+                }}
                 onFocus={() => setShowOccDropdown(true)}
               />
               {occSearch && (
-                <button className="gfb-input-clear" onClick={() => setOccSearch('')}>×</button>
+                <button className="gfb-input-clear" onClick={() => setOccSearch('')}>
+                  ×
+                </button>
               )}
               {showOccDropdown && (
                 <div className="gfb-dropdown">
                   <div className="gfb-dropdown-list">
-                    {filteredOccupations.map(occ => (
+                    {filteredOccupations.map((occ) => (
                       <button
                         key={occ}
                         className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''}`}
@@ -395,20 +411,23 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               )}
             </div>
           </div>
-
-          
-
-
         </div>
 
         {totalActive > 0 && (
           <div className="gfb-chips">
-            {activeFilters.map(f => (
+            {activeFilters.map((f) => (
               <div key={`${f.type}-${f.val}`} className="gfb-chip">
                 <span className="gfb-chip-type">{f.type}:</span>
                 <strong>{f.val}</strong>
                 <button onClick={f.remover} className="gfb-chip-close">
-                  <svg viewBox="0 0 14 14" width="10" height="10"><path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  <svg viewBox="0 0 14 14" width="10" height="10">
+                    <path
+                      d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </button>
               </div>
             ))}

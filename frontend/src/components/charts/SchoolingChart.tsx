@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../../constants';
-import * as Epi from '../../types/epi';
 import { useChartJs } from '../../hooks/useChartJs';
+import * as Epi from '../../types/epi';
 
 interface SchoolingChartProps {
   data: Epi.CitizenBootstrap['schooling_profile'];
@@ -13,11 +13,13 @@ const SchoolingChart: React.FC<SchoolingChartProps> = ({ data }) => {
       type: 'bar',
       data: {
         labels: data.map((x) => x.label),
-        datasets: [{
-          data: data.map((x) => x.count),
-          backgroundColor: COLORS.PRIMARY,
-          borderRadius: 7,
-        }],
+        datasets: [
+          {
+            data: data.map((x) => x.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',

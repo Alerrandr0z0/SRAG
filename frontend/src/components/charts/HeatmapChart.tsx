@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { useEcharts } from "../../hooks/useEcharts";
+import React, { useMemo } from 'react';
+import { useEcharts } from '../../hooks/useEcharts';
 
 type HeatmapPoint = [number, number, number];
 type HeatmapTooltip = { value: HeatmapPoint };
@@ -16,8 +16,8 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
   xLabels,
   yLabels,
   matrix,
-  valueName = "Valor",
-  colors = ["#f8fafc", "#93c5fd", "#1d4ed8"],
+  valueName = 'Valor',
+  colors = ['#f8fafc', '#93c5fd', '#1d4ed8'],
 }) => {
   const option = useMemo(() => {
     const data: HeatmapPoint[] = [];
@@ -34,26 +34,26 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
 
     return {
       tooltip: {
-        position: "top",
+        position: 'top',
         formatter: (params: HeatmapTooltip) => {
           return `${yLabels[params.value[1]]} @ ${xLabels[params.value[0]]}<br/><b>${valueName}: ${params.value[2]}</b>`;
         },
       },
       grid: {
         top: 20,
-        right: "10%",
+        right: '10%',
         bottom: 70,
-        left: "5%",
+        left: '5%',
         containLabel: true,
       },
       xAxis: {
-        type: "category",
+        type: 'category',
         data: xLabels,
         splitArea: { show: true },
         axisLabel: { rotate: 35, interval: 0, fontSize: 10 },
       },
       yAxis: {
-        type: "category",
+        type: 'category',
         data: yLabels,
         splitArea: { show: true },
         inverse: true,
@@ -63,8 +63,8 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
         min: 0,
         max: maxVal,
         calculable: true,
-        orient: "horizontal",
-        left: "center",
+        orient: 'horizontal',
+        left: 'center',
         bottom: 0,
         itemWidth: 12,
         itemHeight: 120,
@@ -73,15 +73,15 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
       series: [
         {
           name: valueName,
-          type: "heatmap",
+          type: 'heatmap',
           data: data,
           label: {
-          show: true,
-          fontSize: 9,
-          formatter: (p: HeatmapTooltip) => (p.value[2] > 0 ? p.value[2] : ""),
-        },
+            show: true,
+            fontSize: 9,
+            formatter: (p: HeatmapTooltip) => (p.value[2] > 0 ? p.value[2] : ''),
+          },
           emphasis: {
-            itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.5)" },
+            itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' },
           },
         },
       ],
@@ -95,17 +95,19 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {!hasData && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#94a3b8',
-          fontSize: '0.8rem',
-          zIndex: 10,
-          background: 'var(--bg-panel)'
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#94a3b8',
+            fontSize: '0.8rem',
+            zIndex: 10,
+            background: 'var(--bg-panel)',
+          }}
+        >
           <p>Aguardando processamento de matriz de incidência.</p>
         </div>
       )}

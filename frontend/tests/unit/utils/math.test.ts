@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { cumulative, buildBand } from '../../../src/utils/math';
+import { describe, expect, it } from 'vitest';
 import type { ForecastEntry } from '../../../src/types/epi';
+import { buildBand, cumulative } from '../../../src/utils/math';
 
 describe('math utils', () => {
   describe('cumulative', () => {

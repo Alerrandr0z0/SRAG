@@ -7,9 +7,28 @@ const LabPanel: React.FC = () => {
   const jupyterUrl = `${window.location.protocol}//${window.location.host}/lab/lab/tree/notebooks/srag_mossoro_analise_previsao.ipynb?factory=Notebook`;
 
   return (
-    <div style={{ height: '90vh', width: '100%', position: 'relative', background: '#fff', borderRadius: '14px', border: '1px solid #d7e4df', overflow: 'hidden' }}>
+    <div
+      style={{
+        height: '90vh',
+        width: '100%',
+        position: 'relative',
+        background: '#fff',
+        borderRadius: '14px',
+        border: '1px solid #d7e4df',
+        overflow: 'hidden',
+      }}
+    >
       {loading && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f8fafc',
+          }}
+        >
           <p style={{ color: '#64748b' }}>Conectando ao ambiente de notebooks...</p>
         </div>
       )}

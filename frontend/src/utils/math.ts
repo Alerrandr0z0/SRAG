@@ -20,7 +20,7 @@ export function buildBand(
   forecast: ForecastEntry[],
   histLen: number,
   seriesMode: string,
-  histLast = 0
+  histLast = 0,
 ) {
   const lower = labels.map(() => null as number | null);
   const upper = labels.map(() => null as number | null);
@@ -39,8 +39,8 @@ export function buildBand(
     const upCum = cumulative(upRaw).map((v) => v + histLast);
 
     return {
-      lower: labels.map((_, i) => (i < histLen ? null : lowCum[i - histLen] ?? null)),
-      upper: labels.map((_, i) => (i < histLen ? null : upCum[i - histLen] ?? null)),
+      lower: labels.map((_, i) => (i < histLen ? null : (lowCum[i - histLen] ?? null))),
+      upper: labels.map((_, i) => (i < histLen ? null : (upCum[i - histLen] ?? null))),
     };
   }
 

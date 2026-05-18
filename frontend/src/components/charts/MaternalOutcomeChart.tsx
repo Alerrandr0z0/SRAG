@@ -12,10 +12,10 @@ interface MaternalOutcomeChartProps {
 }
 
 const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => {
-  const labels = data.map(d => d.group);
-  const cureData = data.map(d => (d.cure / d.total) * 100);
-  const icuData = data.map(d => (d.icu / d.total) * 100);
-  const deathData = data.map(d => (d.death / d.total) * 100);
+  const labels = data.map((d) => d.group);
+  const cureData = data.map((d) => (d.cure / d.total) * 100);
+  const icuData = data.map((d) => (d.icu / d.total) * 100);
+  const deathData = data.map((d) => (d.death / d.total) * 100);
 
   const { canvasRef } = useChartJs(
     () => ({
@@ -56,13 +56,19 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
           },
           tooltip: {
             callbacks: {
-              label: (context: { raw: unknown; dataIndex: number; datasetIndex: number; dataset: { label?: string } }) => {
+              label: (context: {
+                raw: unknown;
+                dataIndex: number;
+                datasetIndex: number;
+                dataset: { label?: string };
+              }) => {
                 const val = Number(context.raw);
-                const originalVal = context.datasetIndex === 0
-                  ? data[context.dataIndex].cure
-                  : context.datasetIndex === 1
-                    ? data[context.dataIndex].icu
-                    : data[context.dataIndex].death;
+                const originalVal =
+                  context.datasetIndex === 0
+                    ? data[context.dataIndex].cure
+                    : context.datasetIndex === 1
+                      ? data[context.dataIndex].icu
+                      : data[context.dataIndex].death;
                 return `${context.dataset.label}: ${val.toFixed(1)}% (${originalVal} casos)`;
               },
             },

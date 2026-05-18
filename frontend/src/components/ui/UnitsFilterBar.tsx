@@ -56,11 +56,18 @@ const UnitsFilterBar: React.FC<UnitsFilterBarProps> = ({
           <select
             onChange={addUnit}
             className="pill"
-            style={{ appearance: 'none', cursor: 'pointer', outline: 'none', background: 'transparent' }}
+            style={{
+              appearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+              background: 'transparent',
+            }}
           >
             <option value="">+ Adicionar unidade...</option>
-            {unitsList.map(u => (
-              <option key={u.id_unidade} value={u.id_unidade}>{u.id_unidade} ({u.count})</option>
+            {unitsList.map((u) => (
+              <option key={u.id_unidade} value={u.id_unidade}>
+                {u.id_unidade} ({u.count})
+              </option>
             ))}
           </select>
 

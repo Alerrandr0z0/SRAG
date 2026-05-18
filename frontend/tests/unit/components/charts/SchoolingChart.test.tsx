@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import SchoolingChart from '../../../../src/components/charts/SchoolingChart';
 
 describe('SchoolingChart', () => {

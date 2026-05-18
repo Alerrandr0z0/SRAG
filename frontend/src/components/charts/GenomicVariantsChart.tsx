@@ -10,14 +10,14 @@ interface GenomicVariantsChartProps {
 }
 
 const VARIANT_COLORS: Record<string, string> = {
-  'Ômicron': '#0f766e',
-  'Delta': '#1d4ed8',
-  'Alfa': '#b91c1c',
-  'Beta': '#7c3aed',
-  'Gama': '#d97706',
-  'Recombinante': '#0369a1',
-  'Desconhecida': '#94a3b8',
-  'Outra': '#475569'
+  Ômicron: '#0f766e',
+  Delta: '#1d4ed8',
+  Alfa: '#b91c1c',
+  Beta: '#7c3aed',
+  Gama: '#d97706',
+  Recombinante: '#0369a1',
+  Desconhecida: '#94a3b8',
+  Outra: '#475569',
 };
 
 const GenomicVariantsChart: React.FC<GenomicVariantsChartProps> = ({ data }) => {
@@ -65,7 +65,12 @@ const GenomicVariantsChart: React.FC<GenomicVariantsChartProps> = ({ data }) => 
         },
         scales: {
           x: { grid: { display: false } },
-          y: { stacked: true, min: 0, max: 100, ticks: { callback: (value: string | number) => `${value}%` } },
+          y: {
+            stacked: true,
+            min: 0,
+            max: 100,
+            ticks: { callback: (value: string | number) => `${value}%` },
+          },
         },
       },
     }),
@@ -74,7 +79,15 @@ const GenomicVariantsChart: React.FC<GenomicVariantsChartProps> = ({ data }) => 
 
   if (!shouldRenderChart) {
     return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#94a3b8',
+        }}
+      >
         <p>Aguardando dados de sequenciamento genômico para o período selecionado.</p>
       </div>
     );

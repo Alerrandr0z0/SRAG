@@ -1,32 +1,28 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
-
-// API
-import { api } from './services/api';
-
-// Hooks
-import { useCoreData } from './hooks/useCoreData';
-import { useTerritoryData } from './hooks/useTerritoryData';
-import { useUnitsData } from './hooks/useUnitsData';
-import { useCitizenData } from './hooks/useCitizenData';
-import { useAuditData } from './hooks/useAuditData';
-
-// UI Components
-import Sidebar from './components/ui/Sidebar';
-import KpiCard from './components/ui/KpiCard';
-import GlobalFilterBar from './components/ui/GlobalFilterBar';
 
 // Charts
 import TrendChart from './components/charts/TrendChart';
 import VirusProfileChart from './components/charts/VirusProfileChart';
-
+import AuditPanel from './components/panels/AuditPanel';
+import CitizenPanel from './components/panels/CitizenPanel';
+import NotebooksPanel from './components/panels/NotebooksPanel';
 // Panels
 import TerritoryPanel from './components/panels/TerritoryPanel';
 import UnitsPanel from './components/panels/UnitsPanel';
-import CitizenPanel from './components/panels/CitizenPanel';
 import VigilancePanel from './components/panels/VigilancePanel';
-import AuditPanel from './components/panels/AuditPanel';
-import NotebooksPanel from './components/panels/NotebooksPanel';
+import GlobalFilterBar from './components/ui/GlobalFilterBar';
+import KpiCard from './components/ui/KpiCard';
+// UI Components
+import Sidebar from './components/ui/Sidebar';
+import { useAuditData } from './hooks/useAuditData';
+import { useCitizenData } from './hooks/useCitizenData';
+// Hooks
+import { useCoreData } from './hooks/useCoreData';
+import { useTerritoryData } from './hooks/useTerritoryData';
+import { useUnitsData } from './hooks/useUnitsData';
+// API
+import { api } from './services/api';
 
 function App() {
   // Config State
@@ -44,6 +40,7 @@ function App() {
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [virusDetail, setVirusDetail] = useState('summary');
   const [dashboardYear, setDashboardYear] = useState<number[]>([]);
+  const [showForecast, setShowForecast] = useState(false);
 
   // Citizen State
   const [citizenTab, setCitizenTab] = useState<string[]>([]);
@@ -58,7 +55,7 @@ function App() {
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
 
   // Core Data Hook
-  const { data, status, lastUpdate, error } = useCoreData(
+  const { data, status, lastUpdate } = useCoreData(
     weeksWindow,
     lookback,
     virusDetail,
@@ -71,23 +68,69 @@ function App() {
     dashboardYear,
     undefined,
     maternalFilter,
-    occupationFilter
+    occupationFilter,
   );
 
   // Lazy Loaded Data Hooks
-  const territoryData = useTerritoryData(panel === 'territorio', 'Urbana', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
-  const unitsData = useUnitsData(panel === 'unidades', swimmerVirus, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
-  const citizenData = useCitizenData(panel === 'cidadao', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
-  const auditData = useAuditData(panel === 'auditoria', citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, maternalFilter, occupationFilter);
+  const territoryData = useTerritoryData(
+    panel === 'territorio',
+    'Urbana',
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    maternalFilter,
+    occupationFilter,
+  );
+  const unitsData = useUnitsData(
+    panel === 'unidades',
+    swimmerVirus,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    maternalFilter,
+    occupationFilter,
+  );
+  const citizenData = useCitizenData(
+    panel === 'cidadao',
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    maternalFilter,
+    occupationFilter,
+  );
+  const auditData = useAuditData(
+    panel === 'auditoria',
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    maternalFilter,
+    occupationFilter,
+  );
   const vigilanceLoading = panel === 'vigilancia' && !data?.laboratoryNetwork;
 
   const bairrosList = useMemo(() => {
     const combined = [
       ...(territoryData.entities?.urban_bairros || []),
-      ...(territoryData.entities?.rural_comunidades || [])
+      ...(territoryData.entities?.rural_comunidades || []),
     ];
     const uniqueMap = new Map<string, number>();
-    combined.forEach(item => {
+    combined.forEach((item) => {
       const current = uniqueMap.get(item.label) || 0;
       if (item.count > current) uniqueMap.set(item.label, item.count);
     });
@@ -95,14 +138,18 @@ function App() {
   }, [territoryData.entities]);
 
   const unitsList = useMemo(() => {
-    return (unitsData.units || []).map((item) => ({ id_unidade: item.id_unidade, count: item.count }));
+    return (unitsData.units || []).map((item) => ({
+      id_unidade: item.id_unidade,
+      count: item.count,
+    }));
   }, [unitsData.units]);
 
   useEffect(() => {
     if (panel === 'cidadao') {
-      api.fetchOccupations(dashboardYear, zoneFilter, bairroFilter)
-        .then(res => setAvailableOccupations(res.map(o => o.label)))
-        .catch(err => console.error("Failed to fetch occupations", err));
+      api
+        .fetchOccupations(dashboardYear, zoneFilter, bairroFilter)
+        .then((res) => setAvailableOccupations(res.map((o) => o.label)))
+        .catch((err) => console.error('Failed to fetch occupations', err));
     }
   }, [panel, dashboardYear, zoneFilter, bairroFilter]);
 
@@ -125,14 +172,46 @@ function App() {
   const currentTrends = data?.trends;
 
   const activeFilters = [
-    ...citizenTab.map(f => ({ type: 'Perfil', val: f, remover: () => setCitizenTab(citizenTab.filter(i => i !== f)) })),
-    ...raceFilter.map(f => ({ type: 'Raça', val: f, remover: () => setRaceFilter(raceFilter.filter(i => i !== f)) })),
-    ...genderFilter.map(f => ({ type: 'Gênero', val: f, remover: () => setGenderFilter(genderFilter.filter(i => i !== f)) })),
-    ...zoneFilter.map(f => ({ type: 'Zona', val: f, remover: () => setZoneFilter(zoneFilter.filter(i => i !== f)) })),
-    ...bairroFilter.map(f => ({ type: 'Bairro', val: f, remover: () => setBairroFilter(bairroFilter.filter(i => i !== f)) })),
-    ...unitFilter.map(f => ({ type: 'Unid', val: f, remover: () => setUnitFilter(unitFilter.filter(i => i !== f)) })),
-    ...maternalFilter.map(f => ({ type: 'Materno', val: f, remover: () => setMaternalFilter(maternalFilter.filter(i => i !== f)) })),
-    ...occupationFilter.map(f => ({ type: 'Ocupação', val: f, remover: () => setOccupationFilter(occupationFilter.filter(i => i !== f)) }))
+    ...citizenTab.map((f) => ({
+      type: 'Perfil',
+      val: f,
+      remover: () => setCitizenTab(citizenTab.filter((i) => i !== f)),
+    })),
+    ...raceFilter.map((f) => ({
+      type: 'Raça',
+      val: f,
+      remover: () => setRaceFilter(raceFilter.filter((i) => i !== f)),
+    })),
+    ...genderFilter.map((f) => ({
+      type: 'Gênero',
+      val: f,
+      remover: () => setGenderFilter(genderFilter.filter((i) => i !== f)),
+    })),
+    ...zoneFilter.map((f) => ({
+      type: 'Zona',
+      val: f,
+      remover: () => setZoneFilter(zoneFilter.filter((i) => i !== f)),
+    })),
+    ...bairroFilter.map((f) => ({
+      type: 'Bairro',
+      val: f,
+      remover: () => setBairroFilter(bairroFilter.filter((i) => i !== f)),
+    })),
+    ...unitFilter.map((f) => ({
+      type: 'Unid',
+      val: f,
+      remover: () => setUnitFilter(unitFilter.filter((i) => i !== f)),
+    })),
+    ...maternalFilter.map((f) => ({
+      type: 'Materno',
+      val: f,
+      remover: () => setMaternalFilter(maternalFilter.filter((i) => i !== f)),
+    })),
+    ...occupationFilter.map((f) => ({
+      type: 'Ocupação',
+      val: f,
+      remover: () => setOccupationFilter(occupationFilter.filter((i) => i !== f)),
+    })),
   ];
 
   const clearAllFilters = () => {
@@ -192,29 +271,72 @@ function App() {
               <KpiCard label="Total Internações" value={kpis.total} />
               <KpiCard label="Total UTI" value={kpis.uti} />
               <KpiCard label="Letalidade" value={kpis.death} />
-              <KpiCard label="PROJEÇÃO" value={kpis.next} />
             </section>
 
             <section className="main-grid">
               <article className="panel">
                 <div className="section-header">
                   <div className="stack" style={{ gap: 4 }}>
-                    <h3 style={{ margin: 0 }}>Tendência</h3>
+                    <h3 style={{ margin: 0 }}>Histórico de Notificações</h3>
                     {currentTrends && (
-                      <div className="filters" style={{ fontSize: '12px', color: '#64748b', gap: 12 }}>
-                        <span>Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b></span>
-                        <span>Média: <b>{(currentTrends.history.reduce((s, h) => s + h.total, 0) / (currentTrends.history.length || 1)).toFixed(1)}/s</b></span>
+                      <div
+                        className="filters"
+                        style={{ fontSize: '12px', color: '#64748b', gap: 12 }}
+                      >
+                        <span>
+                          Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
+                        </span>
+                        <span>
+                          Média:{' '}
+                          <b>
+                            {(
+                              currentTrends.history.reduce((s, h) => s + h.total, 0) /
+                              (currentTrends.history.length || 1)
+                            ).toFixed(1)}
+                            /semana
+                          </b>
+                        </span>
                       </div>
                     )}
                   </div>
                   <div className="filters">
+                    <button
+                      className={`pill-btn ${showForecast ? 'active' : ''}`}
+                      onClick={() => setShowForecast(!showForecast)}
+                      style={{
+                        marginRight: '1.5rem',
+                        padding: '0.4rem 1rem',
+                        border: showForecast
+                          ? '1px solid var(--primary-teal)'
+                          : '1px solid #cbd5e1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ opacity: showForecast ? 1 : 0.6 }}
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      {showForecast ? 'Ocultar Previsão' : 'Mostrar Previsão'}
+                    </button>
                     <div className="pill-group">
                       {[
                         { v: '0', l: 'Tudo' },
                         { v: '52', l: '52s' },
                         { v: '26', l: '26s' },
-                        { v: '12', l: '12s' }
-                      ].map(opt => (
+                        { v: '12', l: '12s' },
+                      ].map((opt) => (
                         <button
                           key={opt.v}
                           className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
@@ -224,7 +346,7 @@ function App() {
                         </button>
                       ))}
                     </div>
-                    <select value={seriesMode} onChange={e => setSeriesMode(e.target.value)}>
+                    <select value={seriesMode} onChange={(e) => setSeriesMode(e.target.value)}>
                       <option value="weekly">Semanal</option>
                       <option value="cumulative">Acumulada</option>
                       <option value="composition">Composição</option>
@@ -240,6 +362,7 @@ function App() {
                       composition={currentTrends.composition}
                       baseCumulative={currentTrends.base_cumulative}
                       seriesMode={seriesMode}
+                      showForecast={showForecast}
                     />
                   )}
                 </div>
@@ -276,7 +399,9 @@ function App() {
                 boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
                 choropleth={territoryData.choropleth}
                 ruralData={territoryData.ruralData}
-                ruralSectorsGeo={territoryData.ruralSectorsGeo as import('geojson').FeatureCollection}
+                ruralSectorsGeo={
+                  territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
+                }
               />
             </article>
           )}
@@ -324,15 +449,10 @@ function App() {
           )}
 
           {panel === 'auditoria' && (
-            <AuditPanel
-              loading={auditData.loading}
-              completeness={auditData.completeness}
-            />
+            <AuditPanel loading={auditData.loading} completeness={auditData.completeness} />
           )}
 
-          {panel === 'notebooks' && (
-            <NotebooksPanel />
-          )}
+          {panel === 'notebooks' && <NotebooksPanel />}
         </section>
       </main>
     </div>
@@ -340,4 +460,3 @@ function App() {
 }
 
 export default App;
-
