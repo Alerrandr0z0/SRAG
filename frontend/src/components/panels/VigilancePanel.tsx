@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as Epi from '../../types/epi';
+import BarChart from '../charts/BarChart';
 import EpidemicCurveChart from '../charts/EpidemicCurveChart';
 import HeatmapChart from '../charts/HeatmapChart';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
@@ -13,9 +14,14 @@ import KpiCard from '../ui/KpiCard';
 interface VigilancePanelProps {
   loading: boolean;
   laboratoryNetwork: Epi.LaboratoryNetwork | undefined;
+  etiologicAgentFilter?: string[];
 }
 
-const VigilancePanel: React.FC<VigilancePanelProps> = ({ loading, laboratoryNetwork }) => {
+const VigilancePanel: React.FC<VigilancePanelProps> = ({
+  loading,
+  laboratoryNetwork,
+  etiologicAgentFilter = [],
+}) => {
   const [curveMode, setCurveMode] = useState<'composicao' | 'positividade' | 'acumulado'>(
     'positividade',
   );
@@ -31,6 +37,9 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({ loading, laboratoryNetw
   const virusTrends = laboratoryNetwork?.virus_trends || [];
   const antiviralTypes = laboratoryNetwork?.antiviral_types || [];
   const positivityTrend = laboratoryNetwork?.positivity_trend || [];
+  const selectedAgent = etiologicAgentFilter[0] || '';
+  const isAgentFiltered = selectedAgent === 'COVID-19' || selectedAgent === 'Influenza';
+  const lethality = laboratoryNetwork?.agent_lethality_heatmap;
 
   // Data mapping for QualidadePerformance (D3)
   const mapBoxPlot = (data: number[] | undefined, label: string): BoxStats => {
@@ -189,13 +198,26 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({ loading, laboratoryNetw
             </div>
           </div>
           <div className="chart-wrap chart-wrap--tall">
-            <HeatmapChart
-              xLabels={laboratoryNetwork?.agent_lethality_heatmap?.age_bands || []}
-              yLabels={laboratoryNetwork?.agent_lethality_heatmap?.agents || []}
-              matrix={laboratoryNetwork?.agent_lethality_heatmap?.matrix || []}
-              valueName="Letalidade (%)"
-              colors={['#fff1f2', '#f43f5e', '#9f1239']}
-            />
+            {isAgentFiltered && lethality ? (
+              <BarChart
+                labels={lethality.age_bands || []}
+                data={
+                  (lethality.matrix?.[selectedAgent === 'Influenza' ? 1 : 2] || []).map(
+                    (v) => Number(v || 0),
+                  )
+                }
+                horizontal={true}
+                color={selectedAgent === 'Influenza' ? '#1d4ed8' : '#0f766e'}
+              />
+            ) : (
+              <HeatmapChart
+                xLabels={laboratoryNetwork?.agent_lethality_heatmap?.age_bands || []}
+                yLabels={laboratoryNetwork?.agent_lethality_heatmap?.agents || []}
+                matrix={laboratoryNetwork?.agent_lethality_heatmap?.matrix || []}
+                valueName="Letalidade (%)"
+                colors={['#fff1f2', '#f43f5e', '#9f1239']}
+              />
+            )}
           </div>
         </article>
       </section>

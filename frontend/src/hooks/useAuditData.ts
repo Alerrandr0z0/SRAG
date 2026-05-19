@@ -11,6 +11,7 @@ export function useAuditData(
   bairroFilter?: string[],
   unitFilter?: string[],
   years?: number[],
+  agents?: string[],
   maternal?: string[],
   occupations?: string[],
 ) {
@@ -32,7 +33,7 @@ export function useAuditData(
           bairroFilter,
           unitFilter,
           years,
-          undefined,
+          agents,
           maternal,
           occupations,
         );
@@ -58,6 +59,7 @@ export function useAuditData(
     bairroFilter,
     unitFilter,
     years,
+    agents,
     maternal,
     occupations,
   ]);

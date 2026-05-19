@@ -15,6 +15,7 @@ interface UnitsPanelProps {
   icuBottleneck: Epi.IcuBottleneckRecord[];
   swimmerVirus: 'covid' | 'gripe';
   setSwimmerVirus: (v: 'covid' | 'gripe') => void;
+  etiologicAgentFilter?: string[];
   dashboardYear?: number[];
   chartDebug?: boolean;
 }
@@ -28,10 +29,14 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
   icuBottleneck = [],
   swimmerVirus,
   setSwimmerVirus,
+  etiologicAgentFilter = [],
   dashboardYear = [],
 }) => {
   const isYearSelected = dashboardYear.length > 0;
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>('year');
+  const selectedAgent = etiologicAgentFilter[0] || 'Todos';
+  const showCovid = selectedAgent !== 'Influenza';
+  const showGripe = selectedAgent !== 'COVID-19';
 
   // Ajuste automático: Se um ano for selecionado e o modo estiver como "ano", muda para "mês"
   React.useEffect(() => {
@@ -271,17 +276,23 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
 
       <article className="panel" style={{ marginTop: '20px' }}>
         <div className="section-header">
-          <h3>Jornada Clínica por Perfil Vacinal</h3>
-          <div className="filters">
-            <select
-              value={swimmerVirus}
-              onChange={(e) => setSwimmerVirus(e.target.value as 'covid' | 'gripe')}
-              style={{ padding: '4px 8px', borderRadius: '6px' }}
-            >
-              <option value="covid">Visão COVID-19</option>
-              <option value="gripe">Visão Influenza</option>
-            </select>
-          </div>
+          <h3>
+            {selectedAgent === 'Influenza'
+              ? 'Jornada Clínica por Perfil Vacinal - Influenza'
+              : selectedAgent === 'COVID-19'
+                ? 'Jornada Clínica por Perfil Vacinal - COVID-19'
+                : 'Jornada Clínica por Perfil Vacinal'}
+          </h3>
+            <div className="filters">
+              <select
+                value={swimmerVirus}
+                onChange={(e) => setSwimmerVirus(e.target.value as 'covid' | 'gripe')}
+                style={{ padding: '4px 8px', borderRadius: '6px' }}
+              >
+                {showCovid && <option value="covid">Visão COVID-19</option>}
+                {showGripe && <option value="gripe">Visão Influenza</option>}
+              </select>
+            </div>
         </div>
         <div style={{ marginTop: '20px' }}>
           <AggregatedSwimmerPlot data={timelineData} swimmerVirus={swimmerVirus} />

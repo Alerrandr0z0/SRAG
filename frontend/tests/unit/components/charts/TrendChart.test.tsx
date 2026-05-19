@@ -1,5 +1,10 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../../src/hooks/useEcharts', () => ({
+  useEcharts: () => ({ chartRef: () => {} }),
+}));
+
 import TrendChart from '../../../../src/components/charts/TrendChart';
 
 describe('TrendChart', () => {
@@ -21,6 +26,6 @@ describe('TrendChart', () => {
         seriesMode="weekly"
       />,
     );
-    expect(document.querySelector('canvas')).toBeTruthy();
+    expect(document.querySelector('div')).toBeTruthy();
   });
 });

@@ -23,6 +23,7 @@ import { useTerritoryData } from './hooks/useTerritoryData';
 import { useUnitsData } from './hooks/useUnitsData';
 // API
 import { api } from './services/api';
+import type * as Epi from './types/epi';
 
 function App() {
   // Config State
@@ -49,10 +50,13 @@ function App() {
   const [zoneFilter, setZoneFilter] = useState<string[]>([]);
   const [bairroFilter, setBairroFilter] = useState<string[]>([]);
   const [unitFilter, setUnitFilter] = useState<string[]>([]);
+  const [agentFilter, setAgentFilter] = useState<string[]>([]);
   const [maternalFilter, setMaternalFilter] = useState<string[]>([]);
   const [occupationFilter, setOccupationFilter] = useState<string[]>([]);
   const [availableOccupations, setAvailableOccupations] = useState<string[]>([]);
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
+  const [trends, setTrends] = useState<Epi.TrendsData | null>(null);
+  const [virus, setVirus] = useState<Epi.VirusData[] | null>(null);
 
   // Core Data Hook
   const { data, status, lastUpdate } = useCoreData(
@@ -66,10 +70,61 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
-    undefined,
+    agentFilter,
     maternalFilter,
     occupationFilter,
   );
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchVirus(
+        virusDetail,
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+      )
+      .then((res) => {
+        if (active) setVirus(res);
+      })
+      .finally(() => {});
+    return () => {
+      active = false;
+    };
+  }, [virusDetail, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchTrends(
+        weeksWindow,
+        lookback,
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+      )
+      .then((res) => {
+        if (active) setTrends(res);
+      })
+      .finally(() => {});
+    return () => {
+      active = false;
+    };
+  }, [weeksWindow, lookback, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
 
   // Lazy Loaded Data Hooks
   const territoryData = useTerritoryData(
@@ -82,6 +137,7 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
+    agentFilter,
     maternalFilter,
     occupationFilter,
   );
@@ -95,6 +151,7 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
+    agentFilter,
     maternalFilter,
     occupationFilter,
   );
@@ -107,6 +164,7 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
+    agentFilter,
     maternalFilter,
     occupationFilter,
   );
@@ -119,6 +177,7 @@ function App() {
     bairroFilter,
     unitFilter,
     dashboardYear,
+    agentFilter,
     maternalFilter,
     occupationFilter,
   );
@@ -147,11 +206,32 @@ function App() {
   useEffect(() => {
     if (panel === 'cidadao') {
       api
-        .fetchOccupations(dashboardYear, zoneFilter, bairroFilter)
+        .fetchOccupations(dashboardYear, zoneFilter, bairroFilter, agentFilter)
         .then((res) => setAvailableOccupations(res.map((o) => o.label)))
         .catch((err) => console.error('Failed to fetch occupations', err));
     }
-  }, [panel, dashboardYear, zoneFilter, bairroFilter]);
+  }, [panel, dashboardYear, zoneFilter, bairroFilter, agentFilter]);
+
+  useEffect(() => {
+    const selectedAgent = agentFilter[0];
+    if (selectedAgent === 'Influenza') {
+      setSwimmerVirus('gripe');
+      setVirusDetail('influenza_detailed');
+    } else if (selectedAgent === 'COVID-19') {
+      setSwimmerVirus('covid');
+      setVirusDetail('covid_detailed');
+    }
+  }, [agentFilter]);
+
+  useEffect(() => {
+    const selectedAgent = agentFilter[0];
+    if (selectedAgent === 'Influenza' && virusDetail !== 'influenza_detailed') {
+      setVirusDetail('influenza_detailed');
+    }
+    if (selectedAgent === 'COVID-19' && virusDetail !== 'covid_detailed') {
+      setVirusDetail('covid_detailed');
+    }
+  }, [agentFilter, virusDetail]);
 
   // KPIs Memo
   const kpis = useMemo(() => {
@@ -169,7 +249,7 @@ function App() {
 
   const availableYears = data?.summary?.available_years || [];
 
-  const currentTrends = data?.trends;
+  const currentTrends = trends ?? data?.trends;
 
   const activeFilters = [
     ...citizenTab.map((f) => ({
@@ -202,6 +282,11 @@ function App() {
       val: f,
       remover: () => setUnitFilter(unitFilter.filter((i) => i !== f)),
     })),
+    ...agentFilter.map((f) => ({
+      type: 'Agente',
+      val: f,
+      remover: () => setAgentFilter(agentFilter.filter((i) => i !== f)),
+    })),
     ...maternalFilter.map((f) => ({
       type: 'Materno',
       val: f,
@@ -221,6 +306,7 @@ function App() {
     setZoneFilter([]);
     setBairroFilter([]);
     setUnitFilter([]);
+    setAgentFilter([]);
     setMaternalFilter([]);
     setOccupationFilter([]);
   };
@@ -260,6 +346,8 @@ function App() {
               bairrosList={bairrosList}
               unitFilter={unitFilter}
               setUnitFilter={setUnitFilter}
+              agentFilter={agentFilter}
+              setAgentFilter={setAgentFilter}
               unitsList={unitsList}
               occupationOptions={availableOccupations}
               activeFilters={activeFilters}
@@ -301,10 +389,10 @@ function App() {
                   </div>
                   <div className="filters">
                     <button
+                      type="button"
                       className={`pill-btn ${showForecast ? 'active' : ''}`}
                       onClick={() => setShowForecast(!showForecast)}
                       style={{
-                        marginRight: '1.5rem',
                         padding: '0.4rem 1rem',
                         border: showForecast
                           ? '1px solid var(--primary-teal)'
@@ -362,6 +450,7 @@ function App() {
                       composition={currentTrends.composition}
                       baseCumulative={currentTrends.base_cumulative}
                       seriesMode={seriesMode}
+                      weeksWindow={weeksWindow}
                       showForecast={showForecast}
                     />
                   )}
@@ -376,15 +465,27 @@ function App() {
             <article className="panel viral-profile-panel">
               <div className="section-header">
                 <h3>Perfil viral</h3>
-                <select value={virusDetail} onChange={(e) => setVirusDetail(e.target.value)}>
-                  <option value="summary">Resumido</option>
-                  <option value="detailed">Detalhado (Geral)</option>
-                  <option value="covid_detailed">Detalhado COVID-19</option>
-                  <option value="influenza_detailed">Detalhado Influenza</option>
+                <select
+                  value={virusDetail}
+                  onChange={(e) => setVirusDetail(e.target.value)}
+                  onFocus={() => {
+                    if (agentFilter[0] && virusDetail === 'summary') {
+                      setVirusDetail(agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed');
+                    }
+                  }}
+                >
+                  {!agentFilter[0] && <option value="summary">Resumido</option>}
+                  {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
+                  {agentFilter[0] !== 'Influenza' && (
+                    <option value="covid_detailed">Detalhado COVID-19</option>
+                  )}
+                  {agentFilter[0] !== 'COVID-19' && (
+                    <option value="influenza_detailed">Detalhado Influenza</option>
+                  )}
                 </select>
               </div>
               <div className="chart-wrap">
-                {data?.virus && <VirusProfileChart data={data.virus} />}
+                {virus && <VirusProfileChart data={virus} />}
               </div>
             </article>
           </section>
@@ -417,6 +518,7 @@ function App() {
                 icuBottleneck={unitsData.icuBottleneck}
                 swimmerVirus={swimmerVirus}
                 setSwimmerVirus={setSwimmerVirus}
+                etiologicAgentFilter={agentFilter}
                 dashboardYear={dashboardYear}
               />
             </article>
@@ -435,6 +537,7 @@ function App() {
                 maternalProfile={citizenData.maternalProfile}
                 vaccination={citizenData.vaccination}
                 genderFilter={genderFilter}
+                etiologicAgentFilter={agentFilter}
               />
             </article>
           )}
@@ -444,6 +547,7 @@ function App() {
               <VigilancePanel
                 loading={vigilanceLoading}
                 laboratoryNetwork={data?.laboratoryNetwork}
+                etiologicAgentFilter={agentFilter}
               />
             </article>
           )}

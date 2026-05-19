@@ -51,21 +51,24 @@ export function useEcharts(
     const instance = echarts.init(container, currentTheme);
     chartInstance.current = instance;
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (instance && !instance.isDisposed()) {
-        requestAnimationFrame(() => {
-          if (!instance.isDisposed()) instance.resize();
-        });
-      }
-    });
-    resizeObserver.observe(container);
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            if (instance && !instance.isDisposed()) {
+              requestAnimationFrame(() => {
+                if (!instance.isDisposed()) instance.resize();
+              });
+            }
+          })
+        : null;
+    if (resizeObserver) resizeObserver.observe(container);
 
     if (optRef.current) {
-      instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
+      instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, false);
     }
 
     return () => {
-      resizeObserver.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
       if (chartInstance.current) {
         chartInstance.current.dispose();
         chartInstance.current = null;
@@ -78,7 +81,7 @@ export function useEcharts(
     const instance = chartInstance.current;
     if (instance && optRef.current && !instance.isDisposed()) {
       try {
-        instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
+        instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, false);
         instance.resize();
       } catch (err) {
         console.error('ECharts Error:', err);
