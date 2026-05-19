@@ -44,6 +44,7 @@ Thumbs.db
 GEMINI.md
 .gemini/
 frontend/GEMINI.md
+AGENTS.md
 
 # Agent Skills & Knowledge Graph (external assets & artifacts)
 .agents/

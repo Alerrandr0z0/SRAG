@@ -15,12 +15,12 @@ def _find_project_root() -> Path:
     """Find the project root by looking for .git directory first, then pyproject.toml."""
     current = Path(__file__).resolve()
     # Check current directory and all parents
-    for parent in [current] + list(current.parents):
+    for parent in [current, *list(current.parents)]:
         # Prefer .git as it won't be copied to mutants/ directory
         if (parent / ".git").exists():
             return parent
     # Fallback to pyproject.toml if .git not found
-    for parent in [current] + list(current.parents):
+    for parent in [current, *list(current.parents)]:
         if (parent / "pyproject.toml").exists():
             return parent
     # Fallback to current directory if no marker found

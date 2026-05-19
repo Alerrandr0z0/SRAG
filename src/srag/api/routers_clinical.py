@@ -49,6 +49,7 @@ def get_occupations(
         bairros=filters.bairros,
         years=filters.years,
     )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     return compute_occupation_profile(df, top_n=limit)
 
 

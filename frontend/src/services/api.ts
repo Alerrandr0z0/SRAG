@@ -404,7 +404,12 @@ export const api = {
       ),
     ),
 
-  fetchOccupations: (years?: number[], zonas?: string[], bairros?: string[]) =>
+  fetchOccupations: (
+    years?: number[],
+    zonas?: string[],
+    bairros?: string[],
+    agents?: string[],
+  ) =>
     fetchJson<Array<{ label: string; count: number }>>(
       withFilters(
         `${API_BASE}/occupations?limit=60`,
@@ -415,6 +420,7 @@ export const api = {
         bairros,
         undefined,
         years,
+        agents,
       ),
     ),
 

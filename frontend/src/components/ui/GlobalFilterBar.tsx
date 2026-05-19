@@ -37,6 +37,9 @@ interface GlobalFilterBarProps {
   setUnitFilter: (u: string[]) => void;
   unitsList: Array<{ id_unidade: string; count: number }>;
 
+  agentFilter: string[];
+  setAgentFilter: (a: string[]) => void;
+
   occupationOptions: string[];
 
   activeFilters: ActiveFilter[];
@@ -75,6 +78,11 @@ const MATERNAL_OPTS: FilterOption[] = [
   { key: 'puerpera', label: 'Puérpera' },
 ];
 
+const AGENT_OPTS: FilterOption[] = [
+  { key: 'COVID-19', label: 'COVID-19' },
+  { key: 'Influenza', label: 'Influenza' },
+];
+
 const toggle = (list: string[], key: string, setter: (v: string[]) => void) => {
   setter(list.includes(key) ? list.filter((i) => i !== key) : [...list, key]);
 };
@@ -101,6 +109,8 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   unitFilter,
   setUnitFilter,
   unitsList,
+  agentFilter,
+  setAgentFilter,
   occupationOptions,
   activeFilters,
   clearAllFilters,
@@ -233,6 +243,24 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                     if (opt.key === 'F' && genderFilter.includes('F')) {
                       setMaternalFilter([]);
                     }
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Agente Etiológico */}
+          <div className="gfb-group">
+            <span className="gfb-label">Agente Etiológico</span>
+            <div className="gfb-pills">
+              {AGENT_OPTS.map((opt) => (
+                <button
+                  key={opt.key}
+                  className={`gfb-pill ${agentFilter[0] === opt.key ? 'active' : ''}`}
+                  onClick={() => {
+                    setAgentFilter(agentFilter[0] === opt.key ? [] : [opt.key]);
                   }}
                 >
                   {opt.label}

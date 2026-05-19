@@ -12,6 +12,7 @@ export function useTerritoryData(
   bairroFilter?: string[],
   unitFilter?: string[],
   years?: number[],
+  agents?: string[],
   maternal?: string[],
   occupations?: string[],
 ) {
@@ -48,7 +49,7 @@ export function useTerritoryData(
           bairroFilter,
           unitFilter,
           years,
-          undefined,
+          agents,
           maternal,
           occupations,
         );
@@ -77,6 +78,7 @@ export function useTerritoryData(
     bairroFilter,
     unitFilter,
     years,
+    agents,
     maternal,
     occupations,
   ]);

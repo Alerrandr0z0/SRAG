@@ -20,6 +20,7 @@ interface CitizenPanelProps {
   maternalProfile?: Epi.CitizenBootstrap['maternal_profile'] | null;
   vaccination: Epi.VaccinationProfile | null;
   genderFilter?: string[];
+  etiologicAgentFilter?: string[];
 }
 
 const CitizenPanel: React.FC<CitizenPanelProps> = ({
@@ -33,13 +34,16 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
   maternalProfile,
   vaccination,
   genderFilter = [],
+  etiologicAgentFilter = [],
 }) => {
   const isOnlyMale =
     genderFilter.length === 1 && (genderFilter[0] === 'M' || genderFilter[0] === 'Masculino');
+  const selectedAgent = etiologicAgentFilter[0] || '';
+  const showCovid = selectedAgent !== 'Influenza';
 
   // Logic to find the main manufacturer for the KPI
   const topManufacturer =
-    vaccination?.manufacturers && vaccination.manufacturers.length > 0
+    showCovid && vaccination?.manufacturers && vaccination.manufacturers.length > 0
       ? vaccination.manufacturers.sort((a, b) => b.count - a.count)[0]
       : null;
 
@@ -450,7 +454,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           <h3>Assinatura Clínica de Sintomas</h3>
         </div>
         <div className="chart-wrap" style={{ height: '600px' }}>
-          {symptomsSignature && <SymptomsSignatureGrid signature={symptomsSignature} />}
+            {symptomsSignature && (
+              <SymptomsSignatureGrid signature={symptomsSignature} selectedAgent={selectedAgent} />
+            )}
         </div>
       </article>
 
@@ -474,34 +480,40 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       )}
       */}
 
-      {/* PAINEL DE IMUNIZAÇÃO REFORMULADO */}
       <section className="vigilance-block" style={{ marginTop: '3rem' }}>
         <h3 className="block-title">Perfil de Imunização</h3>
         <div
           className="vigilance-insight-grid"
-          style={{ gridTemplateColumns: 'minmax(240px, 0.7fr) minmax(0, 1.3fr)' }}
+          style={{ gridTemplateColumns: showCovid ? 'minmax(240px, 0.7fr) minmax(0, 1.3fr)' : '1fr' }}
         >
-          <div className="stack" style={{ gap: '1rem' }}>
-            <KpiCard
-              label="Fabricante Predominante"
-              value={topManufacturer ? topManufacturer.label.split('/')[0] : 'N/A'}
-              className="vigilance-metric vigilance-metric--teal"
-            />
-            <article className="panel" style={{ padding: '1.25rem', flexGrow: 1 }}>
-              <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>
-                Distribuição de Fabricantes
-              </p>
-              <div style={{ height: '200px' }}>
-                <VigilanceDonutChart title="" data={vaccination?.manufacturers || []} />
-              </div>
-            </article>
-          </div>
+          {showCovid && (
+            <div className="stack" style={{ gap: '1rem' }}>
+              <KpiCard
+                label="Fabricante Predominante"
+                value={topManufacturer ? topManufacturer.label.split('/')[0] : 'N/A'}
+                className="vigilance-metric vigilance-metric--teal"
+              />
+              <article className="panel" style={{ padding: '1.25rem', flexGrow: 1 }}>
+                <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>
+                  Distribuição de Fabricantes
+                </p>
+                <div style={{ height: '200px' }}>
+                  <VigilanceDonutChart title="" data={vaccination?.manufacturers || []} />
+                </div>
+              </article>
+            </div>
+          )}
           <article className="panel" style={{ padding: '1.5rem' }}>
             <p className="eyebrow" style={{ marginBottom: '1rem' }}>
               Esquema por Campanha e Dose
             </p>
             <div className="chart-wrap" style={{ height: '300px' }}>
-              {vaccination && <VaccinationProfileChart vaccinationData={vaccination} />}
+              {vaccination && (
+                <VaccinationProfileChart
+                  vaccinationData={vaccination}
+                  selectedAgent={selectedAgent}
+                />
+              )}
             </div>
           </article>
         </div>

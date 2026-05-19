@@ -5,9 +5,10 @@ import { SymptomSignature } from '../../types/epi';
 
 interface Props {
   signature: SymptomSignature;
+  selectedAgent?: string;
 }
 
-const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
+const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' }) => {
   const { labels = [], bands = [], matrices = {} } = signature || {};
 
   const option = useMemo(() => {
@@ -36,7 +37,11 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
       { key: 'covid', title: 'COVID-19' },
       { key: 'gripe', title: 'Influenza' },
       { key: 'vsr', title: 'VSR' },
-    ].filter((p) => !!matrices[p.key as keyof typeof matrices]);
+    ].filter((p) => {
+      if (selectedAgent === 'COVID-19') return p.key === 'covid' && !!matrices[p.key as keyof typeof matrices];
+      if (selectedAgent === 'Influenza') return p.key === 'gripe' && !!matrices[p.key as keyof typeof matrices];
+      return !!matrices[p.key as keyof typeof matrices];
+    });
 
     if (pathogens.length === 0) {
       return {
@@ -209,7 +214,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature }) => {
       yAxis: yAxes,
       series: series,
     };
-  }, [labels, bands, matrices]);
+  }, [labels, bands, matrices, selectedAgent]);
 
   const { chartRef } = useEcharts(option, [signature]);
 
