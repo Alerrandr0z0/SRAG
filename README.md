@@ -1,83 +1,48 @@
 # SRAG Mossoró/RN
 
-Sistema de vigilância epidemiológica municipal para Mossoró/RN, projetado para automatizar a análise de dados do SIVEP-Gripe e oferecer inteligência geoespacial e preditiva para apoio à decisão em saúde pública.
+Sistema de vigilância epidemiológica municipal para Mossoró/RN, automatizando análise de dados do SIVEP-Gripe com inteligência geoespacial e preditiva.
 
-## 📊 Visão Geral
+## Stack
 
-O projeto consolidou a análise de dados epidemiológicos em uma plataforma integrada de alta performance, substituindo planilhas manuais por um fluxo automatizado de engenharia:
+- **Backend:** Python 3.14, FastAPI, Pandas, DuckDB, Prophet, Kaplan-Meier
+- **Frontend:** React 19, TypeScript, Vite, ECharts, Leaflet
+- **Qualidade:** Pyright (strict), Ruff, 447 testes, 84% cobertura, Mutmut, Hypothesis
 
-1.  **Motor de Ingestão Universal:** Processamento ultrarrápido de arquivos Parquet, CSV e **XLSX** via DuckDB e desduplicação global baseada em hashes únicos.
-2.  **Backend Científico:** API FastAPI desacoplada com motor analítico vetorizado (Pandas), modelos de previsão sazonais (Facebook Prophet) e análise de sobrevivência (Kaplan-Meier).
-3.  **Engenharia de Qualidade:** Suite de **262 testes** com 87% de cobertura, integrando testes de propriedade (Hypothesis), benchmarks e testes de mutação (Mutmut) para garantir robustez matemática.
-4.  **Dashboard Inteligente:** Visualização dinâmica em React 19 com **Modo Escuro**, navegação por **Sidebar**, e integração nativa com notebooks Jupyter.
-
-## 🛠️ Arquitetura e Estrutura de Dados
-
-O projeto segue uma estrutura organizada para garantir a integridade e escalabilidade:
-
-```text
-├── data/
-│   ├── raw/           # Fontes brutas (Bronze): Parquets, CSVs e XLSX originais
-│   ├── processed/     # Dados estruturados (Silver): Banco SQLite e limites municipais
-│   ├── geojson/       # Dados prontos para consumo (Gold): Polígonos para o dashboard
-├── src/srag/          # Backend (API e Motor Analítico)
-├── frontend/          # Dashboard (React 19 + TypeScript + Vite)
-├── scripts/           # Ferramentas operacionais e orquestração
-└── tests/             # Suite de testes (Unitários, Integração e Propriedade)
-```
-
-## 🚀 Toolchain Unificada (Makefile)
-
-Gerencie todo o ciclo de vida do projeto com comandos simplificados:
+## Toolchain
 
 ```bash
-# 1. Instalação e Setup (uv + npm + hooks)
-make setup
-
-# 2. Ingestão e Processamento de Dados
-make ingest
-
-# 3. Qualidade e Segurança (Lint, Tipagem Strict, Bandit)
-make lint-back   # Roda Ruff + Pyright (Strict)
-make security    # Roda Bandit + Gitleaks
-
-# 4. Suite de Testes Completa
-make test-back   # Pytest (262 testes)
-make mutation    # Teste de mutação (Mutmut + Stryker)
-
-# 5. Iniciar Sistema (Full Stack)
-make start       # Dashboard (5173), API (8000), Jupyter (8888)
-
-# 6. Iniciar com Docker
-make start-docker # Frontend (80), API (8000), Jupyter (8888)
-
-# 7. Encerrar Docker
-make stop-docker  # Encerra o stack do Compose
+make setup              # Primeira instalação (uv + npm + hooks)
+make ingest             # ETL DuckDB → SQLite
+make lint-back          # Ruff + Pyright strict
+make test-back          # 447 testes + coverage (threshold 80%)
+make fix-back           # Ruff auto-fix + format
+make security           # Bandit + Gitleaks
+make mutation-incr      # Mutação incremental (rápido, para dev)
+make property-test      # Testes de propriedade (Hypothesis)
+make bench              # Benchmarks de performance
+make start              # Dashboard (5173) + API (8000) + Jupyter (8888)
+make observability      # Logfire dashboard
+make update-graph       # Knowledge graph (graphify)
 ```
 
-### Acesso público via Docker
+## Arquitetura
 
-- `Frontend`: http://localhost
-- `Backend`: http://localhost:8000
-- `Jupyter`: http://localhost:8888/lab/
+```
+data/               # raw/ → processed/ → geojson/
+src/srag/           # API + Motor analítico vetorizado
+  ├── api/          # FastAPI routers + TypedDicts
+  ├── data/         # Analytics, database, loader, geospatial
+  ├── pipelines/    # SIVEP ingestão e validação
+  └── models/       # Forecasting (Prophet)
+frontend/           # React 19 + ECharts + Leaflet
+scripts/            # ingest_data.py, port_control.sh
+```
 
-## 🛡️ Padrões de Engenharia
+## Endpoints principais
 
-- **Tipagem Estrita:** **Pyright (Strict Mode)** para máxima segurança em tempo de desenvolvimento.
-- **Segurança Blindada:** Auditoria automática contra injeção de SQL e vazamento de segredos (Gitleaks) via hooks de pre-commit.
-- **Performance:** Todas as lógicas analíticas são **vetorizadas**, eliminando loops lentos e garantindo escalabilidade para grandes bases de dados.
-- **Observabilidade:** Integração opcional com **Logfire** para monitoramento de performance de queries e erros de validação Pydantic.
-
-## 🧠 Inteligência e Funcionalidades
-
-- **Auditoria de Dados:** Painel exclusivo de completude de campos críticos.
-- **Filtros Avançados:** Busca textual de ocupações e filtros maternos inteligentes.
-- **Ciência de Dados:** Notebooks Jupyter Lab integrados diretamente no dashboard.
-- **Mapa Térmico:** Visualização de densidade com suporte a áreas urbanas e rurais.
-
-## 🔗 Principais Endpoints
-
-- `GET /data_completeness`: Score de qualidade e preenchimento.
-- `GET /trends`: Histórico e previsão sazonal.
-- `GET /laboratory_network`: Subtipagem Influenza, variantes COVID e latência diagnóstica.
-- `GET /vaccine_survival`: Curvas de eficácia vacinal no tempo.
+- `GET /summary` — Resumo epidemiológico
+- `GET /trends` — Histórico + previsão sazonal
+- `GET /laboratory_network` — 25+ sub-métricas laboratoriais
+- `GET /vaccine_survival` — Curvas Kaplan-Meier (COVID + Influenza)
+- `GET /citizen_bootstrap` — 10 perfis demográficos
+- `GET /geo/*` — Mapas coropléticos, setores rurais, heatpoints
