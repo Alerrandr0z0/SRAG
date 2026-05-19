@@ -69,7 +69,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
         <div className="section-header">
           <div>
             <h3>Mapa territorial</h3>
-            <p className="meta">Distribuição geográfica das notificações</p>
+            <p className="meta">Cada bairro recebe uma cor na escala amarelo→vermelho conforme sua posição entre 0 e o bairro com mais casos — proporção linear direta</p>
           </div>
           <div className="filters">
             <label>

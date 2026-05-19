@@ -41,8 +41,6 @@ function App() {
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [virusDetail, setVirusDetail] = useState('summary');
   const [dashboardYear, setDashboardYear] = useState<number[]>([]);
-  const [showForecast, setShowForecast] = useState(false);
-
   // Citizen State
   const [citizenTab, setCitizenTab] = useState<string[]>([]);
   const [raceFilter, setRaceFilter] = useState<string[]>([]);
@@ -76,6 +74,7 @@ function App() {
   );
 
   useEffect(() => {
+    if (panel !== 'vigilancia') return;
     let active = true;
     api
       .fetchVirus(
@@ -98,9 +97,10 @@ function App() {
     return () => {
       active = false;
     };
-  }, [virusDetail, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
+  }, [panel, virusDetail, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
 
   useEffect(() => {
+    if (panel !== 'vigilancia') return;
     let active = true;
     api
       .fetchTrends(
@@ -124,7 +124,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [weeksWindow, lookback, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
+  }, [panel, weeksWindow, lookback, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
 
   // Lazy Loaded Data Hooks
   const territoryData = useTerritoryData(
@@ -361,134 +361,7 @@ function App() {
               <KpiCard label="Letalidade" value={kpis.death} />
             </section>
 
-            <section className="main-grid">
-              <article className="panel">
-                <div className="section-header">
-                  <div className="stack" style={{ gap: 4 }}>
-                    <h3 style={{ margin: 0 }}>Histórico de Notificações</h3>
-                    {currentTrends && (
-                      <div
-                        className="filters"
-                        style={{ fontSize: '12px', color: '#64748b', gap: 12 }}
-                      >
-                        <span>
-                          Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
-                        </span>
-                        <span>
-                          Média:{' '}
-                          <b>
-                            {(
-                              currentTrends.history.reduce((s, h) => s + h.total, 0) /
-                              (currentTrends.history.length || 1)
-                            ).toFixed(1)}
-                            /semana
-                          </b>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="filters">
-                    <button
-                      type="button"
-                      className={`pill-btn ${showForecast ? 'active' : ''}`}
-                      onClick={() => setShowForecast(!showForecast)}
-                      style={{
-                        padding: '0.4rem 1rem',
-                        border: showForecast
-                          ? '1px solid var(--primary-teal)'
-                          : '1px solid #cbd5e1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="14"
-                        height="14"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{ opacity: showForecast ? 1 : 0.6 }}
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                      {showForecast ? 'Ocultar Previsão' : 'Mostrar Previsão'}
-                    </button>
-                    <div className="pill-group">
-                      {[
-                        { v: '0', l: 'Tudo' },
-                        { v: '52', l: '52s' },
-                        { v: '26', l: '26s' },
-                        { v: '12', l: '12s' },
-                      ].map((opt) => (
-                        <button
-                          key={opt.v}
-                          className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
-                          onClick={() => setWeeksWindow(opt.v)}
-                        >
-                          {opt.l}
-                        </button>
-                      ))}
-                    </div>
-                    <select value={seriesMode} onChange={(e) => setSeriesMode(e.target.value)}>
-                      <option value="weekly">Semanal</option>
-                      <option value="cumulative">Acumulada</option>
-                      <option value="composition">Composição</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="chart-wrap">
-                  {currentTrends && (
-                    <TrendChart
-                      history={currentTrends.history}
-                      forecast={currentTrends.forecast}
-                      thresholds={currentTrends.thresholds}
-                      composition={currentTrends.composition}
-                      baseCumulative={currentTrends.base_cumulative}
-                      seriesMode={seriesMode}
-                      weeksWindow={weeksWindow}
-                      showForecast={showForecast}
-                    />
-                  )}
-                </div>
-              </article>
-            </section>
           </>
-        )}
-
-        {panel !== 'notebooks' && (
-          <section className="secondary-grid">
-            <article className="panel viral-profile-panel">
-              <div className="section-header">
-                <h3>Perfil viral</h3>
-                <select
-                  value={virusDetail}
-                  onChange={(e) => setVirusDetail(e.target.value)}
-                  onFocus={() => {
-                    if (agentFilter[0] && virusDetail === 'summary') {
-                      setVirusDetail(agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed');
-                    }
-                  }}
-                >
-                  {!agentFilter[0] && <option value="summary">Resumido</option>}
-                  {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
-                  {agentFilter[0] !== 'Influenza' && (
-                    <option value="covid_detailed">Detalhado COVID-19</option>
-                  )}
-                  {agentFilter[0] !== 'COVID-19' && (
-                    <option value="influenza_detailed">Detalhado Influenza</option>
-                  )}
-                </select>
-              </div>
-              <div className="chart-wrap">
-                {virus && <VirusProfileChart data={virus} />}
-              </div>
-            </article>
-          </section>
         )}
 
         <section className="main-grid">
@@ -543,13 +416,109 @@ function App() {
           )}
 
           {panel === 'vigilancia' && (
-            <article className="panel">
-              <VigilancePanel
-                loading={vigilanceLoading}
-                laboratoryNetwork={data?.laboratoryNetwork}
-                etiologicAgentFilter={agentFilter}
-              />
-            </article>
+            <>
+              <section className="main-grid">
+                <article className="panel">
+                  <div className="section-header">
+                    <div className="stack" style={{ gap: 4 }}>
+                      <h3 style={{ margin: 0 }}>Histórico de Notificações</h3>
+                      {currentTrends && (
+                        <div
+                          className="filters"
+                          style={{ fontSize: '12px', color: '#64748b', gap: 12 }}
+                        >
+                          <span>
+                            Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
+                          </span>
+                          <span>
+                            Média:{' '}
+                            <b>
+                              {(
+                                currentTrends.history.reduce((s, h) => s + h.total, 0) /
+                                (currentTrends.history.length || 1)
+                              ).toFixed(1)}
+                              /semana
+                            </b>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="filters">
+                      <div className="pill-group">
+                        {[
+                          { v: '0', l: 'Tudo' },
+                          { v: '52', l: '52s' },
+                          { v: '26', l: '26s' },
+                          { v: '12', l: '12s' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.v}
+                            className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
+                            onClick={() => setWeeksWindow(opt.v)}
+                          >
+                            {opt.l}
+                          </button>
+                        ))}
+                      </div>
+                      <select value={seriesMode} onChange={(e) => setSeriesMode(e.target.value)}>
+                        <option value="weekly">Semanal</option>
+                        <option value="cumulative">Acumulada</option>
+                        <option value="composition">Composição</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="chart-wrap">
+                    {currentTrends && (
+                      <TrendChart
+                        history={currentTrends.history}
+                        forecast={currentTrends.forecast}
+                        thresholds={currentTrends.thresholds}
+                        composition={currentTrends.composition}
+                        baseCumulative={currentTrends.base_cumulative}
+                        seriesMode={seriesMode}
+                        weeksWindow={weeksWindow}
+                        showForecast={false}
+                      />
+                    )}
+                  </div>
+                </article>
+              </section>
+              <section className="secondary-grid">
+                <article className="panel viral-profile-panel">
+                  <div className="section-header">
+                    <h3>Perfil viral</h3>
+                    <select
+                      value={virusDetail}
+                      onChange={(e) => setVirusDetail(e.target.value)}
+                      onFocus={() => {
+                        if (agentFilter[0] && virusDetail === 'summary') {
+                          setVirusDetail(agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed');
+                        }
+                      }}
+                    >
+                      {!agentFilter[0] && <option value="summary">Resumido</option>}
+                      {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
+                      {agentFilter[0] !== 'Influenza' && (
+                        <option value="covid_detailed">Detalhado COVID-19</option>
+                      )}
+                      {agentFilter[0] !== 'COVID-19' && (
+                        <option value="influenza_detailed">Detalhado Influenza</option>
+                      )}
+                    </select>
+                  </div>
+                  <div className="chart-wrap">
+                    {virus && <VirusProfileChart data={virus} />}
+                  </div>
+                </article>
+              </section>
+              <article className="panel">
+                <VigilancePanel
+                  loading={vigilanceLoading}
+                  laboratoryNetwork={data?.laboratoryNetwork}
+                  etiologicAgentFilter={agentFilter}
+                />
+              </article>
+            </>
           )}
 
           {panel === 'auditoria' && (
