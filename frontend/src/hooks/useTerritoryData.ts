@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
 export function useTerritoryData(
   active: boolean,
-  mapZoneMode: string,
+  _mapZoneMode: string,
   profile?: string[],
   raceFilter?: string[],
   genderFilter?: string[],
@@ -12,15 +12,26 @@ export function useTerritoryData(
   bairroFilter?: string[],
   unitFilter?: string[],
   years?: number[],
+  agents?: string[],
   maternal?: string[],
-  occupations?: string[]
+  occupations?: string[],
 ) {
-  const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({ bairros: [], zonas: [] });
+  const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({
+    bairros: [],
+    zonas: [],
+  });
   const [boundary, setBoundary] = useState<unknown>(null);
   const [choropleth, setChoropleth] = useState<Epi.TerritoryBootstrap['choropleth'] | null>(null);
-  const [ruralData, setRuralData] = useState<{ sectors: Array<{ sector: string; count: number }>; points: unknown[]; center: { lat: number; lon: number } } | null>(null);
+  const [ruralData, setRuralData] = useState<{
+    sectors: Array<{ sector: string; count: number }>;
+    points: unknown[];
+    center: { lat: number; lon: number };
+  } | null>(null);
   const [ruralSectorsGeo, setRuralSectorsGeo] = useState<unknown>(null);
-  const [entities, setEntities] = useState<Epi.TerritoryBootstrap['territory_entities']>({ urban_bairros: [], rural_comunidades: [] });
+  const [entities, setEntities] = useState<Epi.TerritoryBootstrap['territory_entities']>({
+    urban_bairros: [],
+    rural_comunidades: [],
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,7 +41,18 @@ export function useTerritoryData(
     async function loadBootstrap() {
       setLoading(true);
       try {
-         const bootstrap = await api.fetchTerritoryBootstrap(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations);
+        const bootstrap = await api.fetchTerritoryBootstrap(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternal,
+          occupations,
+        );
         if (isMounted) {
           setTerritory(bootstrap.territory);
           setBoundary(bootstrap.boundary);
@@ -38,14 +60,28 @@ export function useTerritoryData(
           setEntities(bootstrap.territory_entities);
         }
       } catch (e) {
-        console.error("Failed to load territory bootstrap", e);
+        console.error('Failed to load territory bootstrap', e);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
     loadBootstrap();
-    return () => { isMounted = false; };
-  }, [active, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, maternal, occupations]);
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    active,
+    profile,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    agents,
+    maternal,
+    occupations,
+  ]);
 
   useEffect(() => {
     if (!active) return;
@@ -53,20 +89,20 @@ export function useTerritoryData(
 
     async function loadRuralData() {
       try {
-         const [points, geo] = await Promise.all([
-           api.fetchRuralHeatpoints(),
-           api.fetchRuralSectorsGeo(),
-         ]);
-          if (isMounted) {
-            setRuralData({
-              sectors: points.sectors,
-              points: [],
-              center: points.center,
-            });
-            setRuralSectorsGeo(geo);
-          }
+        const [points, geo] = await Promise.all([
+          api.fetchRuralHeatpoints(),
+          api.fetchRuralSectorsGeo(),
+        ]);
+        if (isMounted) {
+          setRuralData({
+            sectors: points.sectors,
+            points: [],
+            center: points.center,
+          });
+          setRuralSectorsGeo(geo);
+        }
       } catch (e) {
-        console.error("Failed to load rural data", e);
+        console.error('Failed to load rural data', e);
         if (isMounted) {
           setRuralData(null);
           setRuralSectorsGeo(null);
@@ -74,7 +110,9 @@ export function useTerritoryData(
       }
     }
     loadRuralData();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [active]);
 
   return { territory, boundary, choropleth, ruralData, ruralSectorsGeo, entities, loading };

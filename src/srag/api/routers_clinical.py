@@ -49,6 +49,7 @@ def get_occupations(
         bairros=filters.bairros,
         years=filters.years,
     )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     return compute_occupation_profile(df, top_n=limit)
 
 
@@ -66,6 +67,7 @@ def clinical_flow(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -133,6 +135,7 @@ def hospitalization_duration(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -163,6 +166,7 @@ def vaccination_profile(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -229,6 +233,7 @@ def citizen_bootstrap(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -267,6 +272,7 @@ def clinical_timing(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
@@ -288,6 +294,7 @@ def vaccine_survival(
         filters.zonas,
         filters.bairros,
         filters.unidades,
+        years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
     )

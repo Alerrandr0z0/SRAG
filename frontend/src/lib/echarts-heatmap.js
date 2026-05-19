@@ -1,32 +1,32 @@
-import * as echarts from "echarts/core";
 import {
-  HeatmapChart,
-  SankeyChart,
   BarChart,
+  BoxplotChart,
+  EffectScatterChart,
+  HeatmapChart,
   LineChart,
   PieChart,
-  BoxplotChart,
+  SankeyChart,
   ScatterChart,
-  EffectScatterChart
-} from "echarts/charts";
+} from 'echarts/charts';
 import {
-  TooltipComponent,
-  GridComponent,
-  VisualMapComponent,
-  LegendComponent,
-  TitleComponent,
-  MarkLineComponent,
-  MarkAreaComponent,
-  MarkPointComponent,
-  DataZoomComponent,
-  DatasetComponent,
-  TransformComponent,
   AriaComponent,
+  DatasetComponent,
+  DataZoomComponent,
   GraphicComponent,
-  ToolboxComponent
-} from "echarts/components";
-import { LabelLayout, UniversalTransition } from "echarts/features";
-import { CanvasRenderer } from "echarts/renderers";
+  GridComponent,
+  LegendComponent,
+  MarkAreaComponent,
+  MarkLineComponent,
+  MarkPointComponent,
+  TitleComponent,
+  ToolboxComponent,
+  TooltipComponent,
+  TransformComponent,
+  VisualMapComponent,
+} from 'echarts/components';
+import * as echarts from 'echarts/core';
+import { LabelLayout, UniversalTransition } from 'echarts/features';
+import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([
   TooltipComponent,

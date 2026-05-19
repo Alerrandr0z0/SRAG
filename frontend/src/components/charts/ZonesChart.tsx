@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../../constants';
-import * as Epi from '../../types/epi';
 import { useChartJs } from '../../hooks/useChartJs';
+import * as Epi from '../../types/epi';
 
 interface ZonesChartProps {
   data: Epi.ZoneStats[];
@@ -13,11 +13,13 @@ const ZonesChart: React.FC<ZonesChartProps> = ({ data }) => {
       type: 'bar',
       data: {
         labels: data.map((z) => z.zona),
-        datasets: [{
-          data: data.map((z) => z.count),
-          backgroundColor: COLORS.PRIMARY,
-          borderRadius: 7,
-        }],
+        datasets: [
+          {
+            data: data.map((z) => z.count),
+            backgroundColor: COLORS.PRIMARY,
+            borderRadius: 7,
+          },
+        ],
       },
       options: {
         maintainAspectRatio: false,

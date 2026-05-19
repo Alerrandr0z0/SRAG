@@ -3,6 +3,7 @@ export interface SummaryData {
   uti_total: number;
   death_rate: number;
   total: number;
+  notification_total: number;
   available_years: number[];
 }
 
@@ -86,7 +87,13 @@ export interface TerritoryBootstrap {
 }
 
 export interface LaboratoryNetwork {
-  labs: Array<{ LAB_REF?: string; lab_ref?: string; tested_cases: number; positive_count?: number; positive_rate?: number }>;
+  labs: Array<{
+    LAB_REF?: string;
+    lab_ref?: string;
+    tested_cases: number;
+    positive_count?: number;
+    positive_rate?: number;
+  }>;
   overall: {
     tested_cases: number;
     positive_rate: number;
@@ -103,7 +110,12 @@ export interface LaboratoryNetwork {
   };
   treatment_metrics?: {
     antiviral_latency: { boxplot_data: number[]; median: number; count: number };
-    antiviral_outcome_impact: Array<{ group: string; cure_rate: number; death_rate: number; total: number }>;
+    antiviral_outcome_impact: Array<{
+      group: string;
+      cure_rate: number;
+      death_rate: number;
+      total: number;
+    }>;
   };
   agent_lethality_heatmap?: {
     agents: string[];
@@ -115,7 +127,12 @@ export interface LaboratoryNetwork {
     labels: string[];
     matrix: number[][];
   };
-  positivity_trend: Array<{ epi_week: string; tested: number; positive: number; positivity_rate: number }>;
+  positivity_trend: Array<{
+    epi_week: string;
+    tested: number;
+    positive: number;
+    positivity_rate: number;
+  }>;
   influenza_subtypes: Array<{ label: string; count: number }>;
   antiviral_usage: { adherence_rate: number; total_indicated: number; treated: number };
   closure_criteria: Array<{ label: string; count: number }>;
@@ -199,7 +216,7 @@ export interface VaccineSurvival {
 export interface AggregatedTimeline {
   perfil: string;
   status_key: string;
-  gripe_status?: 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado';
+  gripe_status?: 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado' | 'inconsistencia';
   mediana_dose_sintoma: number | null;
   doseP25?: number | null;
   doseP75?: number | null;

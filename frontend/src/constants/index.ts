@@ -8,14 +8,7 @@ export const COLORS = {
   MUTED: '#94a3b8', // Slate 400
   BACKGROUND: '#f8fafc',
   BORDER: '#e2e8f0',
-  CHART: [
-    '#0f766e',
-    '#1d4ed8',
-    '#b45309',
-    '#047857',
-    '#dc2626',
-    '#94a3b8',
-  ],
+  CHART: ['#0f766e', '#1d4ed8', '#b45309', '#047857', '#dc2626', '#94a3b8'],
   HEATMAP: ['#eff6ff', '#93c5fd', '#1d4ed8'],
 };
 

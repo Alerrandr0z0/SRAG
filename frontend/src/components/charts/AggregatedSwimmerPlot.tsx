@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { AggregatedTimeline } from '../../types/epi';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { COLORS } from '../../constants';
+import { useThemeMode } from '../../hooks/useThemeMode';
+import { AggregatedTimeline } from '../../types/epi';
 
-type GripeStatus = 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado';
+type GripeStatus = 'protegido' | 'vencida' | 'nao_vacinado' | 'ignorado' | 'inconsistencia';
 
 export interface EnrichedTimeline extends AggregatedTimeline {
   gripe_status?: GripeStatus;
@@ -52,22 +53,24 @@ const GRIPE_LABELS: Record<GripeStatus, string> = {
   vencida: 'Vencida',
   nao_vacinado: 'Não vacinada',
   ignorado: 'Ignorado',
+  inconsistencia: 'Inconsistente',
 };
 
-const MARKER_LEGEND: Array<{ kind: MarkerKind; label: string; hint: string }> = [
-  { kind: 'dose', label: 'Última dose', hint: 'Círculo' },
-  { kind: 'internacao', label: 'Internação', hint: 'Losango' },
-  { kind: 'cura', label: 'Cura predominante', hint: 'Estrela' },
-  { kind: 'obito', label: 'Óbito predominante', hint: 'X' },
-  { kind: 'presintoma', label: 'Pré-sintoma', hint: 'Traço pontilhado' },
+const MARKER_LEGEND: Array<{ kind: MarkerKind; label: string; hint?: string }> = [
+  { kind: 'dose', label: 'Última dose' },
+  { kind: 'internacao', label: 'Internação' },
+  { kind: 'cura', label: 'Cura predominante' },
+  { kind: 'obito', label: 'Óbito predominante' },
+  { kind: 'presintoma', label: 'Pré-sintoma' },
   { kind: 'bandaiqr', label: 'Banda IQR', hint: 'Faixa P25–P75' },
 ];
 
 const GRIPE_LEGEND: Array<{ status: GripeStatus; label: string; hint: string }> = [
   { status: 'protegido', label: 'Protegida', hint: '≤365d da campanha' },
   { status: 'vencida', label: 'Vencida', hint: '>365d da campanha' },
-  { status: 'nao_vacinado', label: 'Não vacinada', hint: 'Sem vacina' },
-  { status: 'ignorado', label: 'Ignorado', hint: 'Sem classificação' },
+  { status: 'nao_vacinado', label: 'Não vacinada', hint: 'Sem registro de vacinação' },
+  { status: 'ignorado', label: 'Ignorado', hint: 'Dados não informados' },
+  { status: 'inconsistencia', label: 'Inconsistente', hint: 'Dados conflitantes' },
 ];
 
 const LEGEND_DIAMOND_PATH = d3.symbol().type(d3.symbolDiamond).size(92)() ?? undefined;
@@ -84,6 +87,8 @@ const getGripeColor = (status: GripeStatus | undefined): string => {
       return '#d97706';
     case 'nao_vacinado':
       return '#dc2626';
+    case 'inconsistencia':
+      return '#7c3aed';
     default:
       return '#94a3b8';
   }
@@ -146,7 +151,13 @@ const SwimmerLegendIcon: React.FC<{ kind: MarkerKind }> = ({ kind }) => {
       return (
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
           <g transform="translate(12 12)">
-            <path d={LEGEND_CROSS_PATH} transform="rotate(45)" fill={COLORS.DANGER} stroke="white" strokeWidth="1.2" />
+            <path
+              d={LEGEND_CROSS_PATH}
+              transform="rotate(45)"
+              fill={COLORS.DANGER}
+              stroke="white"
+              strokeWidth="1.2"
+            />
           </g>
         </svg>
       );
@@ -168,7 +179,17 @@ const SwimmerLegendIcon: React.FC<{ kind: MarkerKind }> = ({ kind }) => {
     case 'bandaiqr':
       return (
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="7" width="18" height="10" rx="2" fill="#0f766e" fillOpacity="0.15" stroke="#0f766e" strokeOpacity="0.3" />
+          <rect
+            x="3"
+            y="7"
+            width="18"
+            height="10"
+            rx="2"
+            fill="#0f766e"
+            fillOpacity="0.15"
+            stroke="#0f766e"
+            strokeOpacity="0.3"
+          />
         </svg>
       );
   }
@@ -176,21 +197,17 @@ const SwimmerLegendIcon: React.FC<{ kind: MarkerKind }> = ({ kind }) => {
 
 interface AggregatedSwimmerPlotProps {
   data: EnrichedTimeline[];
+  swimmerVirus?: 'covid' | 'gripe';
 }
 
-const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) => {
+const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({
+  data,
+  swimmerVirus = 'gripe',
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTheme(document.documentElement.getAttribute('data-theme') || 'light');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
+  const theme = useThemeMode();
 
   const themeColors = useMemo(() => {
     const isDark = theme === 'dark';
@@ -213,7 +230,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
     if (!svgRef.current || !data.length) return;
 
     const colorByKey = Object.fromEntries(
-      data.map(d => [d.perfil, getGripeColor(d.gripe_status)]),
+      data.map((d) => [d.perfil, getGripeColor(d.gripe_status)]),
     ) as Record<string, string>;
 
     const sorted = [...data].sort((a, b) => {
@@ -225,15 +242,16 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       return aT - bT;
     });
 
-    const dividerIdx = sorted.findIndex(d => !isObito(d));
-    const nMax = d3.max(sorted, d => d.n) ?? 1;
+    const dividerIdx = sorted.findIndex((d) => !isObito(d));
+    const nMax = d3.max(sorted, (d) => d.n) ?? 1;
     const strokeW = (d: EnrichedTimeline) => 1.5 + (d.n / nMax) * 4.5;
 
-    const MARGIN = { top: 76, right: 96, bottom: 76, left: 250 };
+    const totalWidth = svgRef.current.clientWidth || 900;
+    const leftMargin = totalWidth < 600 ? 140 : 250;
+    const MARGIN = { top: 76, right: 96, bottom: 76, left: leftMargin };
     const ROW_H = 68;
     const INLINE_W = 52;
-    const totalWidth = svgRef.current.clientWidth || 900;
-    const CW = Math.max(320, totalWidth - MARGIN.left - MARGIN.right);
+    const CW = Math.max(280, totalWidth - MARGIN.left - MARGIN.right);
     const CH = sorted.length * ROW_H;
 
     const svg = d3.select(svgRef.current);
@@ -242,14 +260,23 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
 
     const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
 
-    const xMin = d3.min(sorted, d => Math.min(d.mediana_dose_sintoma ?? 0, d.doseP25 ?? 0)) ?? -180;
-    const xMax = d3.max(sorted, d => {
-      const base = (d.mediana_sintoma_internacao ?? 0) + (d.mediana_internacao_desfecho ?? 0);
-      return base + (d.desfP75 ?? 0);
-    }) ?? 60;
+    const xMin =
+      d3.min(sorted, (d) => Math.min(d.mediana_dose_sintoma ?? 0, d.doseP25 ?? 0)) ?? -180;
+    const xMax =
+      d3.max(sorted, (d) => {
+        const base = (d.mediana_sintoma_internacao ?? 0) + (d.mediana_internacao_desfecho ?? 0);
+        return base + (d.desfP75 ?? 0);
+      }) ?? 60;
 
-    const xScale = d3.scaleLinear().domain([xMin - 25, xMax + 40]).range([0, CW]);
-    const yScale = d3.scaleBand().domain(sorted.map(d => d.perfil)).range([0, CH]).padding(0.34);
+    const xScale = d3
+      .scaleLinear()
+      .domain([xMin - 25, xMax + 40])
+      .range([0, CW]);
+    const yScale = d3
+      .scaleBand()
+      .domain(sorted.map((d) => d.perfil))
+      .range([0, CH])
+      .padding(0.34);
 
     // Background rectangles
     g.append('rect')
@@ -320,16 +347,32 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
 
     g.append('g')
       .attr('transform', `translate(0, ${CH})`)
-      .call(d3.axisBottom(xScale).ticks(8).tickSize(-CH).tickFormat(() => ''))
-      .call(gg => gg.select('.domain').remove())
-      .call(gg => gg.selectAll('.tick line').attr('stroke', themeColors.border).attr('stroke-dasharray', '3,3'));
+      .call(
+        d3
+          .axisBottom(xScale)
+          .ticks(8)
+          .tickSize(-CH)
+          .tickFormat(() => ''),
+      )
+      .call((gg) => gg.select('.domain').remove())
+      .call((gg) =>
+        gg
+          .selectAll('.tick line')
+          .attr('stroke', themeColors.border)
+          .attr('stroke-dasharray', '3,3'),
+      );
 
     g.append('g')
       .attr('transform', `translate(0, ${CH})`)
-      .call(d3.axisBottom(xScale).ticks(8).tickFormat(d => `${+d}d`))
-      .call(gg => gg.select('.domain').attr('stroke', themeColors.border))
-      .call(gg => gg.selectAll('.tick line').attr('stroke', themeColors.border))
-      .call(gg => gg.selectAll('text').attr('fill', themeColors.text).attr('font-size', '10px'));
+      .call(
+        d3
+          .axisBottom(xScale)
+          .ticks(8)
+          .tickFormat((d) => `${+d}d`),
+      )
+      .call((gg) => gg.select('.domain').attr('stroke', themeColors.border))
+      .call((gg) => gg.selectAll('.tick line').attr('stroke', themeColors.border))
+      .call((gg) => gg.selectAll('text').attr('fill', themeColors.text).attr('font-size', '10px'));
 
     const updateTooltip = (event: PointerEvent, d: EnrichedTimeline, color: string) => {
       const container = chartWrapRef.current;
@@ -338,25 +381,40 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       const width = 320;
       const height = 240;
       setTooltip({
-        x: Math.max(12, Math.min(event.clientX - rect.left + 16, Math.max(12, rect.width - width - 12))),
-        y: Math.max(12, Math.min(event.clientY - rect.top - 18, Math.max(12, rect.height - height - 12))),
+        x: Math.max(
+          12,
+          Math.min(event.clientX - rect.left + 16, Math.max(12, rect.width - width - 12)),
+        ),
+        y: Math.max(
+          12,
+          Math.min(event.clientY - rect.top - 18, Math.max(12, rect.height - height - 12)),
+        ),
         title: perfilLabel(d.perfil),
         badge: getGripeLabel(d.gripe_status),
         badgeColor: color,
         outcome: isObito(d) ? 'Óbito predominante' : 'Cura predominante',
         outcomeColor: isObito(d) ? COLORS.DANGER : COLORS.SUCCESS,
-        chips: [{ label: 'N', value: d.n.toLocaleString('pt-BR') }, { label: 'UTI', value: `${d.uti_pct}%`, color: getUtiColor(d.uti_pct) }],
+        chips: [
+          { label: 'N', value: d.n.toLocaleString('pt-BR') },
+          { label: 'UTI', value: `${d.uti_pct}%`, color: getUtiColor(d.uti_pct) },
+        ],
         metrics: [
           { label: 'Última dose', value: formatBeforeSymptoms(d.mediana_dose_sintoma) },
-          { label: 'Sintomas → internação', value: `${formatDays(d.mediana_sintoma_internacao)} · ${formatRange(d.internP25, d.internP75)}` },
-          { label: 'Internação → desfecho', value: `${formatDays(d.mediana_internacao_desfecho)} · ${formatRange(d.desfP25, d.desfP75)}` },
+          {
+            label: 'Sintomas → internação',
+            value: `${formatDays(d.mediana_sintoma_internacao)} · ${formatRange(d.internP25, d.internP75)}`,
+          },
+          {
+            label: 'Internação → desfecho',
+            value: `${formatDays(d.mediana_internacao_desfecho)} · ${formatRange(d.desfP25, d.desfP75)}`,
+          },
           { label: 'Cura', value: formatPct(d.taxa_cura), color: COLORS.SUCCESS },
           { label: 'Óbito', value: formatPct(d.taxa_obito), color: COLORS.DANGER },
         ],
       });
     };
 
-    sorted.forEach(raw => {
+    sorted.forEach((raw) => {
       const d = raw as EnrichedTimeline;
       const cy = yScale(d.perfil)! + yScale.bandwidth() / 2;
       const color = colorByKey[d.perfil] ?? '#94a3b8';
@@ -367,12 +425,15 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
       const doseP25X = d.doseP25 != null ? xScale(d.doseP25) : null;
       const internX = xScale(d.mediana_sintoma_internacao ?? 0);
       const internP75X = xScale(d.internP75 ?? 0);
-      const desfX = xScale((d.mediana_sintoma_internacao ?? 0) + (d.mediana_internacao_desfecho ?? 0));
+      const desfX = xScale(
+        (d.mediana_sintoma_internacao ?? 0) + (d.mediana_internacao_desfecho ?? 0),
+      );
       const desfP75X = xScale((d.mediana_sintoma_internacao ?? 0) + (d.desfP75 ?? 0));
 
       const row = g.append('g').datum(d).attr('class', 'cohort').style('cursor', 'pointer');
 
-      row.append('rect')
+      row
+        .append('rect')
         .attr('class', 'row-hover-bg')
         .attr('x', -MARGIN.left + 4)
         .attr('y', cy - yScale.bandwidth() / 2 - 8)
@@ -383,99 +444,288 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
         .attr('stroke', themeColors.border)
         .attr('opacity', 0);
 
-      row.append('text')
+      row
+        .append('text')
         .attr('x', -MARGIN.left + 12)
         .attr('y', cy - 4)
-        .attr('font-size', '13px')
+        .attr('font-size', totalWidth < 600 ? '11px' : '13px')
         .attr('font-weight', '700')
         .attr('fill', themeColors.main)
         .text(perfilLabel(d.perfil));
 
-      const sub = row.append('text')
+      const sub = row
+        .append('text')
         .attr('x', -MARGIN.left + 12)
         .attr('y', cy + 10)
-        .attr('font-size', '10px')
+        .attr('font-size', totalWidth < 600 ? '9px' : '10px')
         .attr('fill', themeColors.text)
         .style('font-variant-numeric', 'tabular-nums');
 
       sub.append('tspan').text(`N=${d.n.toLocaleString('pt-BR')} · `);
-      sub.append('tspan').attr('fill', getUtiColor(d.uti_pct)).attr('font-weight', '700').text(`UTI ${d.uti_pct}%`);
+      sub
+        .append('tspan')
+        .attr('fill', getUtiColor(d.uti_pct))
+        .attr('font-weight', '700')
+        .text(`UTI ${d.uti_pct}%`);
 
       if (doseP25X != null) {
-        row.append('rect').attr('x', doseP25X).attr('y', cy - bandH / 2).attr('width', xScale(0) - doseP25X).attr('height', bandH).attr('fill', color).attr('opacity', 0.1).attr('rx', 2);
+        row
+          .append('rect')
+          .attr('x', doseP25X)
+          .attr('y', cy - bandH / 2)
+          .attr('width', xScale(0) - doseP25X)
+          .attr('height', bandH)
+          .attr('fill', color)
+          .attr('opacity', 0.1)
+          .attr('rx', 2);
       }
-      row.append('rect').attr('x', xScale(0)).attr('y', cy - bandH / 2).attr('width', internP75X - xScale(0)).attr('height', bandH).attr('fill', color).attr('opacity', 0.15).attr('rx', 2);
-      row.append('rect').attr('x', internX).attr('y', cy - bandH / 2).attr('width', desfP75X - internX).attr('height', bandH).attr('fill', color).attr('opacity', 0.2).attr('rx', 2);
+      row
+        .append('rect')
+        .attr('x', xScale(0))
+        .attr('y', cy - bandH / 2)
+        .attr('width', internP75X - xScale(0))
+        .attr('height', bandH)
+        .attr('fill', color)
+        .attr('opacity', 0.15)
+        .attr('rx', 2);
+      row
+        .append('rect')
+        .attr('x', internX)
+        .attr('y', cy - bandH / 2)
+        .attr('width', desfP75X - internX)
+        .attr('height', bandH)
+        .attr('fill', color)
+        .attr('opacity', 0.2)
+        .attr('rx', 2);
 
       if (doseX != null) {
-        row.append('line').attr('x1', doseX).attr('x2', xScale(0)).attr('y1', cy).attr('y2', cy).attr('stroke', color).attr('stroke-width', sw * 0.55).attr('stroke-dasharray', '5,3').attr('opacity', 0.6);
-        row.append('circle').attr('cx', doseX).attr('cy', cy).attr('r', 4.5).attr('fill', color).attr('stroke', themeColors.bg).attr('stroke-width', 1.5);
+        row
+          .append('line')
+          .attr('x1', doseX)
+          .attr('x2', xScale(0))
+          .attr('y1', cy)
+          .attr('y2', cy)
+          .attr('stroke', color)
+          .attr('stroke-width', sw * 0.55)
+          .attr('stroke-dasharray', '5,3')
+          .attr('opacity', 0.6);
+        row
+          .append('circle')
+          .attr('cx', doseX)
+          .attr('cy', cy)
+          .attr('r', 4.5)
+          .attr('fill', color)
+          .attr('stroke', themeColors.bg)
+          .attr('stroke-width', 1.5);
       }
-      row.append('line').attr('x1', xScale(0)).attr('x2', internX).attr('y1', cy).attr('y2', cy).attr('stroke', color).attr('stroke-width', sw);
-      row.append('line').attr('x1', internX).attr('x2', desfX).attr('y1', cy).attr('y2', cy).attr('stroke', color).attr('stroke-width', sw * 1.6);
-      row.append('path').attr('d', d3.symbol().type(d3.symbolDiamond).size(90)()).attr('transform', `translate(${internX}, ${cy})`).attr('fill', themeColors.text).attr('stroke', themeColors.bg).attr('stroke-width', 1.5);
+      row
+        .append('line')
+        .attr('x1', xScale(0))
+        .attr('x2', internX)
+        .attr('y1', cy)
+        .attr('y2', cy)
+        .attr('stroke', color)
+        .attr('stroke-width', sw);
+      row
+        .append('line')
+        .attr('x1', internX)
+        .attr('x2', desfX)
+        .attr('y1', cy)
+        .attr('y2', cy)
+        .attr('stroke', color)
+        .attr('stroke-width', sw * 1.6);
+      row
+        .append('path')
+        .attr('d', d3.symbol().type(d3.symbolDiamond).size(90)())
+        .attr('transform', `translate(${internX}, ${cy})`)
+        .attr('fill', themeColors.text)
+        .attr('stroke', themeColors.bg)
+        .attr('stroke-width', 1.5);
 
       if (!isObito(d)) {
-        row.append('path').attr('d', d3.symbol().type(d3.symbolStar).size(160)()).attr('transform', `translate(${desfX}, ${cy})`).attr('fill', COLORS.SUCCESS).attr('stroke', themeColors.bg).attr('stroke-width', 1.5);
+        row
+          .append('path')
+          .attr('d', d3.symbol().type(d3.symbolStar).size(160)())
+          .attr('transform', `translate(${desfX}, ${cy})`)
+          .attr('fill', COLORS.SUCCESS)
+          .attr('stroke', themeColors.bg)
+          .attr('stroke-width', 1.5);
       } else {
-        row.append('path').attr('d', d3.symbol().type(d3.symbolCross).size(140)()).attr('transform', `translate(${desfX}, ${cy}) rotate(45)`).attr('fill', COLORS.DANGER).attr('stroke', themeColors.bg).attr('stroke-width', 1.5);
+        row
+          .append('path')
+          .attr('d', d3.symbol().type(d3.symbolCross).size(140)())
+          .attr('transform', `translate(${desfX}, ${cy}) rotate(45)`)
+          .attr('fill', COLORS.DANGER)
+          .attr('stroke', themeColors.bg)
+          .attr('stroke-width', 1.5);
       }
 
       const barX = Math.min(desfX + 14, CW - INLINE_W - 28);
-      row.append('rect').attr('x', barX).attr('y', cy - 6).attr('width', INLINE_W * d.taxa_cura).attr('height', 12).attr('fill', COLORS.SUCCESS).attr('rx', 2);
-      row.append('rect').attr('x', barX + INLINE_W * d.taxa_cura).attr('y', cy - 6).attr('width', INLINE_W * d.taxa_obito).attr('height', 12).attr('fill', COLORS.DANGER).attr('rx', 0);
+      row
+        .append('rect')
+        .attr('x', barX)
+        .attr('y', cy - 6)
+        .attr('width', INLINE_W * d.taxa_cura)
+        .attr('height', 12)
+        .attr('fill', COLORS.SUCCESS)
+        .attr('rx', 2);
+      row
+        .append('rect')
+        .attr('x', barX + INLINE_W * d.taxa_cura)
+        .attr('y', cy - 6)
+        .attr('width', INLINE_W * d.taxa_obito)
+        .attr('height', 12)
+        .attr('fill', COLORS.DANGER)
+        .attr('rx', 0);
 
       const pct = isObito(d) ? d.taxa_obito : d.taxa_cura;
-      row.append('text').attr('x', Math.min(barX + INLINE_W + 6, CW - 4)).attr('y', cy + 4).attr('font-size', '10px').attr('font-weight', '700').attr('fill', isObito(d) ? COLORS.DANGER : COLORS.SUCCESS).text(`${(pct * 100).toFixed(0)}%`);
+      row
+        .append('text')
+        .attr('x', Math.min(barX + INLINE_W + 6, CW - 4))
+        .attr('y', cy + 4)
+        .attr('font-size', '10px')
+        .attr('font-weight', '700')
+        .attr('fill', isObito(d) ? COLORS.DANGER : COLORS.SUCCESS)
+        .text(`${(pct * 100).toFixed(0)}%`);
 
-      row.on('pointerenter', (event: PointerEvent) => {
-        row.raise();
-        g.selectAll('g.cohort').attr('opacity', subD => (subD === d ? 1 : 0.18));
-        row.select('rect.row-hover-bg').attr('opacity', 0.85);
-        updateTooltip(event, d, color);
-      }).on('pointermove', (event: PointerEvent) => updateTooltip(event, d, color))
-      .on('pointerleave', () => {
-        g.selectAll('g.cohort').attr('opacity', 1);
-        row.select('rect.row-hover-bg').attr('opacity', 0);
-        setTooltip(null);
-      });
+      row
+        .on('pointerenter', (event: PointerEvent) => {
+          row.raise();
+          g.selectAll('g.cohort').attr('opacity', (subD) => (subD === d ? 1 : 0.18));
+          row.select('rect.row-hover-bg').attr('opacity', 0.85);
+          updateTooltip(event, d, color);
+        })
+        .on('pointermove', (event: PointerEvent) => updateTooltip(event, d, color))
+        .on('pointerleave', () => {
+          g.selectAll('g.cohort').attr('opacity', 1);
+          row.select('rect.row-hover-bg').attr('opacity', 0);
+          setTooltip(null);
+        });
     });
 
     if (dividerIdx > 0) {
       const divY = yScale(sorted[dividerIdx].perfil)! - ROW_H * 0.12;
-      g.append('line').attr('x1', -MARGIN.left + 8).attr('x2', CW + MARGIN.right - 8).attr('y1', divY).attr('y2', divY).attr('stroke', themeColors.muted).attr('stroke-width', 1).attr('stroke-dasharray', '4,4');
-      g.append('text').attr('x', -MARGIN.left + 8).attr('y', yScale(sorted[0].perfil)! - 10).attr('font-size', '9px').attr('font-weight', '700').attr('fill', COLORS.DANGER).text('ÓBITO PREDOMINANTE');
-      g.append('text').attr('x', -MARGIN.left + 8).attr('y', divY + 12).attr('font-size', '9px').attr('font-weight', '700').attr('fill', COLORS.SUCCESS).text('CURA PREDOMINANTE');
+      g.append('line')
+        .attr('x1', -MARGIN.left + 8)
+        .attr('x2', CW + MARGIN.right - 8)
+        .attr('y1', divY)
+        .attr('y2', divY)
+        .attr('stroke', themeColors.muted)
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '4,4');
+      g.append('text')
+        .attr('x', -MARGIN.left + 8)
+        .attr('y', yScale(sorted[0].perfil)! - 10)
+        .attr('font-size', '9px')
+        .attr('font-weight', '700')
+        .attr('fill', COLORS.DANGER)
+        .text('ÓBITO PREDOMINANTE');
+      g.append('text')
+        .attr('x', -MARGIN.left + 8)
+        .attr('y', divY + 12)
+        .attr('font-size', '9px')
+        .attr('font-weight', '700')
+        .attr('fill', COLORS.SUCCESS)
+        .text('CURA PREDOMINANTE');
     }
   }, [data, themeColors]);
 
   const hasData = data.length > 0;
 
   return (
-    <div style={{ background: themeColors.bg, borderRadius: '12px', padding: '8px 0', boxShadow: 'var(--shadow-panel)', border: `1px solid ${themeColors.border}` }}>
-      <div style={{ padding: '16px 24px 4px' }}>
-        <p style={{ margin: 0, fontSize: '12px', color: themeColors.text, lineHeight: 1.6 }}>
-          Mediana de tempo entre eventos por coorte vacinal. Passe o mouse sobre uma linha para ver os detalhes.
-          {' '}<strong>Cor</strong> = status vacinal Influenza. <strong>Espessura</strong> = volume de casos (N).
-          {' '}<strong>Banda</strong> = IQR (P25–P75). <strong>Barra</strong> = composição cura/óbito.
-        </p>
-      </div>
-
+    <div
+      style={{
+        background: themeColors.bg,
+        borderRadius: '12px',
+        padding: '8px 0',
+        boxShadow: 'var(--shadow-panel)',
+        border: `1px solid ${themeColors.border}`,
+      }}
+    >
       {hasData ? (
-        <div ref={chartWrapRef} style={{ position: 'relative', padding: '0 24px' }}>
+        <div
+          ref={chartWrapRef}
+          style={{ position: 'relative', padding: '0 clamp(12px, 3vw, 24px)' }}
+        >
           <svg ref={svgRef} style={{ width: '100%', display: 'block', overflow: 'visible' }} />
           {tooltip && (
-            <div style={{ position: 'absolute', zIndex: 20, minWidth: '260px', maxWidth: '330px', background: themeColors.bg, border: `1px solid ${themeColors.border}`, borderRadius: '12px', padding: '12px 14px', boxShadow: '0 12px 30px rgba(0,0,0,0.2)', pointerEvents: 'none', left: tooltip.x, top: tooltip.y }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: themeColors.main }}>{tooltip.title}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '999px', padding: '3px 8px', border: '1px solid', borderColor: tooltip.badgeColor, color: tooltip.badgeColor, fontSize: '10px', fontWeight: 700 }}>{tooltip.badge}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '999px', padding: '3px 8px', border: '1px solid', borderColor: tooltip.outcomeColor, color: tooltip.outcomeColor, fontSize: '10px', fontWeight: 700 }}>{tooltip.outcome}</span>
+            <div
+              style={{
+                position: 'absolute',
+                zIndex: 20,
+                minWidth: '260px',
+                maxWidth: '330px',
+                background: themeColors.bg,
+                border: `1px solid ${themeColors.border}`,
+                borderRadius: '12px',
+                padding: '12px 14px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.2)',
+                pointerEvents: 'none',
+                left: tooltip.x,
+                top: tooltip.y,
+              }}
+            >
+              <div style={{ fontSize: '12px', fontWeight: 700, color: themeColors.main }}>
+                {tooltip.title}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', alignItems: 'baseline', marginTop: '10px' }}>
-                {tooltip.metrics.map(metric => (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '999px',
+                    padding: '3px 8px',
+                    border: '1px solid',
+                    borderColor: tooltip.badgeColor,
+                    color: tooltip.badgeColor,
+                    fontSize: '10px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {tooltip.badge}
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '999px',
+                    padding: '3px 8px',
+                    border: '1px solid',
+                    borderColor: tooltip.outcomeColor,
+                    color: tooltip.outcomeColor,
+                    fontSize: '10px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {tooltip.outcome}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  gap: '4px 12px',
+                  alignItems: 'baseline',
+                  marginTop: '10px',
+                }}
+              >
+                {tooltip.metrics.map((metric) => (
                   <React.Fragment key={metric.label}>
-                    <span style={{ fontSize: '10px', color: themeColors.text }}>{metric.label}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: metric.color ?? themeColors.main, textAlign: 'right' }}>{metric.value}</span>
+                    <span style={{ fontSize: '10px', color: themeColors.text }}>
+                      {metric.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: metric.color ?? themeColors.main,
+                        textAlign: 'right',
+                      }}
+                    >
+                      {metric.value}
+                    </span>
                   </React.Fragment>
                 ))}
               </div>
@@ -483,37 +733,138 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({ data }) =
           )}
         </div>
       ) : (
-        <div style={{ margin: '0 24px 16px', padding: '28px 16px', textAlign: 'center', color: themeColors.text, fontSize: '13px', background: themeColors.panel, border: `1px dashed ${themeColors.muted}`, borderRadius: '12px' }}>Sem coortes para exibir.</div>
+        <div
+          style={{
+            margin: '0 clamp(12px, 3vw, 24px) 16px',
+            padding: '28px 16px',
+            textAlign: 'center',
+            color: themeColors.text,
+            fontSize: '13px',
+            background: themeColors.panel,
+            border: `1px dashed ${themeColors.muted}`,
+            borderRadius: '12px',
+          }}
+        >
+          Sem coortes para exibir.
+        </div>
       )}
 
       {hasData && (
-        <div style={{ padding: '12px 24px 18px', display: 'grid', gap: '12px' }}>
-          <div style={{ background: themeColors.panel, border: `1px solid ${themeColors.border}`, borderRadius: '14px', padding: '12px 14px' }}>
-            <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: 700, color: themeColors.text, textTransform: 'uppercase' }}>Marcadores</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              {MARKER_LEGEND.map(item => (
-                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1px solid ${themeColors.border}`, borderRadius: '12px', background: themeColors.bg }}>
-                   <SwimmerLegendIcon kind={item.kind} />
-                   <div><div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div><div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div></div>
+        <div style={{ padding: '12px clamp(12px, 3vw, 24px) 18px', display: 'grid', gap: '12px' }}>
+          <div
+            style={{
+              background: themeColors.panel,
+              border: `1px solid ${themeColors.border}`,
+              borderRadius: '14px',
+              padding: '12px 14px',
+            }}
+          >
+            <div
+              style={{
+                marginBottom: '10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: themeColors.text,
+                textTransform: 'uppercase',
+              }}
+            >
+              Marcadores
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: '8px',
+              }}
+            >
+              {MARKER_LEGEND.map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    border: `1px solid ${themeColors.border}`,
+                    borderRadius: '10px',
+                    background: themeColors.bg,
+                  }}
+                >
+                  <SwimmerLegendIcon kind={item.kind} />
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>
+                      {item.label}
+                    </div>
+                    {item.hint && (
+                      <div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: themeColors.panel, border: `1px solid ${themeColors.border}`, borderRadius: '14px', padding: '12px 14px' }}>
-            <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: 700, color: themeColors.text, textTransform: 'uppercase' }}>Status vacinal da gripe</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              {GRIPE_LEGEND.map(item => (
-                <div key={item.status} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1px solid ${themeColors.border}`, borderRadius: '12px', background: themeColors.bg }}>
-                   <span style={{ display: 'inline-block', width: 28, height: 3, borderRadius: 999, background: getGripeColor(item.status), flexShrink: 0 }} />
-                   <div><div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>{item.label}</div><div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div></div>
-                </div>
-              ))}
+          {swimmerVirus === 'gripe' && (
+            <div
+              style={{
+                background: themeColors.panel,
+                border: `1px solid ${themeColors.border}`,
+                borderRadius: '14px',
+                padding: '12px 14px',
+              }}
+            >
+              <div
+                style={{
+                  marginBottom: '10px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: themeColors.text,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Status vacinal da gripe
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: '8px',
+                }}
+              >
+                {GRIPE_LEGEND.map((item) => (
+                  <div
+                    key={item.status}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 10px',
+                      border: `1px solid ${themeColors.border}`,
+                      borderRadius: '10px',
+                      background: themeColors.bg,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 28,
+                        height: 3,
+                        borderRadius: 999,
+                        background: getGripeColor(item.status),
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: themeColors.main }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: '10px', color: themeColors.text }}>{item.hint}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ marginTop: '10px', fontSize: '11px', color: themeColors.text }}>
-              A cor da linha representa o status vacinal; a espessura, o volume de casos (N).
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -70,7 +70,7 @@ fix-back:
 	uv run ruff check . --fix --unsafe-fixes
 	uv run ruff format .
 fix-front:
-	cd frontend && npm run format
+	cd frontend && npm run fix
 
 security: security-back security-secrets security-deps security-frontend
 security-back:

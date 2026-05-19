@@ -201,6 +201,7 @@ class TestRaces:
         res = apply_global_filters(df, races=[])
         assert len(res) == 2
 
+
 class TestGenders:
     def test_gender_male(self) -> None:
         df = pd.DataFrame({"CS_SEXO": ["M", "F", "I"]})

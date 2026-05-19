@@ -1,18 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { COLORS } from '../../constants';
-import { buildBand } from '../../utils/math';
+import { useEcharts } from '../../hooks/useEcharts';
+import { useThemeMode } from '../../hooks/useThemeMode';
 import * as Epi from '../../types/epi';
-
-type ChartLike = { destroy: () => void };
-type ChartCtor = { new (el: HTMLCanvasElement, _options: unknown): ChartLike };
-
-let chartLoader: Promise<ChartCtor>;
-function loadChart() {
-  if (!chartLoader) {
-    chartLoader = import('chart.js/auto').then((mod) => mod.Chart as ChartCtor);
-  }
-  return chartLoader;
-}
 
 interface TrendChartProps {
   history: Epi.EpiWeekData[];
@@ -21,12 +11,14 @@ interface TrendChartProps {
   composition?: Array<{ epi_week: string; virus: string; count: number }>;
   baseCumulative?: number;
   seriesMode: string;
+  weeksWindow?: string;
+  showForecast?: boolean;
 }
 
 const VIRUS_COLORS: Record<string, string> = {
   'COVID-19': '#0f766e',
-  'Influenza': '#1d4ed8',
-  'VSR': '#b45309',
+  Influenza: '#1d4ed8',
+  VSR: '#b45309',
   'Outros Vírus': '#7c3aed',
   'Outro Agente': '#4b5563',
   'Não Especificada': '#94a3b8',
@@ -36,301 +28,270 @@ const VIRUS_COLORS: Record<string, string> = {
 const TrendChart: React.FC<TrendChartProps> = ({
   history,
   forecast,
-  thresholds,
+  thresholds: defaultThresholds,
   composition,
   baseCumulative = 0,
   seriesMode,
+  weeksWindow = '0',
+  showForecast = false,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<ChartLike | null>(null);
+  const [internalMode] = useState('weekly');
+  const theme = useThemeMode();
 
-  useEffect(() => {
-    let cancelled = false;
+  const [thresholds, setThresholds] = useState<{ medium: number; high: number; very_high: number } | undefined>(
+    defaultThresholds,
+  );
+  const [editingThreshold, setEditingThreshold] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
-    const render = async () => {
-      const Chart = await loadChart();
-      if (cancelled || !canvasRef.current) return;
+  const mode = seriesMode || internalMode;
 
-      const labels = [...history.map((d) => d.epi_week), ...forecast.map((d) => d.epi_week)];
+  const handleThresholdEditStart = (key: string, value: number) => {
+    setEditingThreshold(key);
+    setEditValue(String(value));
+  };
 
-      const historyLen = history.length;
-      if (historyLen === 0) return;
+  const handleThresholdEditSave = () => {
+    if (!editingThreshold || !thresholds) return;
+    const val = Number.parseFloat(editValue);
+    if (Number.isNaN(val) || val < 0) return;
+    setThresholds({ ...thresholds, [editingThreshold]: val });
+    setEditingThreshold(null);
+  };
 
-      let hist = history.map((d) => d.total);
+  const getOption = () => {
+    const isDark = theme === 'dark';
+    const axisColor = isDark ? '#475569' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
 
-      const cumulativeFunc = (values: number[], initial = 0) => {
-        let sum = initial;
-        return values.map((v) => {
-          sum += Number(v || 0);
-          return sum;
-        });
-      };
-
-      if (seriesMode === 'cumulative') {
-        hist = cumulativeFunc(hist, baseCumulative);
-      }
-
-      const histLast = hist.length ? hist[hist.length - 1] : 0;
-      const band = buildBand(labels, forecast, historyLen, seriesMode, histLast);
-
-      const datasets: Array<Record<string, unknown>> = [];
-
-      if (seriesMode === 'composition' && composition) {
-        const viruses = Array.from(new Set(composition.map((c) => c.virus)));
-        const historyWeeks = history.map((h) => h.epi_week);
-
-        const lastWeeks = historyWeeks.slice(-4);
-        const lastComp = composition.filter((c) => lastWeeks.includes(c.epi_week));
-        const totalLast = lastComp.reduce((sum, c) => sum + c.count, 0);
-
-        const virusProportions: Record<string, number> = {};
-        if (totalLast > 0) {
-          viruses.forEach((v) => {
-            const count = lastComp
-              .filter((c) => c.virus === v)
-              .reduce((sum, c) => sum + c.count, 0);
-            virusProportions[v] = count / totalLast;
-          });
-        } else {
-          viruses.forEach((v) => (virusProportions[v] = 1 / viruses.length));
-        }
-
-        viruses.forEach((v) => {
-          const data = labels.map((w, i) => {
-            if (i < historyLen) {
-              const entry = composition.find((c) => c.epi_week === w && c.virus === v);
-              return entry ? entry.count : 0;
-            } else {
-              const weekTotal = forecast[i - historyLen]?.predicted_cases || 0;
-              return weekTotal * (virusProportions[v] || 0);
-            }
-          });
-
-          datasets.push({
-            label: v,
-            data: data,
-              backgroundColor: (context: { chart: { ctx: CanvasRenderingContext2D; scales: { x?: { getPixelForValue: (value: string) => number } } } }) => {
-              const chart = context.chart;
-              const { ctx, scales } = chart;
-              if (!scales.x) return VIRUS_COLORS[v] || '#ccc';
-
-              const x = scales.x.getPixelForValue(labels[historyLen - 1]);
-              if (isNaN(x) || !isFinite(x)) return VIRUS_COLORS[v] || '#ccc';
-
-              const gradient = ctx.createLinearGradient(x - 1, 0, x + 1, 0);
-              gradient.addColorStop(0, VIRUS_COLORS[v] || '#ccc');
-              gradient.addColorStop(1, (VIRUS_COLORS[v] || '#ccc') + '99');
-              return gradient;
-            },
-            borderColor: 'white',
-            borderWidth: 1,
-            fill: true,
-            pointRadius: 0,
-            pointHitRadius: 0,
-            stacked: 'stack1',
-          });
-        });
-      } else {
-        datasets.push({
-          label: 'Histórico',
-          data: [...hist, ...forecast.map(() => null)],
-          borderColor: COLORS.PRIMARY,
-          backgroundColor: 'rgba(15,118,110,0.08)',
-          fill: true,
-          borderWidth: 3,
-          tension: 0.2,
-          z: 10,
-        });
-
-        const prev = labels.map((_, i) => {
-          if (i < historyLen - 1) return null;
-          if (i === historyLen - 1) return hist[historyLen - 1];
-          if (seriesMode === 'cumulative') {
-            const fRaw = forecast.map((f) => f.predicted_cases);
-            const fCum = cumulativeFunc(fRaw, histLast);
-            return fCum[i - historyLen] ?? null;
-          }
-          return forecast[i - historyLen]?.predicted_cases ?? null;
-        });
-
-        datasets.push({
-          label: 'Previsão',
-          data: prev,
-          borderColor: COLORS.DANGER,
-          borderDash: [7, 5],
-          borderWidth: 2.5,
-          tension: 0.2,
-          pointRadius: 0,
-          pointHitRadius: 0,
-          z: 20,
-        });
-      }
-
-      datasets.push(
-        {
-          label: 'Limite inferior',
-          data: band.lower,
-          borderColor: 'transparent',
-          pointRadius: 0,
-          pointHitRadius: 0,
-          fill: false,
-        },
-        {
-          label: 'Faixa prevista',
-          data: band.upper,
-          borderColor: 'transparent',
-          backgroundColor: 'rgba(185,28,28,0.1)',
-          pointRadius: 0,
-          pointHitRadius: 0,
-          fill: '-1',
-        }
-      );
-
-      if (chartInstance.current) chartInstance.current.destroy();
-
-      const statusPlugin = {
-        id: 'statusPlugin',
-          beforeDraw: (chart: { ctx: CanvasRenderingContext2D; chartArea: { top: number; bottom: number; right: number }; scales: { x?: { getPixelForValue: (value: string) => number } } }) => {
-          const {
-            ctx,
-            chartArea: { top, bottom, right },
-            scales: { x },
-          } = chart;
-          if (!x) return;
-          const lastHistX = x.getPixelForValue(labels[historyLen - 1]);
-          if (isNaN(lastHistX) || !isFinite(lastHistX)) return;
-
-          ctx.save();
-          ctx.fillStyle = 'rgba(241, 245, 249, 0.6)';
-          ctx.fillRect(lastHistX, top, right - lastHistX, bottom - top);
-
-          ctx.strokeStyle = '#64748b';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 2]);
-          ctx.beginPath();
-          ctx.moveTo(lastHistX, top);
-          ctx.lineTo(lastHistX, bottom);
-          ctx.stroke();
-
-          ctx.fillStyle = '#64748b';
-          ctx.font = 'bold 9px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.fillText('PREVISÃO', lastHistX + 10, top + 15);
-          ctx.restore();
-        },
-      };
-
-      const alertPlugin = {
-        id: 'alertThresholds',
-        afterDraw: (chart: { ctx: CanvasRenderingContext2D; chartArea: { top: number; bottom: number; right: number; left: number }; scales: { y?: { getPixelForValue: (value: number) => number } } }) => {
-          if (!thresholds || seriesMode === 'cumulative') return;
-          const {
-            ctx,
-            chartArea: { left, right },
-            scales: { y },
-          } = chart;
-          if (!y) return;
-
-          const drawLabel = (val: number, label: string, color: string) => {
-            const yPos = y.getPixelForValue(val);
-            if (isNaN(yPos) || yPos < chart.chartArea.top || yPos > chart.chartArea.bottom) return;
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.setLineDash([6, 4]);
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(left, yPos);
-            ctx.lineTo(right, yPos);
-            ctx.stroke();
-            ctx.fillStyle = color;
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(label, left + 5, yPos - 5);
-            ctx.restore();
-          };
-          drawLabel(thresholds.medium, 'MÉDIO', '#fbbf24');
-          drawLabel(thresholds.high, 'ALTO', '#f97316');
-          drawLabel(thresholds.very_high, 'MUITO ALTO', '#ef4444');
-        },
-      };
-
-      const maxVal = Math.max(...hist, ...(thresholds ? [thresholds.medium] : []));
-
-      chartInstance.current = new Chart(canvasRef.current, {
-        type: 'line',
-        plugins: [statusPlugin, alertPlugin],
-        data: { labels, datasets },
-        options: {
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                filter: (item: { text: string }) => !['Limite inferior', 'Faixa prevista', 'Previsão'].includes(item.text),
-              },
-            },
-            tooltip: {
-            callbacks: {
-                title: (items: Array<{ label?: string }>) => `Semana: ${items[0]?.label ?? ''}`,
-                beforeBody: (items: Array<{ dataset: { label?: string }; dataIndex: number; raw: unknown }>) => {
-                  const isForecast = (items[0]?.dataIndex ?? 0) >= historyLen;
-
-                  // Lógica inteligente de total:
-                  // No modo acumulado, o total já é o valor do ponto.
-                  // No ponto de conexão, evitamos somar o ponto real + o ponto de previsão.
-                  let total = 0;
-                  if (seriesMode === 'cumulative') {
-                    // No acumulado, pegamos o valor do dataset 'Histórico' se existir, senão 'Previsão'
-                    const histItem = items.find(i => i.dataset.label === 'Histórico');
-                    const prevItem = items.find(i => i.dataset.label === 'Previsão');
-                    total = Number((histItem || prevItem)?.raw || 0);
-                  } else {
-                    total = items.reduce((sum: number, item) => {
-                      const label = item.dataset.label ?? '';
-                      if (['Limite inferior', 'Faixa prevista'].includes(label)) return sum;
-                      // No ponto de conexão (junction), ignoramos a linha de previsão no somatório
-                      if (item.dataIndex === historyLen - 1 && label === 'Previsão') return sum;
-                      return sum + Number(item.raw || 0);
-                    }, 0);
-                  }
-
-                  return `${isForecast ? '[PREVISÃO] ' : ''}TOTAL: ${Math.round(total)} CASOS\n-----------------`;
-                },
-                label: (context: { dataset: { label?: string }; raw: unknown }) => {
-                  const label = context.dataset.label ?? '';
-                  if (['Faixa prevista', 'Limite inferior', 'Previsão', 'Histórico'].includes(label))
-                    return null;
-                  return `${label}: ${Math.round(Number(context.raw))}`;
-                },
-              },
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              stacked: seriesMode === 'composition',
-              suggestedMax: maxVal * 1.1,
-              title: { display: true, text: 'Casos' },
-            },
-            x: { grid: { display: false } },
-          },
-        },
+    const cumulative = (values: number[], initial = 0) => {
+      let sum = initial;
+      return values.map((v) => {
+        sum += Number(v || 0);
+        return sum;
       });
     };
 
-    render();
+    const allWeeks = [...history.map((d) => d.epi_week), ...(showForecast ? forecast.map((d) => d.epi_week) : [])];
+    const windowLimit = weeksWindow === '0' ? 0 : Number.parseInt(weeksWindow, 10);
+    const totalWeeks = allWeeks.length;
+    const windowStart = windowLimit > 0 ? Math.max(0, totalWeeks - windowLimit) : 0;
+    const windowEnd = totalWeeks > 0 ? totalWeeks - 1 : 0;
+    const dataZoom =
+      windowLimit > 0
+        ? [{ type: 'inside', startValue: windowStart, endValue: windowEnd, zoomLock: true }]
+        : [{ type: 'inside', start: 0, end: 100, zoomLock: true }];
 
-    return () => {
-      cancelled = true;
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-        chartInstance.current = null;
-      }
+    const histValues =
+      mode === 'cumulative' ? cumulative(history.map((d) => d.total), baseCumulative) : history.map((d) => d.total);
+    const histLast = histValues.at(-1) ?? 0;
+
+    const thresholdMarkLine = thresholds
+      ? {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { type: 'dashed' as const, width: 1.5 },
+          label: {
+            formatter: (p: { name?: string; value?: number }) =>
+              `${p.name || ''} (${Math.round(p.value || 0)})`,
+            position: 'insideEndTop' as const,
+            fontSize: 9,
+            fontWeight: 'bold' as const,
+            backgroundColor: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)',
+            padding: [2, 4],
+          },
+          data: [
+            {
+              yAxis: thresholds.medium,
+              name: 'Médio',
+              lineStyle: { color: '#fbbf24' as string },
+            },
+            {
+              yAxis: thresholds.high,
+              name: 'Alto',
+              lineStyle: { color: '#f97316' as string },
+            },
+            {
+              yAxis: thresholds.very_high,
+              name: 'Muito Alto',
+              lineStyle: { color: '#ef4444' as string },
+            },
+          ],
+        }
+      : undefined;
+
+    const baseSeries = {
+      name: 'Histórico',
+      type: 'bar' as const,
+      data: historyData(),
+      itemStyle: { color: COLORS.PRIMARY },
+      barMaxWidth: 20,
+      universalTransition: true,
+      markLine: thresholdMarkLine,
     };
-  }, [history, forecast, thresholds, composition, baseCumulative, seriesMode]);
 
-  return <canvas ref={canvasRef} />;
+    function historyData() {
+      return showForecast ? [...histValues, ...forecast.map(() => null)] : histValues;
+    }
+
+    if (mode === 'composition' && composition) {
+      const viruses = Array.from(new Set(composition.map((c) => c.virus))).filter(Boolean);
+      const series = viruses.map((virus) => ({
+        name: virus,
+        type: 'line' as const,
+        stack: 'Total',
+        areaStyle: {},
+        symbol: 'none',
+        emphasis: { focus: 'series' },
+        itemStyle: { color: VIRUS_COLORS[virus] || COLORS.SECONDARY },
+        data: allWeeks.map((week, i) => {
+          if (i < history.length) {
+            const found = composition.find((c) => c.epi_week === week && c.virus === virus);
+            return found ? found.count : 0;
+          }
+          const weekTotal = forecast[i - history.length]?.predicted_cases || 0;
+          return weekTotal / Math.max(viruses.length, 1);
+        }),
+      }));
+
+      return {
+        animation: true,
+        animationDuration: 300,
+        animationDurationUpdate: 700,
+        animationEasing: 'cubicOut',
+        animationEasingUpdate: 'cubicOut',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        legend: { data: viruses, bottom: 0, icon: 'circle', textStyle: { color: textColor } },
+        grid: { left: '30px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
+        dataZoom,
+        xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
+        yAxis: [{ type: 'value', name: 'Casos', axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
+        series,
+      };
+    }
+
+    if (mode === 'cumulative') {
+      const cumulativeData = cumulative(histValues, 0);
+      const forecastData = cumulative(forecast.map((f) => f.predicted_cases), histLast);
+
+      return {
+        animation: true,
+        animationDuration: 300,
+        animationDurationUpdate: 700,
+        animationEasing: 'cubicOut',
+        animationEasingUpdate: 'cubicOut',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        grid: { left: '40px', right: '4%', bottom: '40px', top: '25px', containLabel: true },
+        dataZoom,
+        xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
+        yAxis: [{ type: 'value', name: 'Total acumulado', axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
+        series: [
+          {
+            name: 'Histórico',
+            type: 'line',
+            data: [...cumulativeData, ...forecastData],
+            itemStyle: { color: COLORS.PRIMARY },
+            areaStyle: { color: 'rgba(15,118,110,0.1)' },
+            smooth: true,
+            symbol: 'none',
+            universalTransition: true,
+          },
+        ],
+      };
+    }
+
+    return {
+      animation: true,
+      animationDuration: 300,
+      animationDurationUpdate: 700,
+      animationEasing: 'cubicOut',
+      animationEasingUpdate: 'cubicOut',
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' },
+        confine: true,
+        formatter: (params: Array<{ name?: string; seriesName?: string; value?: number }>) => {
+          const week = params[0]?.name ?? '';
+          const total = params.find((p) => p.seriesName === 'Histórico')?.value ?? 0;
+          return `Semana ${week}<br/>Notificações: <b>${Math.round(total).toLocaleString('pt-BR')}</b>`;
+        },
+      },
+      grid: { left: '3%', right: '3%', bottom: '8%', top: '25px', containLabel: true },
+      dataZoom,
+      xAxis: [{ type: 'category', data: allWeeks, axisPointer: { type: 'shadow' }, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
+      yAxis: [{ type: 'value', name: 'Volume', min: 0, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
+      series: [
+        baseSeries,
+      ],
+    };
+  };
+
+  const { chartRef } = useEcharts(getOption(), [history, forecast, thresholds, composition, baseCumulative, mode, weeksWindow, theme, showForecast]);
+
+  return (
+    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div ref={chartRef} style={{ flex: 1, width: '100%' }} />
+      {thresholds && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 16,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '6px 0 2px',
+            fontSize: 11,
+            flexWrap: 'wrap',
+          }}
+        >
+          {[
+            { key: 'medium', label: 'Médio', color: '#fbbf24' },
+            { key: 'high', label: 'Alto', color: '#f97316' },
+            { key: 'very_high', label: 'Muito Alto', color: '#ef4444' },
+          ].map(({ key, label, color }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color, fontWeight: 700, fontSize: 14, lineHeight: '10px' }}>━</span>
+              <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+              {editingThreshold === key ? (
+                <input
+                  type="number"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleThresholdEditSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleThresholdEditSave();
+                    if (e.key === 'Escape') setEditingThreshold(null);
+                  }}
+                  style={{
+                    width: 60,
+                    padding: '1px 4px',
+                    fontSize: 11,
+                    border: `1px solid ${color}`,
+                    borderRadius: 4,
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              ) : (
+                <span
+                  onClick={() => handleThresholdEditStart(key, thresholds[key as keyof typeof thresholds])}
+                  style={{
+                    cursor: 'pointer',
+                    borderBottom: `1px dashed ${color}`,
+                    padding: '0 2px',
+                    fontWeight: 600,
+                    color: color,
+                  }}
+                  title="Clique para editar"
+                >
+                  {Math.round(thresholds[key as keyof typeof thresholds])}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default TrendChart;

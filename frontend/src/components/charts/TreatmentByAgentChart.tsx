@@ -7,8 +7,8 @@ interface TreatmentByAgentChartProps {
 }
 
 const AGENT_COLORS: Record<string, string> = {
-  'VSR': '#0f766e',
-  'Influenza': '#1d4ed8',
+  VSR: '#0f766e',
+  Influenza: '#1d4ed8',
   'COVID-19': '#b91c1c',
   'Outros Vírus': '#7c3aed',
   'Outro Agente': '#475569',
@@ -26,7 +26,11 @@ const TreatmentByAgentChart: React.FC<TreatmentByAgentChartProps> = ({ data }) =
         labels: treatments,
         datasets: agents.map((agent) => ({
           label: agent,
-          data: treatments.map((t) => data.filter((d) => d.treatment === t && d.agent === agent).reduce((sum, d) => sum + d.deaths, 0)),
+          data: treatments.map((t) =>
+            data
+              .filter((d) => d.treatment === t && d.agent === agent)
+              .reduce((sum, d) => sum + d.deaths, 0),
+          ),
           backgroundColor: AGENT_COLORS[agent] || COLORS.SECONDARY,
           borderWidth: 0,
           borderRadius: 6,

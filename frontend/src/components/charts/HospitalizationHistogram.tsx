@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { useEcharts } from '../../hooks/useEcharts';
 import { COLORS } from '../../constants';
+import { useEcharts } from '../../hooks/useEcharts';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 type HistogramTooltip = Array<{ seriesName?: string; value?: [number, number] }>;
 
@@ -9,36 +10,39 @@ interface HospitalizationHistogramProps {
 }
 
 const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ data }) => {
+  const theme = useThemeMode();
+
   const option = useMemo(() => {
     if (!data.length) return {};
 
     // Agrupar dados por dia (bins)
     const bins: Record<number, number> = {};
-    data.forEach(d => {
-        const day = Math.floor(d);
-        if (day >= 0 && day <= 90) bins[day] = (bins[day] || 0) + 1;
+    data.forEach((d) => {
+      const day = Math.floor(d);
+      if (day >= 0 && day <= 90) bins[day] = (bins[day] || 0) + 1;
     });
 
     const maxDay = Math.min(60, Math.max(0, ...data));
     const fullData: [number, number][] = [];
     for (let i = 0; i <= maxDay; i++) {
-        fullData.push([i, bins[i] || 0]);
+      fullData.push([i, bins[i] || 0]);
     }
 
     // Média Móvel para Suavização da Tendência (Linha)
     const smoothedData = fullData.map((val, idx) => {
       const windowSize = 2; // Janela menor para não achatar demais os picos
-      let sum = 0, count = 0;
+      let sum = 0,
+        count = 0;
       for (let i = idx - windowSize; i <= idx + windowSize; i++) {
         if (i >= 0 && i < fullData.length) {
-            sum += fullData[i][1];
-            count++;
+          sum += fullData[i][1];
+          count++;
         }
       }
       return [val[0], sum / count];
     });
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const isDark = theme === 'dark';
     const axisColor = isDark ? '#475569' : '#e2e8f0';
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
@@ -50,10 +54,10 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
         borderColor: axisColor,
         textStyle: { color: isDark ? '#f8fafc' : '#1e293b' },
         formatter: (params: HistogramTooltip) => {
-            const b = params.find(p => p.seriesName === 'Frequência');
-            if (!b) return '';
-            return `Permanência: <b>${b.value?.[0] ?? 0} dias</b><br/>Volume: <b>${b.value?.[1] ?? 0} casos</b>`;
-        }
+          const b = params.find((p) => p.seriesName === 'Frequência');
+          if (!b) return '';
+          return `Permanência: <b>${b.value?.[0] ?? 0} dias</b><br/>Volume: <b>${b.value?.[1] ?? 0} casos</b>`;
+        },
       },
       grid: { top: 40, left: 50, right: 30, bottom: 60, containLabel: false },
       xAxis: {
@@ -66,40 +70,45 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
         splitLine: { show: false },
         axisLabel: { color: textColor },
         axisLine: { show: true, lineStyle: { color: axisColor } },
-        nameTextStyle: { color: textColor }
+        nameTextStyle: { color: textColor },
       },
       yAxis: {
         type: 'value',
         name: 'Casos',
         splitLine: { lineStyle: { type: 'dashed', color: axisColor } },
         axisLabel: { color: textColor },
-        nameTextStyle: { color: textColor }
+        nameTextStyle: { color: textColor },
       },
       series: [
         {
-            name: 'Frequência',
-            data: fullData,
-            type: 'bar',
-            barWidth: '90%',
-            itemStyle: {
-                color: COLORS.PRIMARY,
-                opacity: 0.6,
-                borderRadius: [4, 4, 0, 0]
-            }
+          name: 'Frequência',
+          data: fullData,
+          type: 'bar',
+          barWidth: '90%',
+          itemStyle: {
+            color: COLORS.PRIMARY,
+            opacity: 0.6,
+            borderRadius: [4, 4, 0, 0],
+          },
         },
         {
-            name: 'Tendência',
-            data: smoothedData,
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            lineStyle: { color: COLORS.DANGER, width: 3, shadowBlur: 8, shadowColor: 'rgba(185, 28, 28, 0.3)' }
-        }
-      ]
+          name: 'Tendência',
+          data: smoothedData,
+          type: 'line',
+          smooth: true,
+          symbol: 'none',
+          lineStyle: {
+            color: COLORS.DANGER,
+            width: 3,
+            shadowBlur: 8,
+            shadowColor: 'rgba(185, 28, 28, 0.3)',
+          },
+        },
+      ],
     };
-  }, [data]);
+  }, [data, theme]);
 
-  const { chartRef } = useEcharts(option, [data]);
+  const { chartRef } = useEcharts(option, [data, theme]);
 
   return <div ref={chartRef} className="echart-host" />;
 };

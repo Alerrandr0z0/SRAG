@@ -1,16 +1,19 @@
-import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 import { buildBand, cumulative } from './math';
 
 describe('math helpers', () => {
   it('cumulative is monotonic for non-negative values', () => {
     fc.assert(
-      fc.property(fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 1, maxLength: 30 }), (values) => {
-        const result = cumulative(values);
-        for (let i = 1; i < result.length; i += 1) {
-          expect(result[i]).toBeGreaterThanOrEqual(result[i - 1]);
-        }
-      }),
+      fc.property(
+        fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 1, maxLength: 30 }),
+        (values) => {
+          const result = cumulative(values);
+          for (let i = 1; i < result.length; i += 1) {
+            expect(result[i]).toBeGreaterThanOrEqual(result[i - 1]);
+          }
+        },
+      ),
     );
   });
 

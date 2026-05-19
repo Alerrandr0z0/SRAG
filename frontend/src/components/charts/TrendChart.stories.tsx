@@ -12,8 +12,18 @@ const meta: Meta<typeof TrendChart> = {
       { epi_week: '2024-W04', total: 150 },
     ],
     forecast: [
-      { epi_week: '2024-W05', predicted_cases: 145, predicted_cases_lower: 120, predicted_cases_upper: 168 },
-      { epi_week: '2024-W06', predicted_cases: 138, predicted_cases_lower: 110, predicted_cases_upper: 160 },
+      {
+        epi_week: '2024-W05',
+        predicted_cases: 145,
+        predicted_cases_lower: 120,
+        predicted_cases_upper: 168,
+      },
+      {
+        epi_week: '2024-W06',
+        predicted_cases: 138,
+        predicted_cases_lower: 110,
+        predicted_cases_upper: 160,
+      },
     ],
     thresholds: { medium: 100, high: 140, very_high: 180 },
     composition: [],

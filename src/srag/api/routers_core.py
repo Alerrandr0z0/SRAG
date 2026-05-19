@@ -59,6 +59,7 @@ def get_summary(
             "uti_total": 0,
             "death_rate": 0.0,
             "total": 0,
+            "notification_total": 0,
             "available_years": available_years,
         }
 
@@ -73,6 +74,7 @@ def get_summary(
         "uti_total": uti_cases,
         "death_rate": round((death_cases / total) * 100, 2) if total > 0 else 0,
         "total": hospitalized,
+        "notification_total": len(df),
         "available_years": available_years,
     }
 

@@ -9,17 +9,24 @@ interface BarChartProps {
   color?: string;
 }
 
-const BarChart: React.FC<BarChartProps> = ({ labels, data, horizontal = true, color = COLORS.PRIMARY }) => {
+const BarChart: React.FC<BarChartProps> = ({
+  labels,
+  data,
+  horizontal = true,
+  color = COLORS.PRIMARY,
+}) => {
   const { canvasRef } = useChartJs(
     () => ({
       type: 'bar',
       data: {
         labels,
-        datasets: [{
-          data,
-          backgroundColor: color,
-          borderRadius: 7,
-        }],
+        datasets: [
+          {
+            data,
+            backgroundColor: color,
+            borderRadius: 7,
+          },
+        ],
       },
       options: {
         indexAxis: horizontal ? 'y' : 'x',

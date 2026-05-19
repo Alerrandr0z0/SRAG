@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import * as d3 from 'd3';
 import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
-import * as d3 from 'd3';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useThemeMode } from '../../hooks/useThemeMode';
 
 interface ChoroplethType {
   feature_collection?: FeatureCollection;
@@ -10,7 +11,10 @@ interface ChoroplethType {
 interface LeafletMapProps {
   boundary: FeatureCollection | null;
   choropleth: ChoroplethType | null;
-  ruralData: { sectors: Array<{ sector: string; count: number }>; center: { lat: number; lon: number } } | null;
+  ruralData: {
+    sectors: Array<{ sector: string; count: number }>;
+    center: { lat: number; lon: number };
+  } | null;
   ruralSectorsGeo: FeatureCollection;
   mapZoneMode: string;
   selectedSectors?: string[];
@@ -44,30 +48,41 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const boundaryLayer = useRef<L.GeoJSON | null>(null);
   const overlayLayer = useRef<L.LayerGroup | null>(null);
-  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  const theme = useThemeMode();
 
-  // Calculate the color scale based on intensity
   const colorScale = useMemo(() => {
     if (mapZoneMode !== 'Urbana' || !choropleth?.feature_collection?.features?.length) {
       return null;
     }
 
-    const counts = choropleth.feature_collection.features.map(f => (f.properties?.count as number) || 0);
+    const counts = choropleth.feature_collection.features.map(
+      (f) => (f.properties?.count as number) || 0,
+    );
     const maxCount = d3.max(counts) || 1;
-
-    // Sequential scale using warm tones (Yellow-Orange-Red)
-    return d3.scaleSequential()
-      .domain([0, maxCount])
-      .interpolator(d3.interpolateYlOrRd);
+    return d3.scaleSequential().domain([0, maxCount]).interpolator(d3.interpolateYlOrRd);
   }, [choropleth, mapZoneMode]);
 
-  const handleSectorClick = useCallback((sector: string) => {
-    if (!onSectorSelect) return;
-    const next = selectedSectors.includes(sector)
-      ? selectedSectors.filter(s => s !== sector)
-      : [...selectedSectors, sector];
-    onSectorSelect(next);
-  }, [selectedSectors, onSectorSelect]);
+  const maxVal = colorScale ? colorScale.domain()[1] : 0;
+  const [rangeMin, setRangeMin] = useState(0);
+  const [rangeMax, setRangeMax] = useState(maxVal);
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setRangeMin(0);
+    setRangeMax(maxVal);
+  }, [maxVal]);
+
+  const handleSectorClick = useCallback(
+    (sector: string) => {
+      if (!onSectorSelect) return;
+      const next = selectedSectors.includes(sector)
+        ? selectedSectors.filter((s) => s !== sector)
+        : [...selectedSectors, sector];
+      onSectorSelect(next);
+    },
+    [selectedSectors, onSectorSelect],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -111,11 +126,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           style: (f) => {
             const feature = f as { properties?: { bairro?: string; count?: number } };
             const count = (feature.properties?.count as number) || 0;
+            const inRange = count >= rangeMin && count <= rangeMax;
+            const baseFill =
+              count > 0 && colorScale
+                ? colorScale(count)
+                : theme === 'dark'
+                  ? '#334155'
+                  : '#e2e8f0';
             return {
               color: theme === 'dark' ? '#f8fafc' : '#0f172a',
               weight: 0.5,
-              fillColor: count > 0 && colorScale ? colorScale(count) : (theme === 'dark' ? '#334155' : '#e2e8f0'),
-              fillOpacity: 0.85,
+              fillColor: inRange ? baseFill : theme === 'dark' ? '#1e293b' : '#f1f5f9',
+              fillOpacity: inRange ? 0.85 : 0.3,
             };
           },
           onEachFeature: (feature, layer) => {
@@ -124,7 +146,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               const c = feat.properties.count || 0;
               layer.bindTooltip(
                 `<strong>${feat.properties.bairro}</strong><br/>${c} ${c === 1 ? 'caso' : 'casos'}`,
-                { sticky: true }
+                { sticky: true },
               );
             }
           },
@@ -159,7 +181,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               if (sectorData) {
                 layer.bindTooltip(
                   `<strong>Setor ${sectorData.sector}</strong><br/>${sectorData.count} casos`,
-                  { sticky: true }
+                  { sticky: true },
                 );
               }
               layer.on('click', () => handleSectorClick(sector || ''));
@@ -170,18 +192,29 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         overlayLayer.current = lg.addTo(mapInstance.current);
 
         if (ruralData?.center && mapInstance.current) {
-          mapInstance.current.setView(
-            [ruralData.center.lat, ruralData.center.lon],
-            10
-          );
+          mapInstance.current.setView([ruralData.center.lat, ruralData.center.lon], 10);
         }
       } else if (mapZoneMode === 'Periurbana') {
         overlayLayer.current = L.layerGroup().addTo(mapInstance.current);
       }
     }
     renderMap();
-    return () => { cancelled = true; };
-  }, [boundary, choropleth, ruralData, ruralSectorsGeo, mapZoneMode, selectedSectors, handleSectorClick, colorScale, theme]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    boundary,
+    choropleth,
+    ruralData,
+    ruralSectorsGeo,
+    mapZoneMode,
+    selectedSectors,
+    handleSectorClick,
+    colorScale,
+    theme,
+    rangeMin,
+    rangeMax,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -195,6 +228,109 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   return (
     <div style={{ position: 'relative' }}>
       <div className="map" ref={mapRef} />
+
+      {mapZoneMode === 'Urbana' && colorScale && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            left: 20,
+            zIndex: 1000,
+            background: theme === 'dark' ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            backdropFilter: 'blur(4px)',
+            border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}`,
+            minWidth: 180,
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 6px 0',
+              fontSize: '10px',
+              fontWeight: 700,
+              color: '#94a3b8',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Casos por Bairro
+          </p>
+          <div style={{ position: 'relative' }}>
+            <div
+              ref={barRef}
+              onMouseMove={(e) => {
+                if (!barRef.current) return;
+                const rect = barRef.current.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                setHoverValue(Math.round(pct * maxVal));
+              }}
+              onMouseLeave={() => setHoverValue(null)}
+              style={{
+                width: '100%',
+                height: 12,
+                borderRadius: 4,
+                cursor: 'crosshair',
+                background:
+                  'linear-gradient(to right, #fff7ec, #fee8c8, #fdd49e, #fdbb84, #fc8d59, #ef6548, #d7301f, #990000)',
+              }}
+            />
+            {hoverValue !== null && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -22,
+                  left: `${(hoverValue / maxVal) * 100}%`,
+                  transform: 'translateX(-50%)',
+                  background: theme === 'dark' ? '#1e293b' : '#0f172a',
+                  color: 'white',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none',
+                }}
+              >
+                {hoverValue.toLocaleString('pt-BR')}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>0</span>
+            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
+              {Math.round(maxVal).toLocaleString('pt-BR')}
+            </span>
+          </div>
+          <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="range"
+              min={0}
+              max={maxVal}
+              step={1}
+              value={rangeMin}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setRangeMin(Math.min(v, rangeMax));
+              }}
+              style={{ flex: 1, height: 4, accentColor: '#f97316' }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={maxVal}
+              step={1}
+              value={rangeMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setRangeMax(Math.max(v, rangeMin));
+              }}
+              style={{ flex: 1, height: 4, accentColor: '#dc2626' }}
+            />
+          </div>
+        </div>
+      )}
 
       {mapZoneMode === 'Rural' && (
         <div
@@ -213,22 +349,47 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             border: `1px solid ${theme === 'dark' ? '#334155' : '#334155'}`,
           }}
         >
-          <p style={{ margin: '0 0 8px 0', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p
+            style={{
+              margin: '0 0 8px 0',
+              fontSize: '10px',
+              fontWeight: 700,
+              color: '#94a3b8',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
             Distribuição Rural
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(['N', 'S', 'L', 'O'] as const).map(s => {
+            {(['N', 'S', 'L', 'O'] as const).map((s) => {
               const isSelected = selectedSectors.includes(s);
               if (selectedSectors.length > 0 && !isSelected) return null;
 
-              const sectorData = ruralData?.sectors?.find(item => item.sector === s);
+              const sectorData = ruralData?.sectors?.find((item) => item.sector === s);
               const count = sectorData?.count || 0;
               const color = SECTOR_FILL[s];
 
               return (
-                <div key={s} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div
+                  key={s}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, border: '1px solid rgba(255,255,255,0.2)' }} />
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: color,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                      }}
+                    />
                     <span style={{ fontSize: '13px', fontWeight: 600 }}>Setor {s}</span>
                   </div>
                   <b style={{ fontSize: '13px', color: '#f59e0b' }}>{count}</b>
@@ -268,9 +429,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                   fontSize: '12px',
                   fontWeight: 700,
                   borderRadius: 999,
-                  border: isSelected ? `2px solid ${stroke}` : `1px solid ${theme === 'dark' ? '#475569' : '#e2e8f0'}`,
-                  background: isSelected ? `${stroke}20` : (theme === 'dark' ? '#1e293b' : 'white'),
-                  color: isSelected ? stroke : (theme === 'dark' ? '#f8fafc' : '#0f172a'),
+                  border: isSelected
+                    ? `2px solid ${stroke}`
+                    : `1px solid ${theme === 'dark' ? '#475569' : '#e2e8f0'}`,
+                  background: isSelected ? `${stroke}20` : theme === 'dark' ? '#1e293b' : 'white',
+                  color: isSelected ? stroke : theme === 'dark' ? '#f8fafc' : '#0f172a',
                   cursor: 'pointer',
                 }}
               >
@@ -280,7 +443,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           })}
           {selectedSectors.length > 0 && (
             <button
-              onClick={() => onSectorSelect && onSectorSelect([])}
+              onClick={() => onSectorSelect?.([])}
               style={{
                 padding: '6px 10px',
                 fontSize: '11px',

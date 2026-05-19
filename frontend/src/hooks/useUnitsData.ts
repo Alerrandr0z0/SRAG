@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import * as Epi from '../types/epi';
 
@@ -12,8 +12,9 @@ export function useUnitsData(
   bairroFilter?: string[],
   unitFilter?: string[],
   years?: number[],
+  agents?: string[],
   maternal?: string[],
-  occupations?: string[]
+  occupations?: string[],
 ) {
   const [units, setUnits] = useState<Epi.UnitStats[]>([]);
   const [clinicalFlow, setClinicalFlow] = useState<Epi.ClinicalFlow>({ nodes: [], links: [] });
@@ -30,11 +31,67 @@ export function useUnitsData(
       setLoading(true);
       try {
         const [unitsData, flowData, hospData, timeline, bottleneck] = await Promise.all([
-          api.fetchUnits(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
-          api.fetchClinicalFlow(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
-          api.fetchHospitalizationDuration(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
-          api.fetchTimelineAgg(swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations),
-          api.fetchIcuBottleneck(profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, undefined, maternal, occupations)
+          api.fetchUnits(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchClinicalFlow(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchHospitalizationDuration(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchTimelineAgg(
+            swimmerVirus,
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchIcuBottleneck(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
         ]);
 
         if (isMounted) {
@@ -45,14 +102,29 @@ export function useUnitsData(
           setIcuBottleneck(bottleneck);
         }
       } catch (error) {
-        console.error("Failed to load units data", error);
+        console.error('Failed to load units data', error);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
     load();
-    return () => { isMounted = false; };
-  }, [active, swimmerVirus, profile, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, years, maternal, occupations]);
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    active,
+    swimmerVirus,
+    profile,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    agents,
+    maternal,
+    occupations,
+  ]);
 
   return { units, clinicalFlow, hospitalization, timelineData, icuBottleneck, loading };
 }
