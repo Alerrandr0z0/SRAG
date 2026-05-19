@@ -16,6 +16,9 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
   const cureData = data.map((d) => (d.cure / d.total) * 100);
   const icuData = data.map((d) => (d.icu / d.total) * 100);
   const deathData = data.map((d) => (d.death / d.total) * 100);
+  const otherData = data.map(
+    (d) => ((d.total - d.cure - d.icu - d.death) / d.total) * 100,
+  );
 
   const { canvasRef } = useChartJs(
     () => ({
@@ -41,6 +44,12 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
             backgroundColor: '#be123c',
             stack: 'outcome',
           },
+          {
+            label: 'Outro/Em Aberto',
+            data: otherData,
+            backgroundColor: '#94a3b8',
+            stack: 'outcome',
+          },
         ],
       },
       options: {
@@ -63,12 +72,9 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
                 dataset: { label?: string };
               }) => {
                 const val = Number(context.raw);
-                const originalVal =
-                  context.datasetIndex === 0
-                    ? data[context.dataIndex].cure
-                    : context.datasetIndex === 1
-                      ? data[context.dataIndex].icu
-                      : data[context.dataIndex].death;
+                const d = data[context.dataIndex];
+                const counts = [d.cure, d.icu, d.death, d.total - d.cure - d.icu - d.death];
+                const originalVal = counts[context.datasetIndex] ?? 0;
                 return `${context.dataset.label}: ${val.toFixed(1)}% (${originalVal} casos)`;
               },
             },
@@ -84,7 +90,7 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
         },
       },
     }),
-    [data, labels, cureData, icuData, deathData],
+    [data, labels, cureData, icuData, deathData, otherData],
   );
 
   return <canvas ref={canvasRef} />;

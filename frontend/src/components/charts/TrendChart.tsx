@@ -28,7 +28,7 @@ const VIRUS_COLORS: Record<string, string> = {
 const TrendChart: React.FC<TrendChartProps> = ({
   history,
   forecast,
-  thresholds,
+  thresholds: defaultThresholds,
   composition,
   baseCumulative = 0,
   seriesMode,
@@ -38,7 +38,26 @@ const TrendChart: React.FC<TrendChartProps> = ({
   const [internalMode] = useState('weekly');
   const theme = useThemeMode();
 
+  const [thresholds, setThresholds] = useState<{ medium: number; high: number; very_high: number } | undefined>(
+    defaultThresholds,
+  );
+  const [editingThreshold, setEditingThreshold] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
   const mode = seriesMode || internalMode;
+
+  const handleThresholdEditStart = (key: string, value: number) => {
+    setEditingThreshold(key);
+    setEditValue(String(value));
+  };
+
+  const handleThresholdEditSave = () => {
+    if (!editingThreshold || !thresholds) return;
+    const val = Number.parseFloat(editValue);
+    if (Number.isNaN(val) || val < 0) return;
+    setThresholds({ ...thresholds, [editingThreshold]: val });
+    setEditingThreshold(null);
+  };
 
   const getOption = () => {
     const isDark = theme === 'dark';
@@ -67,11 +86,59 @@ const TrendChart: React.FC<TrendChartProps> = ({
       mode === 'cumulative' ? cumulative(history.map((d) => d.total), baseCumulative) : history.map((d) => d.total);
     const histLast = histValues.at(-1) ?? 0;
 
+    const thresholdMarkLine = thresholds
+      ? {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { type: 'dashed' as const, width: 1.5 },
+          label: {
+            formatter: (p: { name?: string; value?: number }) =>
+              `${p.name || ''} (${Math.round(p.value || 0)})`,
+            position: 'insideEndTop' as const,
+            fontSize: 9,
+            fontWeight: 'bold' as const,
+            backgroundColor: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)',
+            padding: [2, 4],
+          },
+          data: [
+            {
+              yAxis: thresholds.medium,
+              name: 'Médio',
+              lineStyle: { color: '#fbbf24' as string },
+            },
+            {
+              yAxis: thresholds.high,
+              name: 'Alto',
+              lineStyle: { color: '#f97316' as string },
+            },
+            {
+              yAxis: thresholds.very_high,
+              name: 'Muito Alto',
+              lineStyle: { color: '#ef4444' as string },
+            },
+          ],
+        }
+      : undefined;
+
+    const baseSeries = {
+      name: 'Histórico',
+      type: 'bar' as const,
+      data: historyData(),
+      itemStyle: { color: COLORS.PRIMARY },
+      barMaxWidth: 20,
+      universalTransition: true,
+      markLine: thresholdMarkLine,
+    };
+
+    function historyData() {
+      return showForecast ? [...histValues, ...forecast.map(() => null)] : histValues;
+    }
+
     if (mode === 'composition' && composition) {
       const viruses = Array.from(new Set(composition.map((c) => c.virus))).filter(Boolean);
       const series = viruses.map((virus) => ({
         name: virus,
-        type: 'line',
+        type: 'line' as const,
         stack: 'Total',
         areaStyle: {},
         symbol: 'none',
@@ -97,7 +164,6 @@ const TrendChart: React.FC<TrendChartProps> = ({
         legend: { data: viruses, bottom: 0, icon: 'circle', textStyle: { color: textColor } },
         grid: { left: '30px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
         dataZoom,
-        graphic: [{ type: 'text', left: 'center', bottom: 8, style: { text: '⚠ Semanas sem notificações são omitidas', fontSize: 10, fill: textColor } }],
         xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
         yAxis: [{ type: 'value', name: 'Casos', axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
         series,
@@ -115,9 +181,8 @@ const TrendChart: React.FC<TrendChartProps> = ({
         animationEasing: 'cubicOut',
         animationEasingUpdate: 'cubicOut',
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-        grid: { left: '40px', right: '4%', bottom: '60px', top: '25px', containLabel: true },
+        grid: { left: '40px', right: '4%', bottom: '40px', top: '25px', containLabel: true },
         dataZoom,
-        graphic: [{ type: 'text', left: 'center', bottom: 8, style: { text: '⚠ Semanas sem notificações são omitidas', fontSize: 10, fill: textColor } }],
         xAxis: [{ type: 'category', boundaryGap: false, data: allWeeks, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
         yAxis: [{ type: 'value', name: 'Total acumulado', axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
         series: [
@@ -135,8 +200,6 @@ const TrendChart: React.FC<TrendChartProps> = ({
       };
     }
 
-    const historyData = showForecast ? [...histValues, ...forecast.map(() => null)] : histValues;
-
     return {
       animation: true,
       animationDuration: 300,
@@ -150,44 +213,85 @@ const TrendChart: React.FC<TrendChartProps> = ({
         formatter: (params: Array<{ name?: string; seriesName?: string; value?: number }>) => {
           const week = params[0]?.name ?? '';
           const total = params.find((p) => p.seriesName === 'Histórico')?.value ?? 0;
-          const isForecast = params.some((p) => p.seriesName === 'Previsão');
-          return `Semana ${week}<br/>${isForecast ? 'Previsão' : 'Notificações'}: <b>${Math.round(total).toLocaleString('pt-BR')}</b>`;
+          return `Semana ${week}<br/>Notificações: <b>${Math.round(total).toLocaleString('pt-BR')}</b>`;
         },
       },
-      grid: { left: '3%', right: '3%', bottom: '15%', top: '25px', containLabel: true },
+      grid: { left: '3%', right: '3%', bottom: '8%', top: '25px', containLabel: true },
       dataZoom,
-      graphic: [{ type: 'text', left: 'center', bottom: 8, style: { text: '⚠ Semanas sem notificações são omitidas', fontSize: 10, fill: textColor } }],
       xAxis: [{ type: 'category', data: allWeeks, axisPointer: { type: 'shadow' }, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
       yAxis: [{ type: 'value', name: 'Volume', min: 0, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
       series: [
-        {
-          name: 'Histórico',
-          type: 'bar',
-          data: historyData,
-          itemStyle: { color: COLORS.PRIMARY },
-          barMaxWidth: 20,
-          universalTransition: true,
-        },
-        ...(showForecast
-          ? [
-              {
-                name: 'Previsão',
-                type: 'line',
-                data: [...Array(history.length).fill(null), ...forecast.map((f) => f.predicted_cases)],
-                itemStyle: { color: COLORS.DANGER },
-                lineStyle: { width: 2.5, type: 'dashed' },
-                symbol: 'none',
-                universalTransition: true,
-              },
-            ]
-          : []),
+        baseSeries,
       ],
     };
   };
 
   const { chartRef } = useEcharts(getOption(), [history, forecast, thresholds, composition, baseCumulative, mode, weeksWindow, theme, showForecast]);
 
-  return <div ref={chartRef} style={{ height: '100%', width: '100%' }} />;
+  return (
+    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div ref={chartRef} style={{ flex: 1, width: '100%' }} />
+      {thresholds && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 16,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '6px 0 2px',
+            fontSize: 11,
+            flexWrap: 'wrap',
+          }}
+        >
+          {[
+            { key: 'medium', label: 'Médio', color: '#fbbf24' },
+            { key: 'high', label: 'Alto', color: '#f97316' },
+            { key: 'very_high', label: 'Muito Alto', color: '#ef4444' },
+          ].map(({ key, label, color }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color, fontWeight: 700, fontSize: 14, lineHeight: '10px' }}>━</span>
+              <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+              {editingThreshold === key ? (
+                <input
+                  type="number"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleThresholdEditSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleThresholdEditSave();
+                    if (e.key === 'Escape') setEditingThreshold(null);
+                  }}
+                  style={{
+                    width: 60,
+                    padding: '1px 4px',
+                    fontSize: 11,
+                    border: `1px solid ${color}`,
+                    borderRadius: 4,
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              ) : (
+                <span
+                  onClick={() => handleThresholdEditStart(key, thresholds[key as keyof typeof thresholds])}
+                  style={{
+                    cursor: 'pointer',
+                    borderBottom: `1px dashed ${color}`,
+                    padding: '0 2px',
+                    fontWeight: 600,
+                    color: color,
+                  }}
+                  title="Clique para editar"
+                >
+                  {Math.round(thresholds[key as keyof typeof thresholds])}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default TrendChart;
