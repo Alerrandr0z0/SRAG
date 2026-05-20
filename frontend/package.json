@@ -58,17 +58,8 @@
     "storybook": "^8.6.14",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.2",
-<<<<<<< Updated upstream
-=======
     "typescript-eslint": "^8.59.2",
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
     "vite": "^8.0.13",
     "vitest": "^4.1.5"
-=======
-    "tailwindcss": "^4.2.2",
-    "vitest": "^4.1.5",
-    "vite": "^6.4.2"
->>>>>>> Stashed changes
   }
 }
