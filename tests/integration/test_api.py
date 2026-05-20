@@ -105,6 +105,18 @@ def test_get_territory_bootstrap(mock_df: pd.DataFrame) -> None:
     json_data = response.json()
     assert "territory" in json_data
     assert "choropleth" in json_data
+    assert "territory_entities" in json_data
+
+
+def test_get_units_includes_outcome_columns(mock_df: pd.DataFrame) -> None:
+    response = client.get("/units?min_cases=1")
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data
+    first = json_data[0]
+    assert "curados" in first
+    assert "obitos" in first
+    assert "ignorados" in first
 
 
 def test_get_timeline_agg(mock_df: pd.DataFrame) -> None:

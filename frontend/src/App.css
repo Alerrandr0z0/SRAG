@@ -633,6 +633,122 @@ select {
   height: 520px;
 }
 
+.rank-table {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.rank-table__header {
+  align-items: end;
+}
+
+.rank-table__controls {
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rank-search,
+.rank-table__select select {
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-status);
+  color: var(--text-main);
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+}
+
+.rank-search {
+  min-width: 210px;
+}
+
+.rank-table__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.rank-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-status);
+}
+
+.rank-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.rank-table__table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 1;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rank-table__table td {
+  padding: 0.82rem 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text-main);
+}
+
+.rank-table__table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.rank-table__table .is-right {
+  text-align: right;
+}
+
+.rank-table__empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.2rem;
+}
+
+.rank-table__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rank-table__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rank-table__pager button {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-status);
+  border-radius: 999px;
+  padding: 0.38rem 0.75rem;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+.rank-table__pager button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .stack {
   display: grid;
   gap: 0.8rem;

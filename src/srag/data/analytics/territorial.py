@@ -2,7 +2,31 @@
 
 import pandas as pd
 
+from srag.data.analytics.filters import outcome_death_mask
+from srag.data.cnes_lookup import lookup_unit_name
 from srag.utils.epi_weeks import format_epi_week, get_epi_week
+
+
+def _status_counts(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    out = df.copy()
+    out[group_col] = out[group_col].fillna("NAO INFORMADO")
+    if "EVOLUCAO" in out.columns:
+        evolucao = pd.to_numeric(out["EVOLUCAO"], errors="coerce")
+    else:
+        evolucao = pd.Series(pd.NA, index=out.index, dtype="Float64")
+    out["_is_cura"] = evolucao == 1
+    out["_is_obito"] = outcome_death_mask(evolucao)
+    out["_is_ignorado"] = evolucao == 3
+    return (
+        out.groupby(group_col)
+        .agg(
+            count=(group_col, "size"),
+            curados=("_is_cura", "sum"),
+            obitos=("_is_obito", "sum"),
+            ignorados=("_is_ignorado", "sum"),
+        )
+        .reset_index()
+    )
 
 
 def compute_territory_distribution(
@@ -11,11 +35,9 @@ def compute_territory_distribution(
 ) -> pd.DataFrame:
     """Aggregate cases by neighborhood reference with privacy threshold."""
     if df.empty or "BAIRRO_REF" not in df.columns:
-        return pd.DataFrame(columns=["bairro", "count"])
+        return pd.DataFrame(columns=["bairro", "count", "curados", "obitos", "ignorados"])
 
-    out = df.copy()
-    out["BAIRRO_REF"] = out["BAIRRO_REF"].fillna("NAO INFORMADO")
-    grouped = out.groupby("BAIRRO_REF").size().reset_index(name="count")
+    grouped = _status_counts(df, "BAIRRO_REF")
     grouped = grouped[grouped["count"] >= min_cases]
     grouped = grouped.rename(columns={"BAIRRO_REF": "bairro"})
     return grouped.sort_values("count", ascending=False).reset_index(drop=True)
@@ -34,15 +56,16 @@ def compute_zone_distribution(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def compute_unit_distribution(df: pd.DataFrame, min_cases: int = 3) -> pd.DataFrame:
-    """Aggregate notification records by notifying unit/hospital."""
+    """Aggregate notification records by notifying unit/hospital with CNES names."""
     if df.empty or "ID_UNIDADE" not in df.columns:
-        return pd.DataFrame(columns=["id_unidade", "count"])
+        return pd.DataFrame(
+            columns=["id_unidade", "nome_fantasia", "count", "curados", "obitos", "ignorados"]
+        )
 
-    out = df.copy()
-    out["ID_UNIDADE"] = out["ID_UNIDADE"].fillna("NAO INFORMADO")
-    grouped = out.groupby("ID_UNIDADE").size().reset_index(name="count")
+    grouped = _status_counts(df, "ID_UNIDADE")
     grouped = grouped[grouped["count"] >= min_cases]
     grouped = grouped.rename(columns={"ID_UNIDADE": "id_unidade"})
+    grouped["nome_fantasia"] = grouped["id_unidade"].apply(lookup_unit_name)
     return grouped.sort_values("count", ascending=False).reset_index(drop=True)
 
 
