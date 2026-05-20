@@ -31,6 +31,14 @@ frontend/test-results/
 docker-compose.yml
 *.Dockerfile
 
+# Test files (not needed in Docker images)
+frontend/tests/
+tests/
+**/*.spec.ts
+**/*.spec.js
+**/*.test.ts
+**/*.test.js
+
 # Documentation and temporary files
 docs/
 notebooks/.ipynb_checkpoints/
