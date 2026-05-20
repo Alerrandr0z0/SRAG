@@ -5,6 +5,10 @@ frontend/node_modules/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
 
 # Build artifacts
 dist/
