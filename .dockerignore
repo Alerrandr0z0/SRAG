@@ -5,6 +5,10 @@ frontend/node_modules/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
 
 # Build artifacts
 dist/
@@ -26,6 +30,14 @@ frontend/test-results/
 # Docker
 docker-compose.yml
 *.Dockerfile
+
+# Test files (not needed in Docker images)
+frontend/tests/
+tests/
+**/*.spec.ts
+**/*.spec.js
+**/*.test.ts
+**/*.test.js
 
 # Documentation and temporary files
 docs/
