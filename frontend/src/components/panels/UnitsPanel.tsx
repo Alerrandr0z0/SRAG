@@ -4,7 +4,7 @@ import AggregatedSwimmerPlot from '../charts/AggregatedSwimmerPlot';
 import HospitalizationHistogram from '../charts/HospitalizationHistogram';
 import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
 import SankeyChart from '../charts/SankeyChart';
-import UnitsChart from '../charts/UnitsChart';
+import RankTable from '../ui/RankTable';
 
 interface UnitsPanelProps {
   loading: boolean;
@@ -59,17 +59,39 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
     };
   }, [icuBottleneck]);
 
+  const unitRows = useMemo(
+    () =>
+      (units || []).map((item) => ({
+        key: item.nome_fantasia ? `${item.id_unidade}-${item.nome_fantasia}` : item.id_unidade,
+        values: {
+          unidade: item.nome_fantasia || item.id_unidade,
+          count: item.count,
+          curados: item.curados ?? 0,
+          obitos: item.obitos ?? 0,
+          ignorados: item.ignorados ?? 0,
+        },
+      })),
+    [units],
+  );
+
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       {loading && <p className="meta">Carregando dados de unidades...</p>}
 
-      <article className="panel">
-        <div className="section-header">
-          <h3>Unidades notificadoras</h3>
-        </div>
-        <div className="chart-wrap">
-          <UnitsChart data={units || []} />
-        </div>
+      <article className="panel" style={{ boxShadow: 'none' }}>
+        <RankTable
+          title="Unidades notificadoras"
+          subtitle="Top 10 com busca e paginação"
+          searchPlaceholder="Buscar unidade"
+          columns={[
+            { key: 'unidade', label: 'Unidade' },
+            { key: 'count', label: 'Notificados', align: 'right' },
+            { key: 'curados', label: 'Curados', align: 'right' },
+            { key: 'obitos', label: 'Óbitos', align: 'right' },
+            { key: 'ignorados', label: 'Ignorados', align: 'right' },
+          ]}
+          rows={unitRows}
+        />
       </article>
 
       <article className="panel">

@@ -13,6 +13,21 @@ from srag.data.analytics.territorial import (
 
 
 class TestTerritoryDistribution:
+    def test_status_counts_are_aggregated(self) -> None:
+        df = pd.DataFrame(
+            {
+                "BAIRRO_REF": ["Centro", "Centro", "Centro", "Cidade Nova", "Cidade Nova"],
+                "EVOLUCAO": [1, 2, 3, 1, 2],
+            }
+        )
+        res = compute_territory_distribution(df, min_cases=1)
+        rows = {row["bairro"]: row for _, row in res.iterrows()}
+
+        assert rows["Centro"]["count"] == 3
+        assert rows["Centro"]["curados"] == 1
+        assert rows["Centro"]["obitos"] == 1
+        assert rows["Centro"]["ignorados"] == 1
+
     def test_min_cases_boundary(self) -> None:
         df = pd.DataFrame(
             {"BAIRRO_REF": ["A", "A", "A", "A", "A", "B", "B", "B", "B", "C", "C", "C", "D", "D"]}
@@ -64,6 +79,21 @@ class TestZoneDistribution:
 
 
 class TestUnitDistribution:
+    def test_status_counts_are_aggregated(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ID_UNIDADE": ["U1", "U1", "U1", "U2", "U2"],
+                "EVOLUCAO": [1, 2, 3, 1, 2],
+            }
+        )
+        res = compute_unit_distribution(df, min_cases=1)
+        rows = {row["id_unidade"]: row for _, row in res.iterrows()}
+
+        assert rows["U1"]["count"] == 3
+        assert rows["U1"]["curados"] == 1
+        assert rows["U1"]["obitos"] == 1
+        assert rows["U1"]["ignorados"] == 1
+
     def test_min_cases_boundary(self) -> None:
         df = pd.DataFrame({"ID_UNIDADE": ["U1", "U1", "U1", "U2", "U2", "U3"]})
         res = compute_unit_distribution(df, min_cases=3)

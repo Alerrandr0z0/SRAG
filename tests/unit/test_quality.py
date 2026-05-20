@@ -97,40 +97,56 @@ class TestDataCompleteness:
     def test_exact_rate(self) -> None:
         df = pd.DataFrame(
             {
-                "NU_IDADE_N": [1, 2, np.nan],
+                "DT_NOTIFIC": ["2023-01-01", "", np.nan],
+                "DT_SIN_PRI": ["2023-01-02", "", np.nan],
                 "CS_SEXO": ["F", "M", "I"],
+                "DT_NASC": ["1980-01-01", "", np.nan],
+                "NU_IDADE_N": [1, 2, np.nan],
+                "TP_IDADE": [3, 3, np.nan],
+                "ID_MUNICIP": [1, 1, np.nan],
+                "ID_UNIDADE": [10, 10, np.nan],
                 "CS_RACA": [1, 9, 1],
+                "CS_ETINIA": [1, 9, np.nan],
                 "CS_ESCOL_N": [1, 9, np.nan],
                 "PAC_DSCBO": ["Medico", "", np.nan],
                 "CS_ZONA": [1, 9, 1],
-                "DT_SIN_PRI": ["2023-01-01", "", np.nan],
-                "FEBRE": [1, 9, 1],
-                "TOSSE": [1, 9, np.nan],
-                "DISPNEIA": [2, 9, 1],
-                "SATURACAO": [1, 9, np.nan],
-                "FATOR_RISC": [1, 9, 1],
-                "DT_INTERNA": ["2023-01-02", "", np.nan],
+                "NM_BAIRRO": ["Centro", "", np.nan],
+                "NU_CEP": ["59600-000", "", np.nan],
+                "ID_MN_RESI": [1, 1, np.nan],
+                "HOSPITAL": [1, 9, 1],
+                "DT_INTERNA": ["2023-01-03", "", np.nan],
                 "UTI": [1, 9, 2],
+                "DT_ENTUTI": ["2023-01-04", "", np.nan],
+                "DT_SAIDUTI": ["2023-01-05", "", np.nan],
                 "SUPORT_VEN": [1, 9, 2],
                 "EVOLUCAO": [1, 9, 1],
                 "DT_EVOLUCA": ["2023-01-10", "", np.nan],
+                "CLASSI_FIN": [1, 9, 1],
+                "CRITERIO": [1, 9, 1],
                 "AMOSTRA": [1, 9, 2],
                 "TP_AMOSTRA": [1, 9, 2],
                 "DT_COLETA": ["2023-01-01", "", np.nan],
                 "PCR_RESUL": [1, 9, 4],
-                "CLASSI_FIN": [1, 9, 1],
-                "ANTIVIRAL": [1, 9, 2],
+                "RES_AN": [1, 9, 4],
+                "DT_PCR": ["2023-01-05", "", np.nan],
+                "LAB_AN": ["L1", "", np.nan],
                 "VACINA_COV": [1, 9, 2],
+                "DOSE_1_COV": [1, 9, 2],
+                "DOSE_2_COV": [1, 9, 2],
+                "DOSE_REF": [1, 9, 2],
                 "VACINA": [1, 9, 2],
+                "DT_UT_DOSE": ["2023-01-01", "", np.nan],
+                "CS_GESTANT": [3, 9, 1],
+                "PUERPERA": [1, 9, 0],
             }
         )
         res = {r["group"]: r["overall_score"] for r in compute_data_completeness(df)}
-        assert "Demografia e Perfil" in res
-        assert "Sinais e Sintomas" in res
-        assert "Atendimento e Desfecho" in res
-        assert "Laboratório e Diagnóstico" in res
-        assert "Tratamento e Vacinação" in res
-        assert res["Tratamento e Vacinação"] == round((2 / 3 + 2 / 3 + 2 / 3) / 3 * 100, 1)
+        assert "Identificação do Caso" in res
+        assert "Demografia e Residência" in res
+        assert "Linha do Cuidado" in res
+        assert "Coleta e Diagnóstico" in res
+        assert "Vacinação e Gestação" in res
+        assert res["Vacinação e Gestação"] == 62.5
 
     def test_empty_df(self) -> None:
         assert compute_data_completeness(pd.DataFrame()) == []

@@ -173,9 +173,8 @@ def main(
                         if orig == "NULL":
                             select_parts.append("NULL")
                         else:
-                            # Tenta vários formatos: ISO Date, ISO Timestamp, Brasileiro
-                            p1 = "strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%d/%m/%Y')"
-                            p2 = "strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%Y-%m-%d')"
+                            p1 = f"strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%d/%m/%Y')"
+                            p2 = f"strptime(SUBSTR(CAST({orig} AS VARCHAR), 1, 10), '%Y-%m-%d')"
                             select_parts.append(f"""
                                 COALESCE(
                                     TRY_CAST({orig} AS DATE),
@@ -203,6 +202,13 @@ def main(
                             get_col("FAB_COV_2")
                             if get_col("FAB_COV_2") != "NULL"
                             else get_col("FAB_COV2")
+                        )
+                        select_parts.append(orig)
+                    elif col_up == "ID_UNIDADE":
+                        orig = (
+                            get_col("CO_UNI_NOT")
+                            if get_col("CO_UNI_NOT") != "NULL"
+                            else get_col("ID_UNIDADE")
                         )
                         select_parts.append(orig)
                     else:

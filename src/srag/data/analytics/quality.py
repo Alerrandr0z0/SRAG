@@ -107,42 +107,58 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             valid = valid & ~series.isin(ignore_vals)
         return round((valid.sum() / total) * 100, 1)
 
-    # Definição dos blocos de auditoria
+    # Definição dos blocos de auditoria focados em qualidade do registro
     audit_blocks = {
-        "Demografia e Perfil": [
-            ("Idade", calc_rate("NU_IDADE_N")),
+        "Identificação do Caso": [
+            ("Data da Notificação", calc_rate("DT_NOTIFIC")),
+            ("Data dos Primeiros Sintomas", calc_rate("DT_SIN_PRI")),
             ("Sexo", calc_rate("CS_SEXO", ["I"])),
+            ("Data de Nascimento", calc_rate("DT_NASC")),
+            ("Idade Normalizada", calc_rate("NU_IDADE_N")),
+            ("Tipo de Idade", calc_rate("TP_IDADE")),
+            ("Município de Notificação", calc_rate("ID_MUNICIP")),
+            ("Unidade Notificadora", calc_rate("ID_UNIDADE")),
+        ],
+        "Demografia e Residência": [
             ("Raça/Cor", calc_rate("CS_RACA", [9])),
+            ("Etnia", calc_rate("CS_ETINIA", [9])),
             ("Escolaridade", calc_rate("CS_ESCOL_N", [9])),
             ("Ocupação", calc_rate("PAC_DSCBO", [9, "9"])),
-            ("Zona (Urbana/Rural)", calc_rate("CS_ZONA", [9])),
+            ("Zona", calc_rate("CS_ZONA", [9])),
+            ("Bairro", calc_rate("NM_BAIRRO")),
+            ("CEP", calc_rate("NU_CEP")),
+            ("Município de Residência", calc_rate("ID_MN_RESI")),
         ],
-        "Sinais e Sintomas": [
-            ("Data Primeiros Sintomas", calc_rate("DT_SIN_PRI")),
-            ("Febre", calc_rate("FEBRE", [9])),
-            ("Tosse", calc_rate("TOSSE", [9])),
-            ("Dispneia", calc_rate("DISPNEIA", [9])),
-            ("Saturação < 95%", calc_rate("SATURACAO", [9])),
-            ("Fatores de Risco", calc_rate("FATOR_RISC", [9])),
-        ],
-        "Atendimento e Desfecho": [
+        "Linha do Cuidado": [
+            ("Internação Hospitalar", calc_rate("HOSPITAL", [9])),
             ("Data de Internação", calc_rate("DT_INTERNA")),
-            ("Internação em UTI", calc_rate("UTI", [9])),
+            ("UTI", calc_rate("UTI", [9])),
+            ("Entrada em UTI", calc_rate("DT_ENTUTI")),
+            ("Saída da UTI", calc_rate("DT_SAIDUTI")),
             ("Suporte Ventilatório", calc_rate("SUPORT_VEN", [9])),
-            ("Evolução (Cura/Óbito)", calc_rate("EVOLUCAO", [9])),
+            ("Evolução", calc_rate("EVOLUCAO", [9])),
             ("Data de Evolução", calc_rate("DT_EVOLUCA")),
-        ],
-        "Laboratório e Diagnóstico": [
-            ("Coleta de Amostra", calc_rate("AMOSTRA", [9])),
-            ("Tipo de Amostra", calc_rate("TP_AMOSTRA", [9])),
-            ("Data de Coleta", calc_rate("DT_COLETA")),
-            ("Resultado PCR", calc_rate("PCR_RESUL", [9, 4, 5])),
             ("Classificação Final", calc_rate("CLASSI_FIN", [9])),
+            ("Critério de Confirmação", calc_rate("CRITERIO", [9])),
         ],
-        "Tratamento e Vacinação": [
-            ("Uso de Antiviral", calc_rate("ANTIVIRAL", [9])),
+        "Coleta e Diagnóstico": [
+            ("Amostra Coletada", calc_rate("AMOSTRA", [9])),
+            ("Data de Coleta", calc_rate("DT_COLETA")),
+            ("Tipo de Amostra", calc_rate("TP_AMOSTRA", [9])),
+            ("Resultado PCR", calc_rate("PCR_RESUL", [9, 4, 5])),
+            ("Resultado Antígeno", calc_rate("RES_AN", [9])),
+            ("Data do PCR", calc_rate("DT_PCR")),
+            ("Laboratório", calc_rate("LAB_AN")),
+        ],
+        "Vacinação e Gestação": [
             ("Vacina COVID-19", calc_rate("VACINA_COV", [9])),
-            ("Vacina Gripe", calc_rate("VACINA", [9])),
+            ("Dose 1 COVID", calc_rate("DOSE_1_COV", [9])),
+            ("Dose 2 COVID", calc_rate("DOSE_2_COV", [9])),
+            ("Reforço COVID", calc_rate("DOSE_REF", [9])),
+            ("Vacina Influenza", calc_rate("VACINA", [9])),
+            ("Data da Última Dose", calc_rate("DT_UT_DOSE")),
+            ("Gestante", calc_rate("CS_GESTANT", [9])),
+            ("Puérpera", calc_rate("PUERPERA", [9])),
         ],
     }
 

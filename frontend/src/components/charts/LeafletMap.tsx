@@ -3,6 +3,7 @@ import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useThemeMode } from '../../hooks/useThemeMode';
+import { formatRangeValue, getChoroplethStyle } from './LeafletMap.helpers';
 
 interface ChoroplethType {
   feature_collection?: FeatureCollection;
@@ -66,11 +67,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [rangeMin, setRangeMin] = useState(0);
   const [rangeMax, setRangeMax] = useState(maxVal);
   const [hoverValue, setHoverValue] = useState<number | null>(null);
+  const [hoveringBar, setHoveringBar] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setRangeMin(0);
     setRangeMax(maxVal);
+    setHoverValue(null);
   }, [maxVal]);
 
   const handleSectorClick = useCallback(
@@ -122,24 +125,26 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           mapInstance.current.setView([-5.18, -37.34], 12);
         }
 
-        overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
-          style: (f) => {
-            const feature = f as { properties?: { bairro?: string; count?: number } };
-            const count = (feature.properties?.count as number) || 0;
-            const inRange = count >= rangeMin && count <= rangeMax;
-            const baseFill =
-              count > 0 && colorScale
-                ? colorScale(count)
-                : theme === 'dark'
-                  ? '#334155'
-                  : '#e2e8f0';
-            return {
-              color: theme === 'dark' ? '#f8fafc' : '#0f172a',
-              weight: 0.5,
-              fillColor: inRange ? baseFill : theme === 'dark' ? '#1e293b' : '#f1f5f9',
-              fillOpacity: inRange ? 0.85 : 0.3,
-            };
-          },
+          overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
+            style: (f) => {
+              const feature = f as { properties?: { bairro?: string; count?: number } };
+              const count = (feature.properties?.count as number) || 0;
+              const hoveredCount = hoveringBar ? hoverValue : null;
+              const baseFill =
+                count > 0 && colorScale
+                  ? colorScale(count)
+                  : theme === 'dark'
+                    ? '#334155'
+                    : '#e2e8f0';
+              return getChoroplethStyle({
+                count,
+                rangeMin,
+                rangeMax,
+                hoverValue: hoveredCount,
+                theme,
+                colorForCount: baseFill,
+              });
+            },
           onEachFeature: (feature, layer) => {
             const feat = feature as { properties?: { bairro?: string; count?: number } };
             if (feat.properties?.bairro) {
@@ -214,6 +219,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     theme,
     rangeMin,
     rangeMax,
+    hoverValue,
+    hoveringBar,
   ]);
 
   useEffect(() => {
@@ -245,7 +252,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             minWidth: 180,
           }}
         >
-          <p
+            <p
             style={{
               margin: '0 0 6px 0',
               fontSize: '10px',
@@ -256,21 +263,25 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             }}
           >
             Casos por Bairro
-          </p>
-          <div style={{ position: 'relative' }}>
-            <div
-              ref={barRef}
-              onMouseMove={(e) => {
-                if (!barRef.current) return;
-                const rect = barRef.current.getBoundingClientRect();
-                const pct = (e.clientX - rect.left) / rect.width;
-                setHoverValue(Math.round(pct * maxVal));
-              }}
-              onMouseLeave={() => setHoverValue(null)}
-              style={{
-                width: '100%',
-                height: 12,
-                borderRadius: 4,
+            </p>
+            <div style={{ position: 'relative' }}>
+              <div
+                ref={barRef}
+                onMouseMove={(e) => {
+                  if (!barRef.current) return;
+                  const rect = barRef.current.getBoundingClientRect();
+                  const pct = (e.clientX - rect.left) / rect.width;
+                  setHoveringBar(true);
+                  setHoverValue(Math.round(Math.min(Math.max(pct, 0), 1) * maxVal));
+                }}
+                onMouseLeave={() => {
+                  setHoveringBar(false);
+                  setHoverValue(null);
+                }}
+                style={{
+                  width: '100%',
+                  height: 12,
+                  borderRadius: 4,
                 cursor: 'crosshair',
                 background:
                   'linear-gradient(to right, #fff7ec, #fee8c8, #fdd49e, #fdbb84, #fc8d59, #ef6548, #d7301f, #990000)',
@@ -296,40 +307,50 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 {hoverValue.toLocaleString('pt-BR')}
               </div>
             )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+              <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
+                {formatRangeValue(rangeMin)}
+              </span>
+              <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
+                {formatRangeValue(rangeMax)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
+                Mín: {formatRangeValue(rangeMin)}
+              </span>
+              <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
+                Máx: {formatRangeValue(rangeMax)}
+              </span>
+            </div>
+            <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="range"
+                min={0}
+                max={maxVal}
+                step={1}
+                value={rangeMin}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setRangeMin(Math.min(v, rangeMax));
+                }}
+                style={{ flex: 1, height: 4, accentColor: '#f97316' }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={maxVal}
+                step={1}
+                value={rangeMax}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setRangeMax(Math.max(v, rangeMin));
+                }}
+                style={{ flex: 1, height: 4, accentColor: '#dc2626' }}
+              />
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>0</span>
-            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
-              {Math.round(maxVal).toLocaleString('pt-BR')}
-            </span>
-          </div>
-          <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="range"
-              min={0}
-              max={maxVal}
-              step={1}
-              value={rangeMin}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setRangeMin(Math.min(v, rangeMax));
-              }}
-              style={{ flex: 1, height: 4, accentColor: '#f97316' }}
-            />
-            <input
-              type="range"
-              min={0}
-              max={maxVal}
-              step={1}
-              value={rangeMax}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setRangeMax(Math.max(v, rangeMin));
-              }}
-              style={{ flex: 1, height: 4, accentColor: '#dc2626' }}
-            />
-          </div>
-        </div>
       )}
 
       {mapZoneMode === 'Rural' && (

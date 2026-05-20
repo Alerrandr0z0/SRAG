@@ -47,6 +47,9 @@ export interface TrendsData {
 export interface NeighborhoodStats {
   bairro: string;
   count: number;
+  curados?: number;
+  obitos?: number;
+  ignorados?: number;
 }
 
 export interface ZoneStats {
@@ -57,6 +60,10 @@ export interface ZoneStats {
 export interface UnitStats {
   id_unidade: string;
   count: number;
+  curados?: number;
+  obitos?: number;
+  ignorados?: number;
+  nome_fantasia?: string;
   [key: string]: unknown;
 }
 

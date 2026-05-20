@@ -1,8 +1,8 @@
 import type { FeatureCollection } from 'geojson';
 import React, { useMemo, useState } from 'react';
 import * as Epi from '../../types/epi';
-import BairrosChart from '../charts/BairrosChart';
 import LeafletMap from '../charts/LeafletMap';
+import RankTable from '../ui/RankTable';
 
 const ZONE_COLORS: Record<string, string> = {
   Urbana: '#0f766e',
@@ -52,17 +52,39 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
       .filter((z) => z.count > 0);
   }, [territory?.zonas]);
 
+  const bairroRows = useMemo(
+    () =>
+      (territory?.bairros || []).map((item) => ({
+        key: item.bairro,
+        values: {
+          bairro: item.bairro,
+          count: item.count,
+          curados: item.curados ?? 0,
+          obitos: item.obitos ?? 0,
+          ignorados: item.ignorados ?? 0,
+        },
+      })),
+    [territory?.bairros],
+  );
+
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       {loading && <p className="meta">Carregando dados territoriais...</p>}
 
-      <article className="panel">
-        <div className="section-header">
-          <h3>Bairros com mais casos</h3>
-        </div>
-        <div className="chart-wrap">
-          <BairrosChart data={territory?.bairros || []} />
-        </div>
+      <article className="panel" style={{ boxShadow: 'none' }}>
+        <RankTable
+          title="Bairros notificados"
+          subtitle="Top 10 com busca e paginação"
+          searchPlaceholder="Buscar bairro"
+          columns={[
+            { key: 'bairro', label: 'Bairro' },
+            { key: 'count', label: 'Notificados', align: 'right' },
+            { key: 'curados', label: 'Curados', align: 'right' },
+            { key: 'obitos', label: 'Óbitos', align: 'right' },
+            { key: 'ignorados', label: 'Ignorados', align: 'right' },
+          ]}
+          rows={bairroRows}
+        />
       </article>
 
       <article className="panel">
