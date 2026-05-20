@@ -38,6 +38,10 @@ setup-front:
 ingest:
 	uv run scripts/ingest_data.py
 
+cnes-lookup:
+	uv run scripts/fetch_cnes_lookup.py
+	@echo "CNES lookup updated at data/processed/cnes_units.json"
+
 start:
 	./scripts/port_control.sh start
 

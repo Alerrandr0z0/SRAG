@@ -62,6 +62,27 @@ class TerritoryBootstrapResponse(TypedDict):
     territory_entities: list[dict[str, Any]]
 
 
+class TerritoryMetricItem(TypedDict):
+    """Territory ranking row."""
+
+    bairro: str
+    count: int
+    curados: int
+    obitos: int
+    ignorados: int
+
+
+class UnitMetricItem(TypedDict):
+    """Unit ranking row."""
+
+    id_unidade: str
+    nome_fantasia: str
+    count: int
+    curados: int
+    obitos: int
+    ignorados: int
+
+
 class GeoBoundaryResponse(TypedDict):
     """Geo boundary response."""
 

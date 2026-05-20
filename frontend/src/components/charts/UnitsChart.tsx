@@ -12,7 +12,7 @@ const UnitsChart: React.FC<UnitsChartProps> = ({ data }) => {
     () => ({
       type: 'bar',
       data: {
-        labels: data.map((u) => u.id_unidade),
+        labels: data.map((u) => u.nome_fantasia || u.id_unidade),
         datasets: [
           {
             data: data.map((u) => u.count),
