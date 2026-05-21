@@ -130,9 +130,9 @@ def context_trends(
     lookback_weeks: int = Query(0, ge=0),
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
-    df = get_df()
+    df_all = get_df()
     df = apply_global_filters(
-        df,
+        df_all,
         filters.profile,
         filters.race,
         filters.gender,
@@ -142,8 +142,9 @@ def context_trends(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
-        return {"history": [], "forecast": [], "thresholds": {}, "composition": []}
+        return sanitize_data({"history": [], "forecast": [], "thresholds": {}, "composition": []})
 
     work = df.copy()
     if key.startswith("BAIRRO::"):
@@ -153,7 +154,8 @@ def context_trends(
 
     ts = compute_time_series(work)
     result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
-    result["thresholds"] = compute_alert_thresholds(work)
+    # Use full historical baseline for alert thresholds to ensure a stable 'ruler'
+    result["thresholds"] = compute_alert_thresholds(df_all)
     history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
     composition = ts[ts["epi_week"].isin(history_weeks)]
     result["composition"] = composition.to_dict(orient="records")
@@ -186,6 +188,7 @@ def timeline_agg(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
         return []
 
@@ -208,10 +211,10 @@ def icu_bottleneck(
             filters.zonas,
             filters.bairros,
             filters.unidades,
-            filters.years,
             maternal=filters.maternal,
             occupations=filters.occupations,
         )
+        df = apply_surveillance_filters(df, filters.years, filters.agents)
         if df.empty:
             return []
 

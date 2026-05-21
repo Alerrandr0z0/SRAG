@@ -11,6 +11,10 @@ from fastapi import APIRouter, Depends, Query
 
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
+from srag.data.geospatial import (
+    build_bairros_choropleth,
+    _norm_bairro_name,
+)
 from srag.data.analytics import (
     apply_global_filters,
     compute_territory_distribution,
@@ -42,11 +46,29 @@ def territory_bootstrap(
         occupations=filters.occupations,
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
+    
+    # Define default/empty structures for contract stability
+    empty_result = sanitize_data(
+        {
+            "territory": {"bairros": [], "zonas": []},
+            "boundary": {"type": "FeatureCollection", "features": []},
+            "choropleth": {
+                "available": False, 
+                "feature_collection": {"type": "FeatureCollection", "features": []}
+            },
+            "territory_entities": {"urban_bairros": [], "rural_comunidades": []},
+        }
+    )
+
     if df.empty:
-        return {}
+        return empty_result
 
     bairros_df = compute_territory_distribution(df, min_cases=0)
-    bairros_dict = dict(zip(bairros_df["bairro"].str.upper(), bairros_df["count"]))
+    # Correct aggregation: SUM counts if multiple raw names normalize to the same key
+    bairros_dict: dict[str, int] = {}
+    for row in bairros_df.itertuples(index=False):
+        norm = _norm_bairro_name(row.bairro)
+        bairros_dict[norm] = bairros_dict.get(norm, 0) + int(row.count)
 
     boundary_path = Path("data/processed/mossoro_municipality_boundary.geojson")
     boundary = (
@@ -59,14 +81,13 @@ def territory_bootstrap(
     if bairros_geo_path.exists():
         bairros_geo = json.loads(bairros_geo_path.read_text())
         for feature in bairros_geo["features"]:
-            name = feature["properties"].get("bairro", "").upper()
-            feature["properties"]["count"] = bairros_dict.get(name, 0)
+            raw_name = feature["properties"].get("bairro", "")
+            norm_name = _norm_bairro_name(raw_name)
+            feature["properties"]["count"] = bairros_dict.get(norm_name, 0)
+            feature["properties"]["bairro"] = norm_name
         choropleth = {"available": True, "feature_collection": bairros_geo}
     else:
-        choropleth = {
-            "available": False,
-            "feature_collection": {"type": "FeatureCollection", "features": []},
-        }
+        choropleth = empty_result["choropleth"]
 
     entities = compute_territory_entities_by_zone(df, entities_min_cases, entities_limit)
 

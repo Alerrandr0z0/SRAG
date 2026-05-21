@@ -113,7 +113,6 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Data da Notificação", calc_rate("DT_NOTIFIC")),
             ("Data dos Primeiros Sintomas", calc_rate("DT_SIN_PRI")),
             ("Sexo", calc_rate("CS_SEXO", ["I"])),
-            ("Data de Nascimento", calc_rate("DT_NASC")),
             ("Idade Normalizada", calc_rate("NU_IDADE_N")),
             ("Tipo de Idade", calc_rate("TP_IDADE")),
             ("Município de Notificação", calc_rate("ID_MUNICIP")),
@@ -121,7 +120,6 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
         ],
         "Demografia e Residência": [
             ("Raça/Cor", calc_rate("CS_RACA", [9])),
-            ("Etnia", calc_rate("CS_ETINIA", [9])),
             ("Escolaridade", calc_rate("CS_ESCOL_N", [9])),
             ("Ocupação", calc_rate("PAC_DSCBO", [9, "9"])),
             ("Zona", calc_rate("CS_ZONA", [9])),
@@ -134,7 +132,6 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Data de Internação", calc_rate("DT_INTERNA")),
             ("UTI", calc_rate("UTI", [9])),
             ("Entrada em UTI", calc_rate("DT_ENTUTI")),
-            ("Saída da UTI", calc_rate("DT_SAIDUTI")),
             ("Suporte Ventilatório", calc_rate("SUPORT_VEN", [9])),
             ("Evolução", calc_rate("EVOLUCAO", [9])),
             ("Data de Evolução", calc_rate("DT_EVOLUCA")),

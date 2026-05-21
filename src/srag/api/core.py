@@ -47,7 +47,11 @@ def apply_surveillance_filters(
     out = df
     if years and "DT_SIN_PRI" in out.columns:
         year_values = set(years)
-        out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year.isin(year_values)]
+        dt_s = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+        idx = (dt_s.dt.weekday + 1) % 7
+        sun = dt_s - pd.to_timedelta(idx, unit="D")
+        se_years = (sun + pd.to_timedelta(3, unit="D")).dt.year
+        out = out[se_years.isin(year_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
         out = out[infer_etiologic_agent(out).str.upper().isin(agent_norm)]

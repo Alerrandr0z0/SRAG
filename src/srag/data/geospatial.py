@@ -213,7 +213,7 @@ def build_bairros_choropleth(
     bairro_counts_df = compute_territory_distribution(df, min_cases=min_cases)
     count_map: dict[str, int] = {}
     for row in bairro_counts_df.itertuples(index=False):
-        bairro_name = _norm_bairro_name(getattr(row, "BAIRRO_REF", None))
+        bairro_name = _norm_bairro_name(getattr(row, "bairro", None))
         count_value = int(getattr(row, "count", 0) or 0)
         count_map[bairro_name] = count_value
 

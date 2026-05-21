@@ -84,11 +84,28 @@ class TestApplyGlobalFiltersEmpty:
 
 class TestYearsFilter:
     def test_exact_year_match(self) -> None:
+        # Dec 31, 2023 belongs to SE 1 of 2024
         df = pd.DataFrame({"DT_SIN_PRI": ["2023-06-01", "2024-01-01", "2023-12-31"]})
         res = apply_global_filters(df, years=[2023])
-        assert len(res) == 2
+        assert len(res) == 1
+        assert res.iloc[0]["DT_SIN_PRI"] == "2023-06-01"
+
+    def test_year_boundary_se_logic(self) -> None:
+        # Jan 1, 2022 (Saturday) belongs to SE 52 of 2021
+        df = pd.DataFrame({"DT_SIN_PRI": ["2021-12-31", "2022-01-01", "2022-01-02"]})
+        
+        # Filtering for 2021 should include Jan 1, 2022
+        res_2021 = apply_global_filters(df, years=[2021])
+        assert len(res_2021) == 2
+        assert "2022-01-01" in res_2021["DT_SIN_PRI"].values
+        
+        # Filtering for 2022 should NOT include Jan 1, 2022
+        res_2022 = apply_global_filters(df, years=[2022])
+        assert len(res_2022) == 1
+        assert res_2022.iloc[0]["DT_SIN_PRI"] == "2022-01-02"
 
     def test_year_boundary_jan1(self) -> None:
+        # Jan 1, 2024 (Monday) is SE 1 of 2024
         df = pd.DataFrame({"DT_SIN_PRI": ["2023-01-01", "2024-01-01"]})
         res = apply_global_filters(df, years=[2024])
         assert len(res) == 1

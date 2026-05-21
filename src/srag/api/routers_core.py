@@ -38,7 +38,10 @@ def get_summary(
     df_all = get_df()
     available_years: list[int] = []
     if not df_all.empty and "DT_SIN_PRI" in df_all.columns:
-        years_series = pd.to_datetime(df_all["DT_SIN_PRI"], errors="coerce").dt.year.dropna()
+        dt_s = pd.to_datetime(df_all["DT_SIN_PRI"], errors="coerce")
+        idx = (dt_s.dt.weekday + 1) % 7
+        sun = dt_s - pd.to_timedelta(idx, unit="D")
+        years_series = (sun + pd.to_timedelta(3, unit="D")).dt.year.dropna()
         available_years = sorted({int(y) for y in years_series})
 
     df = apply_global_filters(
@@ -54,29 +57,37 @@ def get_summary(
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
     if df.empty:
-        return {
-            "uti_rate": 0.0,
-            "uti_total": 0,
-            "death_rate": 0.0,
-            "total": 0,
-            "notification_total": 0,
-            "available_years": available_years,
-        }
+        return sanitize_data(
+            {
+                "uti_rate": 0.0,
+                "uti_total": 0,
+                "death_rate": 0.0,
+                "total": 0,
+                "notification_total": 0,
+                "available_years": available_years,
+            }
+        )
 
     total = len(df)
     hospital_col = df.get("HOSPITAL")
     hospitalized = int((hospital_col.fillna(0) == 1).sum()) if hospital_col is not None else 0
     uti_cases = int((df["UTI"] == 1).sum())
-    death_cases = outcome_death_mask(df["EVOLUCAO"]).sum()
 
-    return {
-        "uti_rate": round((uti_cases / total) * 100, 2) if total > 0 else 0,
-        "uti_total": uti_cases,
-        "death_rate": round((death_cases / total) * 100, 2) if total > 0 else 0,
-        "total": hospitalized,
-        "notification_total": len(df),
-        "available_years": available_years,
-    }
+    # Standard Epidemiological Lethality: deaths / (cure + deaths)
+    closed_cases_mask = df["EVOLUCAO"].isin([1, 2])
+    closed_count = closed_cases_mask.sum()
+    death_cases = int((df["EVOLUCAO"] == 2).sum())
+
+    return sanitize_data(
+        {
+            "uti_rate": round((uti_cases / total) * 100, 2) if total > 0 else 0,
+            "uti_total": uti_cases,
+            "death_rate": round((death_cases / closed_count * 100), 2) if closed_count > 0 else 0.0,
+            "total": hospitalized,
+            "notification_total": len(df),
+            "available_years": available_years,
+        }
+    )
 
 
 @router.get("/trends")
@@ -86,9 +97,9 @@ def get_trends(
     lookback_weeks: int = 0,
     filters: CommonFilters = Depends(get_common_filters),
 ) -> TrendsResponse:
-    df = get_df()
+    df_all = get_df()
     df = apply_global_filters(
-        df,
+        df_all,
         filters.profile,
         filters.race,
         filters.gender,
@@ -110,7 +121,8 @@ def get_trends(
 
     ts = compute_time_series(df)
     result = predict_next_weeks(ts, weeks_to_predict=weeks_to_predict)
-    result["thresholds"] = compute_alert_thresholds(df)
+    # Use full historical baseline for alert thresholds to ensure a stable 'ruler'
+    result["thresholds"] = compute_alert_thresholds(df_all)
     ts_virus = compute_time_series_by_virus(df)
     history_weeks = [h["epi_week"] for h in result["history"][-last_n_weeks:]]
     composition = ts_virus[ts_virus["epi_week"].isin(history_weeks)]

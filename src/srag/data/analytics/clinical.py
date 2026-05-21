@@ -12,18 +12,27 @@ if TYPE_CHECKING:
 
 
 def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
-    """Calculate key severity percentages for Mossoró."""
+    """Calculate key severity percentages for Mossoró.
+    
+    Lethality (death_rate) is calculated over closed cases (Cure or Death) 
+    to avoid underestimation from open cases.
+    """
     if df.empty:
         return {"uti_rate": 0.0, "death_rate": 0.0}
 
     total = len(df)
     uti_count = (df["UTI"] == 1).sum()
-    death_count = outcome_death_mask(df["EVOLUCAO"]).sum()
+    
+    # Standard Epidemiological Lethality: deaths / (cure + deaths)
+    closed_cases_mask = df["EVOLUCAO"].isin([1, 2])
+    closed_count = closed_cases_mask.sum()
+    death_count = (df["EVOLUCAO"] == 2).sum()
 
     return {
         "uti_rate": round((uti_count / total) * 100, 2),
-        "death_rate": round((death_count / total) * 100, 2),
+        "death_rate": round((death_count / closed_count * 100), 2) if closed_count > 0 else 0.0,
         "total": total,
+        "closed_cases": int(closed_count),
     }
 
 

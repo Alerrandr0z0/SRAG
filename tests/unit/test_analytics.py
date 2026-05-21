@@ -54,13 +54,14 @@ def test_compute_severity_metrics() -> None:
     df = pd.DataFrame(
         {
             "UTI": [1, 2, 1, 9, 1],  # 3 UTI
-            "EVOLUCAO": [1, 2, 1, 2, 3],  # code 3 must not count as death
+            "EVOLUCAO": [1, 2, 1, 2, 3],  # 2 deaths, 2 cures, 1 other -> 4 closed cases
         }
     )
     metrics = compute_severity_metrics(df)
     assert metrics["total"] == 5
+    assert metrics["closed_cases"] == 4
     assert metrics["uti_rate"] == 60.0  # 3/5
-    assert metrics["death_rate"] == 40.0  # 2/5
+    assert metrics["death_rate"] == 50.0  # 2/4 (deaths / closed cases)
 
 
 def test_apply_citizen_filters_profile() -> None:

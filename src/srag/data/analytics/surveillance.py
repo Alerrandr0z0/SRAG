@@ -560,7 +560,8 @@ def compute_genomic_variants(df: pd.DataFrame) -> dict[str, object]:
     if genomic.empty:
         return {"weeks": [], "variants": {}}
 
-    genomic["epi_week"] = genomic["DT_SIN_PRI"].dt.strftime("%Y-W%V")
+    genomic["se_year_week"] = genomic["DT_SIN_PRI"].apply(get_epi_week)
+    genomic["epi_week"] = genomic["se_year_week"].apply(lambda x: format_epi_week(*x))
 
     grouped = genomic.groupby(["epi_week", "variant_name"]).size().unstack(fill_value=0)
 
@@ -616,10 +617,16 @@ def compute_lethality_heatmap(df: pd.DataFrame) -> dict[str, Any]:
                 row.append(0.0)
                 continue
 
-            # CFR: deaths / total cases in cell
-            deaths = cell_df["is_death"].sum()
-            total = len(cell_df)
-            cfr = round((deaths / total) * 100, 1)
+            # CFR: deaths / closed cases (Cure or Death) in cell
+            closed_df = cell_df[cell_df["EVOLUCAO"].isin([1, 2])]
+            deaths = (closed_df["EVOLUCAO"] == 2).sum()
+            total_closed = len(closed_df)
+            
+            if total_closed == 0:
+                row.append(0.0)
+                continue
+                
+            cfr = round((deaths / total_closed) * 100, 1)
             row.append(cfr)
         matrix.append(row)
 

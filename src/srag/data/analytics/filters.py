@@ -44,7 +44,11 @@ def apply_global_filters(
     if years:
         # Normalize years to int to handle potential string inputs from API
         years_int = [int(y) for y in years if str(y).isdigit()]
-        out["_tmp_year"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.year
+        dt_s = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+        # Calculate SE Year vectorized: Start of week (Sunday) + 3 days (Wednesday)
+        idx = (dt_s.dt.weekday + 1) % 7
+        sun = dt_s - pd.to_timedelta(idx, unit="D")
+        out["_tmp_year"] = (sun + pd.to_timedelta(3, unit="D")).dt.year
         out = out[out["_tmp_year"].isin(years_int)]
         out = out.drop(columns=["_tmp_year"])
 
