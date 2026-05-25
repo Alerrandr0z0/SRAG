@@ -16,7 +16,7 @@ engine = create_engine(DB_URL, pool_pre_ping=True)
 _cache: dict[str, Any] = {"df": None, "loaded_at": None}  # Cache invalidated at 2026-05-09
 
 
-def sanitize_data(obj: object) -> object:
+def sanitize_data(obj: Any) -> Any:  # noqa: ANN401
     """Recursively convert numpy types to native python types for JSON serialization."""
     if isinstance(obj, dict):
         return {k: sanitize_data(v) for k, v in obj.items()}

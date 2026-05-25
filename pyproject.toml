@@ -37,6 +37,7 @@ dev = [
     "pip-audit>=2.10",
     "ipykernel>=6.29",
     "jupyter>=1.0",
+    "complexipy>=0.4.0",
 ]
 
 [tool.ruff]
@@ -58,11 +59,18 @@ select = [
     "RUF",  # ruff-specific rules
     "D",    # pydocstyle
     "ANN",  # flake8-annotations
+    "C90",  # mccabe complexity
+    "T20",  # flake8-print
+    "PTH",  # flake8-use-pathlib
 ]
 ignore = [
     "D100",  # missing docstring in public module
     "D104",  # missing docstring in public package
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
 
 [tool.ruff.lint.per-file-ignores]
 "src/srag/api/main.py" = [
@@ -78,6 +86,12 @@ ignore = [
     "N806",
     "RUF005",
 ]
+"main.py" = [
+    "T20",    # allow print in CLI entry point
+]
+"notebooks/**/*.ipynb" = [
+    "T20",    # allow print in Jupyter notebooks
+]
 "tests/**/*.py" = [
     "ANN001",
     "ANN201",
@@ -89,12 +103,15 @@ ignore = [
     "D103",
     "E501",
     "S101",   # allow assert in tests
+    "T20",    # allow print in tests
 ]
 "scripts/**/*.py" = [
     "ANN201",
     "D103",
     "E501",
+    "T20",    # allow print in scripts
 ]
+# --- Tech Debt: Zero legacy functions with high complexity! ---
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -154,4 +171,5 @@ dev = [
     "graphifyy>=0.7.11",
     "jupyterlab>=4.5.5",
     "pip-audit>=2.10",
+    "complexipy>=0.4.0",
 ]

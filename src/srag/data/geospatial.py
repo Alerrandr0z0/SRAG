@@ -254,6 +254,91 @@ def build_bairros_choropleth(
     }
 
 
+def _load_geojson_features(path: Path) -> tuple[list[dict[str, Any]] | None, str]:
+    """Load GeoJSON features and return a tuple (features, status_reason)."""
+    if not path.exists():
+        return None, "geojson_not_found"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        features = payload.get("features", [])
+        if isinstance(features, list) and features:
+            return features, "ok"
+    except Exception:  # nosec: B110
+        pass
+    return None, "invalid_geojson"
+
+
+def _match_centroids(
+    features: list[dict[str, Any]], count_map: dict[str, int]
+) -> dict[str, tuple[float, float]]:
+    """Match GeoJSON features to count_map and return centroids."""
+    centroids: dict[str, tuple[float, float]] = {}
+    for feature in features:
+        props = feature.get("properties", {})
+        raw_name = (
+            props.get("bairro")
+            or props.get("nome")
+            or props.get("name")
+            or props.get("nm_bairro")
+            or ""
+        )
+        key = _norm_bairro_name(raw_name)
+        if key not in count_map:
+            continue
+        centroid = _feature_centroid(feature)
+        if centroid is not None:
+            centroids[key] = centroid
+    return centroids
+
+
+def _bucket_into_sectors(
+    count_map: dict[str, int],
+    centroids: dict[str, tuple[float, float]],
+    center_x: float,
+    center_y: float,
+    min_cases: int,
+) -> list[dict[str, Any]]:
+    """Group bairros into 8 directional macro-sectors."""
+    bucket: dict[str, dict[str, Any]] = {}
+    for bairro_key, count in count_map.items():
+        centroid = centroids.get(bairro_key)
+        if centroid is None:
+            continue
+        x, y = centroid
+        dx = x - center_x
+        dy = y - center_y
+        theta = (math.degrees(math.atan2(dy, dx)) + 360.0) % 360.0
+        sector = _angle_to_sector(theta)
+        if sector not in bucket:
+            bucket[sector] = {
+                "sector": sector,
+                "count": 0,
+                "sum_x": 0.0,
+                "sum_y": 0.0,
+                "n": 0,
+            }
+        bucket[sector]["count"] += int(count)
+        bucket[sector]["sum_x"] += x
+        bucket[sector]["sum_y"] += y
+        bucket[sector]["n"] += 1
+
+    points: list[dict[str, Any]] = []
+    for sector, item in bucket.items():
+        if item["count"] < min_cases:
+            continue
+        avg_x = item["sum_x"] / item["n"]
+        avg_y = item["sum_y"] / item["n"]
+        points.append(
+            {
+                "sector": sector,
+                "count": int(item["count"]),
+                "lat": avg_y,
+                "lon": avg_x,
+            }
+        )
+    return sorted(points, key=lambda p: p["count"], reverse=True)
+
+
 def build_macrosector_heatpoints(
     df: pd.DataFrame,
     geojson_path: str | Path,
@@ -262,20 +347,11 @@ def build_macrosector_heatpoints(
 ) -> dict[str, Any]:
     """Aggregate zone cases into 8 directional macro-sectors for map heat points."""
     path = geojson_path if isinstance(geojson_path, Path) else Path(geojson_path)
-    if not path.exists():
+    features, status = _load_geojson_features(path)
+    if features is None:
         return {
             "available": False,
-            "reason": "geojson_not_found",
-            "center": None,
-            "points": [],
-        }
-
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    features = payload.get("features", [])
-    if not isinstance(features, list) or not features:
-        return {
-            "available": False,
-            "reason": "invalid_geojson",
+            "reason": status,
             "center": None,
             "points": [],
         }
@@ -346,25 +422,8 @@ def build_macrosector_heatpoints(
             ],
         }
 
-    centroids: dict[str, tuple[float, float]] = {}
-    centroid_values: list[tuple[float, float]] = []
-    for feature in features:
-        props = feature.get("properties", {})
-        raw_name = (
-            props.get("bairro")
-            or props.get("nome")
-            or props.get("name")
-            or props.get("nm_bairro")
-            or ""
-        )
-        key = _norm_bairro_name(raw_name)
-        if key not in count_map:
-            continue
-        centroid = _feature_centroid(feature)
-        if centroid is None:
-            continue
-        centroids[key] = centroid
-        centroid_values.append(centroid)
+    centroids = _match_centroids(features, count_map)
+    centroid_values = list(centroids.values())
 
     if not centroid_values:
         if city_centroid is None:
@@ -395,45 +454,8 @@ def build_macrosector_heatpoints(
     center_x = sum(x for x, _ in centroid_values) / len(centroid_values)
     center_y = sum(y for _, y in centroid_values) / len(centroid_values)
 
-    bucket: dict[str, dict[str, Any]] = {}
-    for bairro_key, count in count_map.items():
-        centroid = centroids.get(bairro_key)
-        if centroid is None:
-            continue
-        x, y = centroid
-        dx = x - center_x
-        dy = y - center_y
-        theta = (math.degrees(math.atan2(dy, dx)) + 360.0) % 360.0
-        sector = _angle_to_sector(theta)
-        if sector not in bucket:
-            bucket[sector] = {
-                "sector": sector,
-                "count": 0,
-                "sum_x": 0.0,
-                "sum_y": 0.0,
-                "n": 0,
-            }
-        bucket[sector]["count"] += int(count)
-        bucket[sector]["sum_x"] += x
-        bucket[sector]["sum_y"] += y
-        bucket[sector]["n"] += 1
+    points = _bucket_into_sectors(count_map, centroids, center_x, center_y, min_cases)
 
-    points: list[dict[str, Any]] = []
-    for sector, item in bucket.items():
-        if item["count"] < min_cases:
-            continue
-        avg_x = item["sum_x"] / item["n"]
-        avg_y = item["sum_y"] / item["n"]
-        points.append(
-            {
-                "sector": sector,
-                "count": int(item["count"]),
-                "lat": avg_y,
-                "lon": avg_x,
-            }
-        )
-
-    points = sorted(points, key=lambda p: p["count"], reverse=True)
     return {
         "available": True,
         "reason": "ok",

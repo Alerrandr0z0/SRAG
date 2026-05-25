@@ -2,7 +2,7 @@
 
 # ruff: noqa
 
-from typing import Any
+from typing import Any, cast
 
 import json
 from pathlib import Path
@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Query
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.geospatial import (
-    build_bairros_choropleth,
     _norm_bairro_name,
 )
 from srag.data.analytics import (
@@ -46,15 +45,15 @@ def territory_bootstrap(
         occupations=filters.occupations,
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
-    
+
     # Define default/empty structures for contract stability
     empty_result = sanitize_data(
         {
             "territory": {"bairros": [], "zonas": []},
             "boundary": {"type": "FeatureCollection", "features": []},
             "choropleth": {
-                "available": False, 
-                "feature_collection": {"type": "FeatureCollection", "features": []}
+                "available": False,
+                "feature_collection": {"type": "FeatureCollection", "features": []},
             },
             "territory_entities": {"urban_bairros": [], "rural_comunidades": []},
         }
@@ -66,9 +65,10 @@ def territory_bootstrap(
     bairros_df = compute_territory_distribution(df, min_cases=0)
     # Correct aggregation: SUM counts if multiple raw names normalize to the same key
     bairros_dict: dict[str, int] = {}
-    for row in bairros_df.itertuples(index=False):
-        norm = _norm_bairro_name(row.bairro)
-        bairros_dict[norm] = bairros_dict.get(norm, 0) + int(row.count)
+    for r in bairros_df.to_dict(orient="records"):
+        raw_bairro = cast(str | None, r.get("bairro"))
+        norm = _norm_bairro_name(raw_bairro)
+        bairros_dict[norm] = bairros_dict.get(norm, 0) + int(r.get("count", 0))
 
     boundary_path = Path("data/processed/mossoro_municipality_boundary.geojson")
     boundary = (

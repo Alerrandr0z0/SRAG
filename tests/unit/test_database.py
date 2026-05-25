@@ -1,5 +1,5 @@
-import os
 from datetime import date
+from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
@@ -16,7 +16,7 @@ from srag.data.database import (
 
 # Use a temporary file for testing instead of :memory: to avoid
 # new engines creating new empty databases.
-TEST_DB_FILE = "test_srag_temp.db"
+TEST_DB_FILE = Path("test_srag_temp.db")
 TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
 
 
@@ -33,8 +33,8 @@ def test_db_setup(monkeypatch):
     yield
 
     # Cleanup
-    if os.path.exists(TEST_DB_FILE):
-        os.remove(TEST_DB_FILE)
+    if TEST_DB_FILE.exists():
+        TEST_DB_FILE.unlink()
 
 
 def test_generate_case_hash() -> None:
@@ -126,7 +126,9 @@ def test_save_cases_enrichment(test_db_setup) -> None:
         assert record.TP_IDADE == 3
 
 
-def test_save_cases_logs_summary(test_db_setup, capsys) -> None:
+def test_save_cases_logs_summary(test_db_setup, caplog) -> None:
+    import logging
+
     case = {
         "DT_NOTIFIC": date(2024, 5, 1),
         "ID_MUNICIP": "2408003",
@@ -136,9 +138,11 @@ def test_save_cases_logs_summary(test_db_setup, capsys) -> None:
         "CS_SEXO": "M",
     }
 
-    save_cases([case])
-    out = capsys.readouterr().out
-    assert "save_cases summary:" in out
-    assert "new=1" in out
-    assert "duplicates=0" in out
-    assert "enriched=0" in out
+    with caplog.at_level(logging.INFO):
+        save_cases([case])
+
+    log_messages = [record.message for record in caplog.records]
+    assert any("save_cases summary:" in msg for msg in log_messages)
+    assert any("new=1" in msg for msg in log_messages)
+    assert any("duplicates=0" in msg for msg in log_messages)
+    assert any("enriched=0" in msg for msg in log_messages)

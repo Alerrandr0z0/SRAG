@@ -93,12 +93,12 @@ class TestYearsFilter:
     def test_year_boundary_se_logic(self) -> None:
         # Jan 1, 2022 (Saturday) belongs to SE 52 of 2021
         df = pd.DataFrame({"DT_SIN_PRI": ["2021-12-31", "2022-01-01", "2022-01-02"]})
-        
+
         # Filtering for 2021 should include Jan 1, 2022
         res_2021 = apply_global_filters(df, years=[2021])
         assert len(res_2021) == 2
         assert "2022-01-01" in res_2021["DT_SIN_PRI"].values
-        
+
         # Filtering for 2022 should NOT include Jan 1, 2022
         res_2022 = apply_global_filters(df, years=[2022])
         assert len(res_2022) == 1

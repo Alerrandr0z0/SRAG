@@ -1,4 +1,4 @@
-"""Clinical metrics and timelines."""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
     """Calculate key severity percentages for Mossoró.
-    
-    Lethality (death_rate) is calculated over closed cases (Cure or Death) 
+
+    Lethality (death_rate) is calculated over closed cases (Cure or Death)
     to avoid underestimation from open cases.
     """
     if df.empty:
@@ -22,7 +22,7 @@ def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
 
     total = len(df)
     uti_count = (df["UTI"] == 1).sum()
-    
+
     # Standard Epidemiological Lethality: deaths / (cure + deaths)
     closed_cases_mask = df["EVOLUCAO"].isin([1, 2])
     closed_count = closed_cases_mask.sum()
@@ -34,6 +34,25 @@ def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
         "total": total,
         "closed_cases": int(closed_count),
     }
+
+
+def _compute_date_deltas(df: pd.DataFrame, col_a: str, col_b: str) -> pd.Series:
+    """Calculate date difference in days between col_a and col_b if they exist."""
+    if col_a in df.columns and col_b in df.columns:
+        return (df[col_a] - df[col_b]).dt.days
+    return pd.Series(dtype="float64")
+
+
+def _compute_protocol_adherence(df: pd.DataFrame) -> float:
+    """Calculate the antiviral 48h protocol adherence rate."""
+    antiviral_mask = pd.to_numeric(df["ANTIVIRAL"], errors="coerce") == 1
+    if "DT_SIN_PRI" in df.columns and "DT_ANTIVIR" in df.columns:
+        out_treated = df[antiviral_mask].dropna(subset=["DT_SIN_PRI", "DT_ANTIVIR"])
+        if not out_treated.empty:
+            days_to_antiviral = (out_treated["DT_ANTIVIR"] - out_treated["DT_SIN_PRI"]).dt.days
+            adherent = (days_to_antiviral >= 0) & (days_to_antiviral <= 2)
+            return float(round((adherent.sum() / len(out_treated)) * 100, 1))
+    return 0.0
 
 
 def compute_clinical_timing_metrics(df: pd.DataFrame) -> dict[str, float | int]:
@@ -54,18 +73,9 @@ def compute_clinical_timing_metrics(df: pd.DataFrame) -> dict[str, float | int]:
         if col in out.columns:
             out[col] = pd.to_datetime(out[col], errors="coerce")
 
-    # Calculate deltas only if columns exist
-    symptom_to_hosp = pd.Series(dtype="float64")
-    if "DT_INTERNA" in out.columns and "DT_SIN_PRI" in out.columns:
-        symptom_to_hosp = (out["DT_INTERNA"] - out["DT_SIN_PRI"]).dt.days
-
-    hosp_to_icu = pd.Series(dtype="float64")
-    if "DT_ENTUTI" in out.columns and "DT_INTERNA" in out.columns:
-        hosp_to_icu = (out["DT_ENTUTI"] - out["DT_INTERNA"]).dt.days
-
-    symptom_to_outcome = pd.Series(dtype="float64")
-    if "DT_EVOLUCA" in out.columns and "DT_SIN_PRI" in out.columns:
-        symptom_to_outcome = (out["DT_EVOLUCA"] - out["DT_SIN_PRI"]).dt.days
+    symptom_to_hosp = _compute_date_deltas(out, "DT_INTERNA", "DT_SIN_PRI")
+    hosp_to_icu = _compute_date_deltas(out, "DT_ENTUTI", "DT_INTERNA")
+    symptom_to_outcome = _compute_date_deltas(out, "DT_EVOLUCA", "DT_SIN_PRI")
 
     def safe_median(series: pd.Series) -> float:
         clean = pd.to_numeric(series, errors="coerce")
@@ -74,16 +84,7 @@ def compute_clinical_timing_metrics(df: pd.DataFrame) -> dict[str, float | int]:
             return 0.0
         return float(round(clean.median(), 1))
 
-    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
-
-    protocol_48h_adherence = 0.0
-    if "DT_SIN_PRI" in out.columns and "DT_ANTIVIR" in out.columns:
-        out_treated = out[antiviral_mask].dropna(subset=["DT_SIN_PRI", "DT_ANTIVIR"])
-
-        if not out_treated.empty:
-            days_to_antiviral = (out_treated["DT_ANTIVIR"] - out_treated["DT_SIN_PRI"]).dt.days
-            adherent = (days_to_antiviral >= 0) & (days_to_antiviral <= 2)
-            protocol_48h_adherence = float(round((adherent.sum() / len(out_treated)) * 100, 1))
+    protocol_48h_adherence = _compute_protocol_adherence(out)
 
     return {
         "cases_with_hospital_date": int(out["DT_INTERNA"].notna().sum())
@@ -182,33 +183,24 @@ def compute_maternal_profile(df: pd.DataFrame) -> dict[str, object]:
             "maternal_cases": 0,
         }
 
-    def get_maternal_group(row: pd.Series) -> str:
-        puerp = pd.to_numeric(row["PUERPERA"], errors="coerce")
-        if puerp == 1:
-            return "Puérpera"
-        gest = pd.to_numeric(row["CS_GESTANT"], errors="coerce")
-        if gest == 1:
-            return "Gest. 1º Tri"
-        if gest == 2:
-            return "Gest. 2º Tri"
-        if gest == 3:
-            return "Gest. 3º Tri"
-        if gest == 4:
-            return "Gest. IG Ignorada"
-        return "Não gestante"
+    puerp = pd.to_numeric(fem["PUERPERA"], errors="coerce")
+    gest = pd.to_numeric(fem["CS_GESTANT"], errors="coerce")
 
-    fem["maternal_group"] = fem.apply(get_maternal_group, axis=1)
+    fem["maternal_group"] = np.select(
+        [puerp == 1, gest == 1, gest == 2, gest == 3, gest == 4],
+        ["Puérpera", "Gest. 1º Tri", "Gest. 2º Tri", "Gest. 3º Tri", "Gest. IG Ignorada"],
+        default="Não gestante",
+    )
 
-    def get_severity_outcome(row: pd.Series) -> str:
-        if outcome_death_mask(pd.Series([row["EVOLUCAO"]])).iloc[0]:
-            return "Óbito"
-        if pd.to_numeric(row["UTI"], errors="coerce") == 1:
-            return "UTI (Sobrevivente)"
-        if pd.to_numeric(row["EVOLUCAO"], errors="coerce") == 1:
-            return "Cura (Sem UTI)"
-        return "Outro/Em Aberto"
+    evol = pd.to_numeric(fem["EVOLUCAO"], errors="coerce")
+    uti = pd.to_numeric(fem["UTI"], errors="coerce")
+    is_death = outcome_death_mask(fem["EVOLUCAO"])
 
-    fem["outcome"] = fem.apply(get_severity_outcome, axis=1)
+    fem["outcome"] = np.select(
+        [is_death, uti == 1, evol == 1],
+        ["Óbito", "UTI (Sobrevivente)", "Cura (Sem UTI)"],
+        default="Outro/Em Aberto",
+    )
 
     grouped = fem.groupby(["maternal_group", "outcome"]).size().unstack(fill_value=0)
 
@@ -391,6 +383,59 @@ def compute_symptoms_heatmap(df: pd.DataFrame) -> dict[str, object]:
     return {"labels": labels, "matrix": matrix}
 
 
+def _build_age_bands(age: pd.Series, profile_type: str) -> list[tuple[str, pd.Series]]:
+    """Return a list of (label, mask) tuples based on profile type."""
+    if profile_type == "crianca":
+        return [
+            ("<2 anos", age < 2),
+            ("2-5 anos", (age >= 2) & (age < 6)),
+            ("6-11 anos", (age >= 6) & (age < 12)),
+        ]
+    if profile_type == "adolescente":
+        return [
+            ("12-14 anos", (age >= 12) & (age < 15)),
+            ("15-19 anos", (age >= 15) & (age < 20)),
+        ]
+    if profile_type == "adulto":
+        return [
+            ("20-39 anos", (age >= 20) & (age < 40)),
+            ("40-59 anos", (age >= 40) & (age < 60)),
+        ]
+    if profile_type == "idoso":
+        return [
+            ("60-69 anos", (age >= 60) & (age < 70)),
+            ("70-79 anos", (age >= 70) & (age < 80)),
+            ("80+ anos", age >= 80),
+        ]
+    # "all" view default
+    return [
+        ("Criança", age < 12),
+        ("Adolescente", (age >= 12) & (age < 20)),
+        ("Adulto", (age >= 20) & (age < 60)),
+        ("Idoso", age >= 60),
+    ]
+
+
+def _build_pathogen_masks(
+    df: pd.DataFrame,
+    pathogens_mask_func: Callable[..., Any] | None = None,
+) -> dict[str, pd.Series]:
+    """Build boolean masks for each pathogen group."""
+    if pathogens_mask_func is not None:
+        return pathogens_mask_func(df)
+
+    classi = pd.to_numeric(df.get("CLASSI_FIN", pd.Series(index=df.index)), errors="coerce")
+    pcr_vsr = pd.to_numeric(df.get("PCR_VSR", pd.Series(index=df.index)), errors="coerce")
+    an_vsr = pd.to_numeric(df.get("AN_VSR", pd.Series(index=df.index)), errors="coerce")
+
+    vsr_mask = (pcr_vsr == 1) | (an_vsr == 1)
+    return {
+        "covid": (classi == 5).reindex(df.index, fill_value=False).fillna(False),
+        "gripe": (classi == 1).reindex(df.index, fill_value=False).fillna(False),
+        "vsr": vsr_mask.reindex(df.index, fill_value=False).fillna(False),
+    }
+
+
 def compute_symptoms_signature(
     df: pd.DataFrame,
     profile_type: str = "all",
@@ -403,42 +448,10 @@ def compute_symptoms_signature(
     out = df.copy()
     age = _age_years(out)
 
-    # 1. Define bands based on profile
-    bands = []
-    if profile_type == "crianca":
-        bands = [
-            ("<2 anos", age < 2),
-            ("2-5 anos", (age >= 2) & (age < 6)),
-            ("6-11 anos", (age >= 6) & (age < 12)),
-        ]
-    elif profile_type == "adolescente":
-        bands = [
-            ("12-14 anos", (age >= 12) & (age < 15)),
-            ("15-19 anos", (age >= 15) & (age < 20)),
-        ]
-    elif profile_type == "adulto":
-        bands = [
-            ("20-39 anos", (age >= 20) & (age < 40)),
-            ("40-59 anos", (age >= 40) & (age < 60)),
-        ]
-    elif profile_type == "idoso":
-        bands = [
-            ("60-69 anos", (age >= 60) & (age < 70)),
-            ("70-79 anos", (age >= 70) & (age < 80)),
-            ("80+ anos", age >= 80),
-        ]
-    else:  # "all" view
-        bands = [
-            ("Criança", age < 12),
-            ("Adolescente", (age >= 12) & (age < 20)),
-            ("Adulto", (age >= 20) & (age < 60)),
-            ("Idoso", age >= 60),
-        ]
-
+    bands = _build_age_bands(age, profile_type)
     band_labels = [b[0] for b in bands]
     band_masks = [b[1].reindex(out.index, fill_value=False).fillna(False) for b in bands]
 
-    # 2. Symptoms to analyze
     symptom_fields = [
         ("FEBRE", "Febre"),
         ("TOSSE", "Tosse"),
@@ -455,29 +468,8 @@ def compute_symptoms_signature(
         ("OUTRO_SIN", "Outros sintomas"),
     ]
 
-    # 3. Pathogen groups
-    if pathogens_mask_func is not None:
-        pathogens = pathogens_mask_func(out)
-    else:
-        classi = pd.to_numeric(out.get("CLASSI_FIN", pd.Series(index=out.index)), errors="coerce")
-        pathogens = {
-            "covid": (classi == 5).reindex(out.index, fill_value=False).fillna(False),
-            "gripe": (classi == 1).reindex(out.index, fill_value=False).fillna(False),
-            "vsr": (
-                (
-                    pd.to_numeric(out.get("PCR_VSR", pd.Series(index=out.index)), errors="coerce")
-                    == 1
-                )
-                | (
-                    pd.to_numeric(out.get("AN_VSR", pd.Series(index=out.index)), errors="coerce")
-                    == 1
-                )
-            )
-            .reindex(out.index, fill_value=False)
-            .fillna(False),
-        }
+    pathogens = _build_pathogen_masks(out, pathogens_mask_func)
 
-    # 4. Calculate prevalence per pathogen, per band, per symptom
     matrices = {}
     symptom_avg_freq = {field[0]: 0.0 for field in symptom_fields}
 
@@ -502,10 +494,8 @@ def compute_symptoms_signature(
             matrix.append(row)
         matrices[p_key] = matrix
 
-    # 5. Sort symptoms by average frequency
     sorted_symptoms = sorted(symptom_fields, key=lambda x: symptom_avg_freq[x[0]], reverse=True)
 
-    # Reorder matrices based on sorted symptoms
     for p_key in matrices:
         reordered = []
         for field_id, _ in sorted_symptoms:

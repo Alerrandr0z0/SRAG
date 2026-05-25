@@ -66,6 +66,12 @@ lint: lint-back lint-front
 lint-back:
 	uv run ruff check .
 	uv run pyright
+	uv run complexipy src/srag/ --max-complexity-allowed 15
+
+.PHONY: complexity
+complexity:
+	uv run complexipy src/srag/ --max-complexity-allowed 15
+
 lint-front:
 	cd frontend && npm run lint
 

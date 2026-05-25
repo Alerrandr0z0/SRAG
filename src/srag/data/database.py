@@ -1,6 +1,7 @@
 """Database management for SRAG Mossoró historical data."""
 
 import hashlib
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -9,6 +10,8 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+logger = logging.getLogger("SRAG-Database")
 
 
 def _find_project_root() -> Path:
@@ -224,6 +227,36 @@ def init_db() -> None:
             conn.execute(text(f"ALTER TABLE casos_srag ADD COLUMN {name} {sql_type}"))
 
 
+def _enrich_existing_case(
+    existing: SragRecord, case_dict: dict[str, Any], model_columns: set[str]
+) -> bool:
+    """Fill missing fields on the existing SragRecord with new data.
+
+    Returns:
+        True if the record was enriched, False otherwise.
+    """
+    was_enriched = False
+    for col in model_columns:
+        val = case_dict.get(col)
+        if val is not None and getattr(existing, col) is None:
+            setattr(existing, col, val)
+            was_enriched = True
+    return was_enriched
+
+
+def _map_case_to_record(
+    case_dict: dict[str, Any], case_hash: str, model_columns: set[str]
+) -> SragRecord:
+    """Automatically map a dict to SragRecord model based on column names."""
+    data = {k: v for k, v in case_dict.items() if k in model_columns}
+
+    # Special handling for common SIVEP hyphenated fields
+    if "CO-DETEC" in case_dict and "CO_DETEC" not in data:
+        data["CO_DETEC"] = case_dict["CO-DETEC"]
+
+    return SragRecord(unique_hash=case_hash, **data)
+
+
 def save_cases(cases: list[dict[str, Any]]) -> int:
     """Save a list of cases to the database, skipping duplicates with automated mapping.
 
@@ -247,33 +280,19 @@ def save_cases(cases: list[dict[str, Any]]) -> int:
             exists = session.query(SragRecord).filter(SragRecord.unique_hash == case_hash).first()
 
             if not exists:
-                # Map dict to model automatically based on column names
-                data = {k: v for k, v in case_dict.items() if k in model_columns}
-
-                # Special handling for common SIVEP hyphenated fields
-                if "CO-DETEC" in case_dict and "CO_DETEC" not in data:
-                    data["CO_DETEC"] = case_dict["CO-DETEC"]
-
-                record = SragRecord(unique_hash=case_hash, **data)
+                record = _map_case_to_record(case_dict, case_hash, model_columns)
                 session.add(record)
                 new_count += 1
             else:
                 duplicate_count += 1
-                was_enriched = False
-                # Lightweight enrichment for already-seen cases:
-                # fill missing fields if new data is available.
-                for col in model_columns:
-                    val = case_dict.get(col)
-                    if val is not None and getattr(exists, col) is None:
-                        setattr(exists, col, val)
-                        was_enriched = True
-
-                if was_enriched:
+                if _enrich_existing_case(exists, case_dict, model_columns):
                     enriched_count += 1
 
         session.commit()
-    print(
-        "save_cases summary: "
-        f"new={new_count}, duplicates={duplicate_count}, enriched={enriched_count}"
+    logger.info(
+        "save_cases summary: new=%d, duplicates=%d, enriched=%d",
+        new_count,
+        duplicate_count,
+        enriched_count,
     )
     return new_count

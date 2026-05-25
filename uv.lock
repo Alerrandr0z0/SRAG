@@ -363,6 +363,28 @@ wheels = [
 ]
 
 [[package]]
+name = "complexipy"
+version = "5.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tomli" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/39/a390aa5acccdb5df51c0fbb8cc3b5feba94d86596d78d1257c3624adc7fb/complexipy-5.5.0.tar.gz", hash = "sha256:c6d85ce28c0e8257a0a2caf644b51094438750ee34d6140f9da8859278b70fe5", size = 346876, upload-time = "2026-05-22T19:41:12.198Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/b9/5af652ca3c85eeb86707b945a29b38396263359eb4239a33d9f810e83bc6/complexipy-5.5.0-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:2fa1b99c947567150baee311779381d1844fecf57a1555bbed46f3a68f6286da", size = 2215451, upload-time = "2026-05-22T19:39:52.513Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/20/c32a46a0c40efb07b292902dae291de0358a90005badb29e859277cea392/complexipy-5.5.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:c58f478c5c3971c5d80142a407b3d910eae4f133c3f4f8303adaf3dd022a874a", size = 2136069, upload-time = "2026-05-22T19:39:54.033Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/f1/ddc0084447c58052aa6808d6fa29fb5200f6b40e3cca4b6537aeea1ceb7a/complexipy-5.5.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:e2a5c4b8572b4219e14631553c4c263e44dce292eed737c9bff0a4ed3f6004f3", size = 2318782, upload-time = "2026-05-22T19:39:55.543Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/c7/e44ae2dd6969c77acd942959b05c3a080bf7af6c72e0bbf08d2b70210d26/complexipy-5.5.0-cp314-cp314-manylinux2014_armv7l.manylinux_2_17_armv7l.whl", hash = "sha256:154c16cb15c81f845f21c37daa5e261d531d4f6463bec890d61899b6be24ee7a", size = 2256141, upload-time = "2026-05-22T19:39:57.161Z" },
+    { url = "https://files.pythonhosted.org/packages/76/9b/2d958617c57de367bbad32c3849be643363f8e9f764494fc993ba9a47f44/complexipy-5.5.0-cp314-cp314-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:de8c98e7f8ed44fa9bb327b58e6e5b6acfbf543e7ac07e6f19269393ca5fd794", size = 2456435, upload-time = "2026-05-22T19:39:58.882Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/cd/ace41a7f4f7f7c16863b14b342988190386e860bd06abc1801a01f43f8b2/complexipy-5.5.0-cp314-cp314-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:0006c88baadc3d2e3279660b3e9d2c1dc629a6b40a4e7ae8a7cafe6b968d9cb9", size = 2707617, upload-time = "2026-05-22T19:40:00.747Z" },
+    { url = "https://files.pythonhosted.org/packages/36/fc/e28417982de8b479261a7c8569dbc9645e6fdfe7c22e49e46d7347f5fd07/complexipy-5.5.0-cp314-cp314-manylinux2014_s390x.manylinux_2_17_s390x.whl", hash = "sha256:22de21ec75276c6458192e7c291d162418a6c21071d8226e3447a4da72295cef", size = 2468507, upload-time = "2026-05-22T19:40:02.346Z" },
+    { url = "https://files.pythonhosted.org/packages/68/63/76ea965e721de6ea055f7fd9684e4da7741240bf89b2f86d69774b3e64fa/complexipy-5.5.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:de60570bf5b968cc50d1554f970bc317893b67923910fac6b35aa38921e2287a", size = 2375512, upload-time = "2026-05-22T19:40:04.288Z" },
+    { url = "https://files.pythonhosted.org/packages/38/28/af04683d10495824ef54555fb4ee666a3e7718c602215215a1857c304bb2/complexipy-5.5.0-cp314-cp314-win32.whl", hash = "sha256:c7714f9ef79479e399f5603e4d5c436ab088210762c46a283f20e6b6d6f4ed3e", size = 1918632, upload-time = "2026-05-22T19:40:05.84Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/39/2d275b2660b06a6be9ef482d77c1f07fa2cbf091500b05beba55f349fc9f/complexipy-5.5.0-cp314-cp314-win_amd64.whl", hash = "sha256:669702e9b4453cb721845058b1cced8e86f0cfa5139dc574fdfae0aa6b0be11c", size = 2043840, upload-time = "2026-05-22T19:40:07.41Z" },
+]
+
+[[package]]
 name = "contourpy"
 version = "1.3.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2736,6 +2758,15 @@ wheels = [
 ]
 
 [[package]]
+name = "shellingham"
+version = "1.5.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b27b655beb4b4e9c62313a4e8da8c676e142cc210d58e/shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de", size = 10310, upload-time = "2023-10-24T04:13:40.426Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755, upload-time = "2023-10-24T04:13:38.866Z" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2817,6 +2848,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "complexipy" },
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "pandas-stubs" },
@@ -2830,6 +2862,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
+    { name = "complexipy" },
     { name = "graphifyy" },
     { name = "hypothesis" },
     { name = "ipykernel" },
@@ -2849,6 +2882,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8.3" },
+    { name = "complexipy", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "duckdb", specifier = ">=1.5.1" },
     { name = "fastapi", specifier = ">=0.135.1" },
     { name = "httpx", specifier = ">=0.28.1" },
@@ -2882,6 +2916,7 @@ provides-extras = ["dev"]
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.8.3" },
+    { name = "complexipy", specifier = ">=0.4.0" },
     { name = "graphifyy", specifier = ">=0.7.11" },
     { name = "hypothesis", specifier = ">=6.100.0" },
     { name = "ipykernel", specifier = ">=7.2.0" },
@@ -3451,6 +3486,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/67/1c/dfba5c4633cafc4c701f237d2ba63b416805047fd6d96aab4cfc40969f98/typeguard-4.5.2.tar.gz", hash = "sha256:5a16dcac23502039299c97c8941651bc33d7ea8cc4b2f7d6bbb1b528f6eea423", size = 80240, upload-time = "2026-05-14T12:59:40.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/29/74eeb4d3f3ae61ca096b018ad486b3b3c74b17bec09ab4edab721cbefec3/typeguard-4.5.2-py3-none-any.whl", hash = "sha256:fcf9de18bd945cdb4c7b996e12b4c51ce83f92f191314a6d7cf1739586ec98cf", size = 36748, upload-time = "2026-05-14T12:59:39.473Z" },
+]
+
+[[package]]
+name = "typer"
+version = "0.25.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "annotated-doc" },
+    { name = "click" },
+    { name = "rich" },
+    { name = "shellingham" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e4/51/9aed62104cea109b820bbd6c14245af756112017d309da813ef107d42e7e/typer-0.25.1.tar.gz", hash = "sha256:9616eb8853a09ffeabab1698952f33c6f29ffdbceb4eaeecf571880e8d7664cc", size = 122276, upload-time = "2026-04-30T19:32:16.964Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/f9/2b3ff4e56e5fa7debfaf9eb135d0da96f3e9a1d5b27222223c7296336e5f/typer-0.25.1-py3-none-any.whl", hash = "sha256:75caa44ed46a03fb2dab8808753ffacdbfea88495e74c85a28c5eefcf5f39c89", size = 58409, upload-time = "2026-04-30T19:32:18.271Z" },
 ]
 
 [[package]]

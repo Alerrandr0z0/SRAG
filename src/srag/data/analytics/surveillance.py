@@ -1,6 +1,7 @@
 """Surveillance metrics: Viruses, Testing, Variants, Alerts, and Vaccines."""
 
 from contextlib import suppress
+from datetime import date
 from typing import Any
 
 import numpy as np
@@ -60,38 +61,35 @@ def infer_etiologic_agent(df: pd.DataFrame) -> pd.Series:
     return agent.astype(str)
 
 
-def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
-    """Determine epidemiological status for Flu based on vaccination date and symptoms."""
-    vacina = row.get("VACINA")
-    dt_dose = row.get("DT_UT_DOSE")
-    dt_sintoma = row.get("DT_SIN_PRI")
-
-    try:
-        vacina = float(vacina) if pd.notna(vacina) else np.nan
-    except TypeError, ValueError:
-        vacina = np.nan
-
-    nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
-    is_menor_6m = False
-    is_crianca_8y = False
-    tp_idade = row.get("TP_IDADE")
-
+def _is_baby_under_6m(nu_idade: float, tp_idade: float | str | None) -> bool:
+    """Determine if patient is under 6 months old."""
     if pd.notna(tp_idade):
-        if tp_idade == 1:
-            is_menor_6m = True
-        elif tp_idade == 2:
-            if nu_idade < 6:
-                is_menor_6m = True
-            else:
-                is_crianca_8y = True
-        elif tp_idade == 3 and nu_idade <= 8:
-            is_crianca_8y = True
-    else:
-        if (1000 <= nu_idade <= 1365) or (2000 <= nu_idade < 2006):
-            is_menor_6m = True
-        elif (2006 <= nu_idade <= 2011) or (3000 <= nu_idade <= 3008):
-            is_crianca_8y = True
+        return tp_idade == 1 or (tp_idade == 2 and nu_idade < 6)
+    return (1000 <= nu_idade <= 1365) or (2000 <= nu_idade < 2006)
 
+
+def _is_child_under_8y(nu_idade: float, tp_idade: float | str | None) -> bool:
+    """Determine if patient is a child aged 6 months to 8 years."""
+    if pd.notna(tp_idade):
+        return (tp_idade == 2 and nu_idade >= 6) or (tp_idade == 3 and nu_idade <= 8)
+    return (2006 <= nu_idade <= 2011) or (3000 <= nu_idade <= 3008)
+
+
+def _classify_age_group(row: pd.Series | dict[str, Any]) -> tuple[bool, bool]:
+    """Determine if patient is menor_6m or is_crianca_8y."""
+    nu_idade = float(row.get("NU_IDADE_N", 0)) if pd.notna(row.get("NU_IDADE_N")) else 0
+    tp_idade = row.get("TP_IDADE")
+    return _is_baby_under_6m(nu_idade, tp_idade), _is_child_under_8y(nu_idade, tp_idade)
+
+
+def _resolve_flu_dose_and_vacina(
+    row: pd.Series | dict[str, Any],
+    is_menor_6m: bool,
+    is_crianca_8y: bool,
+    vacina: float,
+    dt_dose: str | date | pd.Timestamp | float | None,
+) -> tuple[str | date | pd.Timestamp | float | None, float, str]:
+    """Resolve vacina, dt_dose, and label_prefix based on age group."""
     label_prefix = "protegido"
 
     if is_menor_6m:
@@ -111,9 +109,64 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
             dt_dose = row.get("DT_DOSEUNI")
             label_prefix = "dose_unica"
 
-    if pd.isna(vacina) or vacina == 9:
+    return dt_dose, vacina, label_prefix
+
+
+def _parse_date_safe(value: str | date | pd.Timestamp | float | None) -> date | None:
+    """Parse safely and return a date or None/NaT."""
+    if pd.isna(value):
+        return None
+    if isinstance(value, pd.Timestamp):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return pd.to_datetime(value, dayfirst=True, format="mixed").date()
+        except TypeError, ValueError:
+            return None
+    return None
+
+
+def _evaluate_vax_status_active(
+    dt_dose_val: date,
+    dt_sintoma_val: date,
+    label_prefix: str,
+    is_crianca_8y: bool,
+) -> str:
+    """Evaluate vaccination status logic when both dates are present and valid."""
+    if dt_dose_val > dt_sintoma_val:
+        return "inconsistencia"
+
+    ano_sintoma = getattr(dt_sintoma_val, "year", None)
+    if not ano_sintoma:
         return "ignorado"
 
+    inicio_campanha = CAMPANHAS_GRIPE.get(
+        ano_sintoma, pd.to_datetime(f"{ano_sintoma}-04-01").date()
+    )
+
+    if dt_dose_val >= inicio_campanha:
+        return label_prefix if is_crianca_8y else "protegido"
+    return "vencida"
+
+
+def _parse_vacina_code(value: float | str | None) -> float:
+    """Safely parse vaccination status code to float."""
+    try:
+        return float(value) if pd.notna(value) else np.nan
+    except TypeError, ValueError:
+        return np.nan
+
+
+def _handle_vacina_status(
+    vacina: float,
+    dt_dose: str | date | pd.Timestamp | float | None,
+    dt_sintoma: str | date | pd.Timestamp | float | None,
+    label_prefix: str,
+    is_crianca_8y: bool,
+) -> str:
+    """Handle vaccination status resolution for known vacina codes."""
     if vacina == 2:
         if pd.notna(dt_dose):
             return "inconsistencia"
@@ -123,46 +176,37 @@ def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
         if pd.isna(dt_dose):
             return "ignorado"
 
-        dt_dose_val = dt_dose.date() if isinstance(dt_dose, pd.Timestamp) else dt_dose
-        dt_sintoma_val = dt_sintoma.date() if isinstance(dt_sintoma, pd.Timestamp) else dt_sintoma
+        dt_dose_val = _parse_date_safe(dt_dose)
+        dt_sintoma_val = _parse_date_safe(dt_sintoma)
 
-        if pd.isna(dt_sintoma_val):
+        if dt_sintoma_val is None or dt_dose_val is None:
             return "ignorado"
-
-        if isinstance(dt_dose_val, str):
-            try:
-                dt_dose_val = pd.to_datetime(dt_dose_val, dayfirst=True, format="mixed").date()
-            except TypeError, ValueError:
-                return "ignorado"
-
-        if isinstance(dt_sintoma_val, str):
-            try:
-                dt_sintoma_val = pd.to_datetime(
-                    dt_sintoma_val, dayfirst=True, format="mixed"
-                ).date()
-            except TypeError, ValueError:
-                return "ignorado"
 
         if not hasattr(dt_dose_val, "year") or not hasattr(dt_sintoma_val, "year"):
             return "ignorado"
 
-        if dt_dose_val > dt_sintoma_val:
-            return "inconsistencia"
-
-        ano_sintoma = getattr(dt_sintoma_val, "year", None)
-        if not ano_sintoma:
-            return "ignorado"
-
-        inicio_campanha = CAMPANHAS_GRIPE.get(
-            ano_sintoma, pd.to_datetime(f"{ano_sintoma}-04-01").date()
+        return _evaluate_vax_status_active(
+            dt_dose_val, dt_sintoma_val, label_prefix, is_crianca_8y
         )
 
-        if dt_dose_val >= inicio_campanha:
-            return label_prefix if is_crianca_8y else "protegido"
-        else:
-            return "vencida"
-
     return "ignorado"
+
+
+def classificar_status_gripe(row: pd.Series | dict[str, Any]) -> str:
+    """Determine epidemiological status for Flu based on vaccination date and symptoms."""
+    vacina = _parse_vacina_code(row.get("VACINA"))
+    dt_dose: str | date | pd.Timestamp | float | None = row.get("DT_UT_DOSE")
+    dt_sintoma: str | date | pd.Timestamp | float | None = row.get("DT_SIN_PRI")
+
+    is_menor_6m, is_crianca_8y = _classify_age_group(row)
+    dt_dose, vacina, label_prefix = _resolve_flu_dose_and_vacina(
+        row, is_menor_6m, is_crianca_8y, vacina, dt_dose
+    )
+
+    if pd.isna(vacina) or vacina == 9:
+        return "ignorado"
+
+    return _handle_vacina_status(vacina, dt_dose, dt_sintoma, label_prefix, is_crianca_8y)
 
 
 def compute_vaccine_survival(df: pd.DataFrame, vax_date_col: str) -> dict[str, list[float]]:
@@ -621,11 +665,11 @@ def compute_lethality_heatmap(df: pd.DataFrame) -> dict[str, Any]:
             closed_df = cell_df[cell_df["EVOLUCAO"].isin([1, 2])]
             deaths = (closed_df["EVOLUCAO"] == 2).sum()
             total_closed = len(closed_df)
-            
+
             if total_closed == 0:
                 row.append(0.0)
                 continue
-                
+
             cfr = round((deaths / total_closed) * 100, 1)
             row.append(cfr)
         matrix.append(row)
@@ -969,6 +1013,125 @@ def compute_vaccination_and_treatment_profile(df: pd.DataFrame) -> dict[str, flo
     }
 
 
+def _get_covid_vaccine_profile(row: pd.Series | dict[str, Any]) -> str:
+    """Classify COVID vaccine profile for a row."""
+    if pd.notna(row.get("DOS_RE_BI")):
+        return "bivalente"
+    if pd.notna(row.get("DOSE_2REF")):
+        return "reforco_2"
+    if pd.notna(row.get("DOSE_REF")):
+        return "reforco_1"
+    if pd.notna(row.get("DOSE_2_COV")):
+        return "completo"
+    if pd.notna(row.get("DOSE_1_COV")):
+        return "dose_1"
+    if row.get("VACINA_COV") == 2:
+        return "nao_vacinado"
+    return "ignorado"
+
+
+def _compute_interval_stats(
+    series: pd.Series, default_val: float | None = 0.0
+) -> tuple[float | None, float | None, float | None]:
+    """Compute median, P25, and P75 of a series, rounded to 1 decimal place."""
+    if series.empty:
+        return default_val, default_val, default_val
+    med = round(float(series.median()), 1)
+    p25 = round(float(series.quantile(0.25)), 1)
+    p75 = round(float(series.quantile(0.75)), 1)
+    return med, p25, p75
+
+
+def _compute_dose_series(subset: pd.DataFrame, virus: str, dt_symptom: pd.Series) -> pd.Series:
+    """Calculate the difference in days between dose and symptoms onset.
+
+    Keeping only values in [-180, 180].
+    """
+    if virus == "covid":
+        dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
+        available_cols = [c for c in dose_cols if c in subset.columns]
+        if available_cols:
+            dt_dose = subset[available_cols].bfill(axis=1).iloc[:, 0]
+            dt_dose = pd.to_datetime(dt_dose, errors="coerce")
+        else:
+            dt_dose = pd.Series(pd.NaT, index=subset.index)
+    else:
+        if "DT_UT_DOSE" in subset.columns:
+            dt_dose = pd.to_datetime(subset["DT_UT_DOSE"], errors="coerce")
+        else:
+            dt_dose = pd.Series(pd.NaT, index=subset.index)
+
+    days_dose_symp = (dt_dose - dt_symptom).dt.days
+    return days_dose_symp[(days_dose_symp >= -180) & (days_dose_symp <= 180)].dropna()
+
+
+def _filter_days_range(
+    col_a: pd.Series, col_b: pd.Series, min_val: int = 0, max_val: int = 180
+) -> pd.Series:
+    """Calculate difference in days (col_a - col_b) and filter within [min_val, max_val]."""
+    days = (col_a - col_b).dt.days
+    return days[(days >= min_val) & (days <= max_val)].dropna()
+
+
+def _compute_profile_metrics(
+    subset: pd.DataFrame,
+    virus: str,
+    perfil: str,
+    friendly_names: dict[str, str],
+) -> dict[str, Any]:
+    """Compute all timeline metrics for a specific vaccine profile subset."""
+    count = len(subset)
+
+    death_mask = outcome_death_mask(subset["EVOLUCAO"])
+    cure_mask = subset["EVOLUCAO"] == 1
+
+    taxa_obito = round(death_mask.sum() / count, 4) if count > 0 else 0.0
+    taxa_cura = round(cure_mask.sum() / count, 4) if count > 0 else 0.0
+
+    dt_symptom = subset["DT_SIN_PRI"]
+    dt_hosp = subset["DT_INTERNA"]
+    dt_outcome = subset["DT_EVOLUCA"]
+
+    valid_dose = _compute_dose_series(subset, virus, dt_symptom)
+    valid_intern = _filter_days_range(dt_hosp, dt_symptom, 0, 180)
+    valid_out = _filter_days_range(dt_outcome, dt_hosp, 0, 180)
+
+    mediana_dose_sintoma, dose_p25, dose_p75 = _compute_interval_stats(
+        valid_dose, default_val=None
+    )
+    mediana_sintoma_internacao, intern_p25, intern_p75 = _compute_interval_stats(
+        valid_intern, default_val=0.0
+    )
+    mediana_internacao_desfecho, desf_p25, desf_p75 = _compute_interval_stats(
+        valid_out, default_val=0.0
+    )
+
+    uti_s = pd.to_numeric(subset["UTI"], errors="coerce")
+    uti_pct = round((uti_s == 1).mean() * 100, 1) if not subset.empty else 0.0
+    severity_score = round((taxa_obito * 0.6) + (taxa_cura * 0.4), 4)
+
+    return {
+        "perfil": friendly_names.get(perfil, perfil),
+        "status_key": perfil,
+        "gripe_status": perfil if virus == "gripe" else None,
+        "mediana_dose_sintoma": mediana_dose_sintoma,
+        "doseP25": dose_p25,
+        "doseP75": dose_p75,
+        "mediana_sintoma_internacao": mediana_sintoma_internacao,
+        "internP25": intern_p25,
+        "internP75": intern_p75,
+        "mediana_internacao_desfecho": mediana_internacao_desfecho,
+        "desfP25": desf_p25,
+        "desfP75": desf_p75,
+        "taxa_cura": taxa_cura,
+        "taxa_obito": taxa_obito,
+        "uti_pct": uti_pct,
+        "severity_score": severity_score,
+        "n": count,
+        "count": count,
+    }
+
+
 def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[dict[str, Any]]:
     """Compute aggregated clinical timeline by vaccine profile."""
     if df.empty:
@@ -979,25 +1142,10 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
     out["DT_INTERNA"] = pd.to_datetime(out["DT_INTERNA"], errors="coerce")
     out["DT_EVOLUCA"] = pd.to_datetime(out["DT_EVOLUCA"], errors="coerce")
 
-    def get_covid_profile(row: pd.Series) -> str:
-        if pd.notna(row.get("DOS_RE_BI")):
-            return "bivalente"
-        if pd.notna(row.get("DOSE_2REF")):
-            return "reforco_2"
-        if pd.notna(row.get("DOSE_REF")):
-            return "reforco_1"
-        if pd.notna(row.get("DOSE_2_COV")):
-            return "completo"
-        if pd.notna(row.get("DOSE_1_COV")):
-            return "dose_1"
-        if row.get("VACINA_COV") == 2:
-            return "nao_vacinado"
-        return "ignorado"
-
     def classify_profile(row: pd.Series) -> str:
         if virus == "gripe":
             return classificar_status_gripe(row)
-        return get_covid_profile(row)
+        return _get_covid_vaccine_profile(row)
 
     out["perfil"] = out.apply(classify_profile, axis=1)
 
@@ -1009,13 +1157,27 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         "completo",
         "dose_1",
         "protegido",
-        "dose_1",
         "dose_2",
         "dose_unica",
         "vencida",
         "ignorado",
         "inconsistencia",
     ]
+
+    friendly_names = {
+        "nao_vacinado": "Não Vacinado",
+        "bivalente": "Bivalente",
+        "reforco_2": "2º Reforço",
+        "reforco_1": "1º Reforço",
+        "completo": "Esquema Completo",
+        "dose_1": "Dose 1",
+        "protegido": "Protegido",
+        "dose_2": "Dose 2",
+        "dose_unica": "Dose Única",
+        "vencida": "Vencida",
+        "ignorado": "Ignorado",
+        "inconsistencia": "Inconsistência",
+    }
 
     results: list[dict[str, Any]] = []
 
@@ -1024,103 +1186,6 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         if subset.empty:
             continue
 
-        count = len(subset)
-
-        death_mask = outcome_death_mask(subset["EVOLUCAO"])
-        cure_mask = subset["EVOLUCAO"] == 1
-
-        taxa_obito = round(death_mask.sum() / count, 4) if count > 0 else 0.0
-        taxa_cura = round(cure_mask.sum() / count, 4) if count > 0 else 0.0
-
-        dt_symptom = subset["DT_SIN_PRI"]
-        dt_hosp = subset["DT_INTERNA"]
-        dt_outcome = subset["DT_EVOLUCA"]
-
-        if virus == "covid":
-            dose_cols = ["DOS_RE_BI", "DOSE_2REF", "DOSE_REF", "DOSE_2_COV", "DOSE_1_COV"]
-            available_cols = [c for c in dose_cols if c in subset.columns]
-            if available_cols:
-                dt_dose = subset[available_cols].bfill(axis=1).iloc[:, 0]
-                dt_dose = pd.to_datetime(dt_dose, errors="coerce")
-            else:
-                dt_dose = pd.Series(pd.NaT, index=subset.index)
-        else:
-            if "DT_UT_DOSE" in subset.columns:
-                dt_dose = pd.to_datetime(subset["DT_UT_DOSE"], errors="coerce")
-            else:
-                dt_dose = pd.Series(pd.NaT, index=subset.index)
-
-        days_dose_symp = (dt_dose - dt_symptom).dt.days
-        valid_dose = days_dose_symp[(days_dose_symp >= -180) & (days_dose_symp <= 180)].dropna()
-
-        days_symp_hosp = (dt_hosp - dt_symptom).dt.days
-        valid_intern = days_symp_hosp[(days_symp_hosp >= 0) & (days_symp_hosp <= 180)].dropna()
-
-        days_hosp_out = (dt_outcome - dt_hosp).dt.days
-        valid_out = days_hosp_out[(days_hosp_out >= 0) & (days_hosp_out <= 180)].dropna()
-
-        mediana_dose_sintoma = (
-            round(float(valid_dose.median()), 1) if not valid_dose.empty else None
-        )
-        dose_p25 = round(float(valid_dose.quantile(0.25)), 1) if not valid_dose.empty else None
-        dose_p75 = round(float(valid_dose.quantile(0.75)), 1) if not valid_dose.empty else None
-
-        mediana_sintoma_internacao = (
-            round(float(valid_intern.median()), 1) if not valid_intern.empty else 0.0
-        )
-        intern_p25 = (
-            round(float(valid_intern.quantile(0.25)), 1) if not valid_intern.empty else 0.0
-        )
-        intern_p75 = (
-            round(float(valid_intern.quantile(0.75)), 1) if not valid_intern.empty else 0.0
-        )
-
-        mediana_internacao_desfecho = (
-            round(float(valid_out.median()), 1) if not valid_out.empty else 0.0
-        )
-        desf_p25 = round(float(valid_out.quantile(0.25)), 1) if not valid_out.empty else 0.0
-        desf_p75 = round(float(valid_out.quantile(0.75)), 1) if not valid_out.empty else 0.0
-
-        uti_pct = round((pd.to_numeric(subset["UTI"], errors="coerce") == 1).mean() * 100, 1)
-
-        severity_score = round((taxa_obito * 0.6) + (taxa_cura * 0.4), 4)
-
-        friendly_names = {
-            "nao_vacinado": "Não Vacinado",
-            "bivalente": "Bivalente",
-            "reforco_2": "2º Reforço",
-            "reforco_1": "1º Reforço",
-            "completo": "Esquema Completo",
-            "dose_1": "Dose 1",
-            "protegido": "Protegido",
-            "dose_2": "Dose 2",
-            "dose_unica": "Dose Única",
-            "vencida": "Vencida",
-            "ignorado": "Ignorado",
-            "inconsistencia": "Inconsistência",
-        }
-
-        results.append(
-            {
-                "perfil": friendly_names.get(perfil, perfil),
-                "status_key": perfil,
-                "gripe_status": perfil if virus == "gripe" else None,
-                "mediana_dose_sintoma": mediana_dose_sintoma,
-                "doseP25": dose_p25,
-                "doseP75": dose_p75,
-                "mediana_sintoma_internacao": mediana_sintoma_internacao,
-                "internP25": intern_p25,
-                "internP75": intern_p75,
-                "mediana_internacao_desfecho": mediana_internacao_desfecho,
-                "desfP25": desf_p25,
-                "desfP75": desf_p75,
-                "taxa_cura": taxa_cura,
-                "taxa_obito": taxa_obito,
-                "uti_pct": uti_pct,
-                "severity_score": severity_score,
-                "n": count,
-                "count": count,
-            }
-        )
+        results.append(_compute_profile_metrics(subset, virus, perfil, friendly_names))
 
     return results

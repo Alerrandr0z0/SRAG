@@ -1,5 +1,7 @@
 """Data loading and anonymization utilities for Mossoró SRAG data."""
 
+from __future__ import annotations
+
 import logging
 import unicodedata
 from typing import TYPE_CHECKING
@@ -103,6 +105,98 @@ def _normalize_age_to_years(nu_idade_n: int | None, tp_idade: int | None) -> flo
     return None
 
 
+def _read_file(file_path: Path) -> pd.DataFrame:
+    """Detect format (CSV/Excel/Parquet) and load the file into a DataFrame."""
+    suffix = file_path.suffix.lower()
+    if suffix == ".csv":
+        try:
+            return pd.read_csv(file_path, sep=None, engine="python", dtype=str)
+        except Exception:
+            return pd.read_csv(file_path, sep=";", dtype=str)
+    if suffix in [".xls", ".xlsx"]:
+        return pd.read_excel(file_path, dtype=str)
+    if suffix == ".parquet":
+        return pd.read_parquet(file_path)
+    raise ValueError(f"Unsupported file format: {file_path.suffix}")
+
+
+def _derive_territorial_fields(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize known alternate SIVEP column names and derive territorial fields."""
+    out = df.copy()
+    rename_map = {
+        source: target
+        for source, target in COLUMN_ALIASES.items()
+        if source in out.columns and target not in out.columns
+    }
+    if rename_map:
+        out = out.rename(columns=rename_map)
+        logger.info(f"Normalized {len(rename_map)} alternate SIVEP column names.")
+
+    if "NM_BAIRRO" in out.columns and "BAIRRO_REF" not in out.columns:
+        out["BAIRRO_REF"] = out["NM_BAIRRO"].apply(_normalize_bairro_name)
+
+    if "CS_ZONA" in out.columns:
+        cs_zona_num = pd.to_numeric(out["CS_ZONA"], errors="coerce").astype("Int64")
+        out["ZONA"] = cs_zona_num.apply(lambda v: _normalize_zone(int(v)) if pd.notna(v) else None)
+
+    if "BAIRRO_REF" in out.columns and "ZONA" not in out.columns:
+        out["ZONA"] = out["BAIRRO_REF"].apply(_infer_zone_from_bairro)
+
+    if "BAIRRO_REF" in out.columns and "ZONA" in out.columns:
+        missing_zone = out["ZONA"].isna()
+        out.loc[missing_zone, "ZONA"] = out.loc[missing_zone, "BAIRRO_REF"].apply(
+            _infer_zone_from_bairro
+        )
+
+    return out
+
+
+def _validate_and_normalize(
+    df: pd.DataFrame,
+    filter_mossoro: bool = True,
+    drop_sensitive: bool = True,
+) -> pd.DataFrame:
+    """Drop sensitive fields, validate records with Pydantic, and normalize age."""
+    out = df.copy()
+    if drop_sensitive:
+        cols_to_drop = [c for c in SENSITIVE_FIELDS if c in out.columns]
+        out = out.drop(columns=cols_to_drop)
+        logger.info(f"Dropped {len(cols_to_drop)} sensitive columns for LGPD compliance.")
+
+    valid_records = []
+    invalid_count = 0
+    records = out.to_dict(orient="records")
+
+    for record in records:
+        try:
+            cleaned_record = {
+                k: (v if str(v).strip() != "" and pd.notna(v) else None) for k, v in record.items()
+            }
+            case = SragCase.model_validate(cleaned_record)
+
+            if filter_mossoro and not is_mossoro_case(case):
+                continue
+
+            normalized_case = case.model_dump()
+            normalized_case["IDADE_ANOS"] = _normalize_age_to_years(
+                normalized_case.get("NU_IDADE_N"),
+                normalized_case.get("TP_IDADE"),
+            )
+            valid_records.append(normalized_case)
+        except ValidationError as e:
+            invalid_count += 1
+            if invalid_count < 3:
+                logger.debug(f"Validation error in record: {e}")
+
+    if invalid_count > 0:
+        logger.warning(
+            f"Skipped {invalid_count} records due to validation errors (dates, types, etc)."
+        )
+
+    logger.info(f"Processed {len(valid_records)} valid records for Mossoró.")
+    return pd.DataFrame(valid_records)
+
+
 def load_and_clean_srag_data(
     file_path: Path,
     filter_mossoro: bool = True,
@@ -120,97 +214,14 @@ def load_and_clean_srag_data(
     """
     logger.info(f"Loading data from {file_path}")
 
-    # Load data - attempting to detect separator for CSV
     try:
-        if file_path.suffix.lower() == ".csv":
-            # Some datasets use ; others use ,
-            # Trying auto-detect first, then semicolon as fallback
-            try:
-                df = pd.read_csv(file_path, sep=None, engine="python", dtype=str)
-            except Exception:
-                df = pd.read_csv(file_path, sep=";", dtype=str)
-        elif file_path.suffix.lower() in [".xls", ".xlsx"]:
-            df = pd.read_excel(file_path, dtype=str)
-        elif file_path.suffix.lower() == ".parquet":
-            df = pd.read_parquet(file_path)
-        else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}")
+        df = _read_file(file_path)
     except Exception as e:
         logger.error(f"Failed to read file {file_path}: {e}")
         raise
 
-    # 0. Normalize known alternate SIVEP column names
-    rename_map = {
-        source: target
-        for source, target in COLUMN_ALIASES.items()
-        if source in df.columns and target not in df.columns
-    }
-    if rename_map:
-        df = df.rename(columns=rename_map)
-        logger.info(f"Normalized {len(rename_map)} alternate SIVEP column names.")
-
-    # 0.1 Derive territorial fields before dropping sensitive columns
-    if "NM_BAIRRO" in df.columns and "BAIRRO_REF" not in df.columns:
-        df["BAIRRO_REF"] = df["NM_BAIRRO"].apply(_normalize_bairro_name)
-
-    if "CS_ZONA" in df.columns:
-        cs_zona_num = pd.to_numeric(df["CS_ZONA"], errors="coerce").astype("Int64")
-        df["ZONA"] = cs_zona_num.apply(lambda v: _normalize_zone(int(v)) if pd.notna(v) else None)
-
-    if "BAIRRO_REF" in df.columns and "ZONA" not in df.columns:
-        df["ZONA"] = df["BAIRRO_REF"].apply(_infer_zone_from_bairro)
-
-    if "BAIRRO_REF" in df.columns and "ZONA" in df.columns:
-        missing_zone = df["ZONA"].isna()
-        df.loc[missing_zone, "ZONA"] = df.loc[missing_zone, "BAIRRO_REF"].apply(
-            _infer_zone_from_bairro
-        )
-
-    # 1. Drop sensitive fields immediately if requested (Privacy First)
-    if drop_sensitive:
-        cols_to_drop = [c for c in SENSITIVE_FIELDS if c in df.columns]
-        df = df.drop(columns=cols_to_drop)
-        logger.info(f"Dropped {len(cols_to_drop)} sensitive columns for LGPD compliance.")
-
-    # 2. Validation and filtering using Pydantic
-    valid_records = []
-    invalid_count = 0
-
-    # Convert DataFrame to list of dicts for Pydantic validation
-    records = df.to_dict(orient="records")
-
-    for record in records:
-        try:
-            # Clean empty strings and NaN to None for optional fields
-            cleaned_record = {
-                k: (v if str(v).strip() != "" and pd.notna(v) else None) for k, v in record.items()
-            }
-
-            case = SragCase.model_validate(cleaned_record)
-
-            # Filter for Mossoró (IBGE 2408003) if requested
-            if filter_mossoro and not is_mossoro_case(case):
-                continue
-
-            normalized_case = case.model_dump()
-            normalized_case["IDADE_ANOS"] = _normalize_age_to_years(
-                normalized_case.get("NU_IDADE_N"),
-                normalized_case.get("TP_IDADE"),
-            )
-            valid_records.append(normalized_case)
-        except ValidationError as e:
-            invalid_count += 1
-            if invalid_count < 3:  # Log only first few errors to avoid noise
-                logger.debug(f"Validation error in record: {e}")
-
-    if invalid_count > 0:
-        logger.warning(
-            f"Skipped {invalid_count} records due to validation errors (dates, types, etc)."
-        )
-
-    logger.info(f"Processed {len(valid_records)} valid records for Mossoró.")
-
-    return pd.DataFrame(valid_records)
+    df = _derive_territorial_fields(df)
+    return _validate_and_normalize(df, filter_mossoro, drop_sensitive)
 
 
 def export_secure_dataset(input_path: Path, output_path: Path) -> None:

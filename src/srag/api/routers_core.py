@@ -19,7 +19,6 @@ from srag.data.analytics import (
     compute_time_series_by_virus,
     compute_virus_detailed_distribution,
     compute_virus_distribution,
-    outcome_death_mask,
 )
 from srag.models.forecasting import predict_next_weeks
 
@@ -82,7 +81,9 @@ def get_summary(
         {
             "uti_rate": round((uti_cases / total) * 100, 2) if total > 0 else 0,
             "uti_total": uti_cases,
-            "death_rate": round((death_cases / closed_count * 100), 2) if closed_count > 0 else 0.0,
+            "death_rate": round((death_cases / closed_count * 100), 2)
+            if closed_count > 0
+            else 0.0,
             "total": hospitalized,
             "notification_total": len(df),
             "available_years": available_years,

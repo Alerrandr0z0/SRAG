@@ -152,6 +152,44 @@ def hospitalization_duration(
         return []
 
 
+def _get_last_covid_dose(row: pd.Series) -> str:
+    """Cascade COVID vaccine doses priority mapping."""
+    if pd.notna(row.get("DOS_RE_BI")):
+        return "Bivalente"
+    if pd.notna(row.get("DOSE_2REF")):
+        return "2º Reforço"
+    if pd.notna(row.get("DOSE_REF")):
+        return "1º Reforço"
+    if pd.notna(row.get("DOSE_2_COV")):
+        return "Esquema Completo"
+    if pd.notna(row.get("DOSE_1_COV")):
+        return "Dose 1"
+    if row.get("VACINA_COV") == 2:
+        return "Não Vacinado"
+    return "Ignorado"
+
+
+def _normalize_flu_labels(raw_schema: dict[Any, Any]) -> dict[str, int]:
+    """Normalize raw Flu labels to human-readable strings and pre-populate with 0."""
+    label_map = {
+        "protegido": "Protegido (Campanha Atual)",
+        "dose_1": "Gripe: Dose 1",
+        "dose_2": "Gripe: Dose 2",
+        "dose_unica": "Gripe: Dose Única",
+        "vencida": "Imunidade Vencida",
+        "nao_vacinado": "Não Vacinado",
+        "ignorado": "Ignorado",
+        "inconsistencia": "Inconsistência",
+    }
+    gripe_schema_readable: dict[str, int] = {
+        label_map.get(str(k), str(k)): int(v) for k, v in raw_schema.items()
+    }
+    for label in label_map.values():
+        if label not in gripe_schema_readable:
+            gripe_schema_readable[label] = 0
+    return gripe_schema_readable
+
+
 @router.get("/vaccination_profile")
 def vaccination_profile(
     filters: CommonFilters = Depends(get_common_filters),
@@ -174,40 +212,9 @@ def vaccination_profile(
         return {}
 
     raw_gripe = df.apply(classificar_status_gripe, axis=1).value_counts().to_dict()
-    gripe_schema = {k: int(v) for k, v in raw_gripe.items()}
-    label_map = {
-        "protegido": "Protegido (Campanha Atual)",
-        "dose_1": "Gripe: Dose 1",
-        "dose_2": "Gripe: Dose 2",
-        "dose_unica": "Gripe: Dose Única",
-        "vencida": "Imunidade Vencida",
-        "nao_vacinado": "Não Vacinado",
-        "ignorado": "Ignorado",
-        "inconsistencia": "Inconsistência",
-    }
-    gripe_schema_readable: dict[str, int] = {
-        label_map.get(str(k), str(k)): int(v) for k, v in gripe_schema.items()
-    }
-    for label in label_map.values():
-        if label not in gripe_schema_readable:
-            gripe_schema_readable[label] = 0
+    gripe_schema_readable = _normalize_flu_labels(raw_gripe)
 
-    def get_last_dose(row: pd.Series) -> str:
-        if pd.notna(row["DOS_RE_BI"]):
-            return "Bivalente"
-        if pd.notna(row["DOSE_2REF"]):
-            return "2º Reforço"
-        if pd.notna(row["DOSE_REF"]):
-            return "1º Reforço"
-        if pd.notna(row["DOSE_2_COV"]):
-            return "Esquema Completo"
-        if pd.notna(row["DOSE_1_COV"]):
-            return "Dose 1"
-        if row["VACINA_COV"] == 2:
-            return "Não Vacinado"
-        return "Ignorado"
-
-    covid_schema = df.apply(get_last_dose, axis=1).value_counts().to_dict()
+    covid_schema = df.apply(_get_last_covid_dose, axis=1).value_counts().to_dict()
     manufacturers = compute_vaccine_manufacturer_distribution(df)
 
     return sanitize_data(
