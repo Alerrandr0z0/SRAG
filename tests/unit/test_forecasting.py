@@ -26,7 +26,7 @@ def test_predict_next_weeks_prophet_success() -> None:
     )
     result = predict_next_weeks(df, weeks_to_predict=4)
     assert result["status"] == "success"
-    assert result["model_type"] == "prophet_stable_seasonal"
+    assert result["model_type"] == "stable_moving_average"
     assert len(result["forecast"]) == 4
     for f in result["forecast"]:
         assert isinstance(f["predicted_cases"], int)

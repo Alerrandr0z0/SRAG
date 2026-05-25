@@ -1,22 +1,16 @@
-"""Advanced seasonal time series forecasting for SRAG using Prophet.
+"""Seasonal time series forecasting baseline for SRAG.
 
-Refined to handle pandemic shocks and seasonal decoupling.
+Replaced Prophet dependency with a stable and lightweight moving average projection.
 """
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import numpy as np
 import pandas as pd
-from prophet import Prophet
 
-from srag.utils.epi_weeks import format_epi_week, get_date_from_epi_week, get_epi_week
-
-# Suppress Prophet/CmdStanPy logging
-logging.getLogger("prophet").setLevel(logging.ERROR)
-logging.getLogger("cmdstanpy").setLevel(logging.ERROR)
+from srag.utils.epi_weeks import format_epi_week
 
 
 def predict_next_weeks(
@@ -24,13 +18,12 @@ def predict_next_weeks(
     weeks_to_predict: int = 4,
     lookback_weeks: int | None = None,
 ) -> dict[str, Any]:
-    """Predict trend using Prophet with improved seasonal handling.
+    """Predict trend using a lightweight moving average baseline (Prophet-free).
 
     Args:
         ts_df: DataFrame with 'epi_week' (YYYY-WW) and 'total'.
         weeks_to_predict: Future projection window.
-        lookback_weeks: DEPRECATED for fitting. Now used only for UI slicing.
-            Fitting now uses all available history to stabilize seasonality.
+        lookback_weeks: DEPRECATED, kept for API compatibility.
     """
     if len(ts_df) < 12:
         return {
@@ -39,79 +32,55 @@ def predict_next_weeks(
             "status": "insufficient_data",
         }
 
-    # 1. Data Preparation
-    def parse_se(se_str: str) -> pd.Timestamp:
-        y, w = map(int, se_str.split("-"))
-        return pd.Timestamp(get_date_from_epi_week(y, w))
+    # 1. Compute moving average and standard deviation from the last 4 weeks
+    recent_data = pd.to_numeric(ts_df["total"].tail(4), errors="coerce").fillna(0)
+    mean_val = float(recent_data.mean())
+    std_val = float(recent_data.std())
+    if np.isnan(std_val):
+        std_val = 0.0
 
-    m_df = ts_df.copy()
-    m_df["ds"] = m_df["epi_week"].apply(parse_se)
-    m_df["y"] = pd.to_numeric(m_df["total"], errors="coerce").fillna(0)
-
-    # --- InfoGripe Strategy: Handling Pandemic Peaks as Outliers ---
-    # Se tivermos anos de pico extremo (2020-2021), eles podem distorcer a média móvel.
-    # Aplicamos um log-transform ou cap para estabilizar o modelo.
-    # Para SRAG municipal, log costuma funcionar melhor para evitar explosões lineares.
-    m_df["y"] = np.log1p(m_df["y"])
-
-    # 2. Configure Prophet
-    # 'changepoint_prior_scale' menor (0.01) evita que o modelo mude de direção
-    # drasticamente por causa de 1 ou 2 semanas de subida (o problema dos 322 casos).
-    m = Prophet(
-        yearly_seasonality=True,  # type: ignore
-        weekly_seasonality=False,  # type: ignore
-        daily_seasonality=False,  # type: ignore
-        changepoint_prior_scale=0.01,
-        seasonality_prior_scale=1.0,
-        interval_width=0.80,
-    )
-
+    # 2. Get last epidemiological week in history
+    last_row = ts_df.iloc[-1]
+    last_week_str = str(last_row["epi_week"])
     try:
-        # Fit on EVERYTHING we have to get the best seasonal profile
-        m.fit(m_df[["ds", "y"]])
+        y, w = map(int, last_week_str.split("-"))
+    except ValueError:
+        # Fallback if string cannot be parsed
+        y, w = 2026, 1
 
-        # 3. Forecast
-        future = m.make_future_dataframe(periods=weeks_to_predict, freq="W")
-        forecast = m.predict(future)
+    forecast_results: list[dict[str, Any]] = []
 
-        # Transform back from log space
-        for col in ["yhat", "yhat_lower", "yhat_upper"]:
-            forecast[col] = np.expm1(forecast[col])
+    # 3. Project future weeks sequentially
+    current_y, current_w = y, w
+    for _ in range(weeks_to_predict):
+        # Advance epidemiological week
+        current_w += 1
+        # Simple epidemiologic week rollover (52/53 weeks per year)
+        if current_w > 52:
+            current_w = 1
+            current_y += 1
 
-        forecast_future = forecast.tail(weeks_to_predict).copy()
+        se_str = format_epi_week(current_y, current_w)
 
-        forecast_results = []
-        for _, row in forecast_future.iterrows():
-            y, w = get_epi_week(row["ds"].date())
-            se_str = format_epi_week(y, w)
+        # Baseline projection: stable moving average with 1 standard deviation bounds
+        pred = round(max(0.0, mean_val))
+        lower = round(max(0.0, mean_val - std_val))
+        upper = round(max(0.0, mean_val + std_val))
 
-            # Garantir que os casos sejam inteiros (não existe 0.5 caso)
-            pred = round(max(0, float(row["yhat"])))
-            lower = round(max(0, float(row["yhat_lower"])))
-            upper = round(max(0, float(row["yhat_upper"])))
+        forecast_results.append(
+            {
+                "epi_week": se_str,
+                "predicted_cases": pred,
+                "predicted_cases_lower": lower,
+                "predicted_cases_upper": upper,
+                "is_forecast": True,
+            }
+        )
 
-            forecast_results.append(
-                {
-                    "epi_week": se_str,
-                    "predicted_cases": pred,
-                    "predicted_cases_lower": lower,
-                    "predicted_cases_upper": upper,
-                    "is_forecast": True,
-                }
-            )
-
-        return {
-            "history": ts_df.to_dict(orient="records"),
-            "forecast": forecast_results,
-            "status": "success",
-            "model_type": "prophet_stable_seasonal",
-            "lookback_weeks": len(ts_df),
-        }
-
-    except Exception as e:
-        return {
-            "history": ts_df.to_dict(orient="records"),
-            "forecast": [],
-            "status": "error",
-            "error_msg": str(e),
-        }
+    return {
+        "history": ts_df.to_dict(orient="records"),
+        "forecast": forecast_results,
+        "status": "success",
+        "model_type": "stable_moving_average",
+        "lookback_weeks": len(ts_df),
+    }

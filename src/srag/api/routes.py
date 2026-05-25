@@ -14,8 +14,9 @@ def register_routes(app: FastAPI) -> None:
     from srag.api.routers_surveillance import router as surveillance_router
     from srag.api.routers_territory import router as territory_router
 
-    app.include_router(core_router)
-    app.include_router(territory_router)
-    app.include_router(clinical_router)
-    app.include_router(surveillance_router)
-    app.include_router(geo_router)
+    for prefix in ["", "/api"]:
+        app.include_router(core_router, prefix=prefix)
+        app.include_router(territory_router, prefix=prefix)
+        app.include_router(clinical_router, prefix=prefix)
+        app.include_router(surveillance_router, prefix=prefix)
+        app.include_router(geo_router, prefix=prefix)

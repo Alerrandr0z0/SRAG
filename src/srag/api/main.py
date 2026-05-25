@@ -1,9 +1,11 @@
 import contextlib
 import logging
+from pathlib import Path
 
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
 
 from srag.api import core as _core
@@ -92,3 +94,7 @@ app.add_middleware(
 )
 
 register_routes(app)
+
+static_dir = Path("/app/frontend/dist")
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
