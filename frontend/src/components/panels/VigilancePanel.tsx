@@ -106,7 +106,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
       className: 'vigilance-metric vigilance-metric--teal',
     },
     {
-      label: 'Latência Diagnóstica',
+      label: 'Latência (PCR+Ag)',
       value: `${overall?.median_turnaround_days || 0}d`,
       className: 'vigilance-metric vigilance-metric--amber',
     },

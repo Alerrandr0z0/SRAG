@@ -85,7 +85,31 @@ export interface TerritoryBootstrap {
   };
   boundary: unknown;
   choropleth: Array<{ bairro: string; count: number; rate?: number }>;
-  ruralData?: { sectors: unknown[]; points: unknown[]; center: unknown } | null;
+  ruralData?: {
+    sectors: Array<{
+      codigo_cnes: string;
+      label: string;
+      count: number;
+      latitude?: number | null;
+      longitude?: number | null;
+      endereco?: string | null;
+      zona?: string;
+      bairro?: string | null;
+    }>;
+    points: unknown[];
+    center: { lat: number; lon: number } | null;
+    urban_points?: Array<{
+      codigo_cnes: string;
+      label: string;
+      count: number;
+      latitude?: number | null;
+      longitude?: number | null;
+      endereco?: string | null;
+      zona?: string;
+      bairro?: string | null;
+    }>;
+    urban_center?: { lat: number; lon: number } | null;
+  } | null;
   ruralSectorsGeo?: unknown;
   territory_entities: {
     urban_bairros: Array<{ label: string; count: number }>;

@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any
 import requests
 
 from srag.data.analytics import compute_territory_distribution
-from srag.data.references import MOSSORO_IBGE_CODE
+from srag.data.cnes_lookup import lookup_unit_record
+from srag.data.references import MOSSORO_IBGE_CODE, MOSSORO_IBGE_CODES
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -26,6 +27,13 @@ BOUNDARY_CACHE_PATH = Path("data/processed/mossoro_municipality_boundary.geojson
 BAIRROS_GEOJSON_FALLBACK_PATH = Path("data/geojson/mossoro_bairros.geojson")
 _boundary_memo: dict[str, Any] | None = None
 _boundary_mtime_ns: int | None = None
+
+# Cache for urban polygon classification (lazy-loaded)
+_urban_polys_cache: list[tuple[str, list[list[tuple[float, float]]]]] | None = None
+_urban_polys_path: str | None = None
+
+# Mossoró IBGE municipality codes (6-digit + check-digit variants)
+MOSSORO_MUNICIPAL_CODES = set(MOSSORO_IBGE_CODES)
 
 
 def _norm_bairro_name(value: str | None) -> str:
@@ -69,6 +77,82 @@ def _norm_zone(value: str | None) -> str:
         ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch)
     )
     return " ".join(text.split())
+
+
+def _point_in_ring(lon: float, lat: float, ring: list[tuple[float, float]]) -> bool:
+    """Ray-casting point-in-polygon test for a single closed ring."""
+    inside = False
+    n = len(ring)
+    for i in range(n):
+        x1, y1 = ring[i]
+        x2, y2 = ring[(i + 1) % n]
+        if ((y1 > lat) != (y2 > lat)) and (lon < (x2 - x1) * (lat - y1) / (y2 - y1) + x1):
+            inside = not inside
+    return inside
+
+
+def _point_in_multi_polygon(
+    lon: float,
+    lat: float,
+    polygons: list[list[tuple[float, float]]],
+) -> bool:
+    """Test point against a list of outer-ring polygons."""
+    return any(_point_in_ring(lon, lat, ring) for ring in polygons)
+
+
+def _extract_rings(geom_type: str, coords_raw: list[Any]) -> list[list[tuple[float, float]]]:
+    """Extract outer polygon rings from a GeoJSON geometry."""
+    rings: list[list[tuple[float, float]]] = []
+    if geom_type == "MultiPolygon":
+        for polygon in coords_raw:
+            if polygon and polygon[0]:
+                rings.append([(p[0], p[1]) for p in polygon[0]])
+    elif geom_type == "Polygon" and coords_raw and coords_raw[0]:
+        rings.append([(p[0], p[1]) for p in coords_raw[0]])
+    return rings
+
+
+def _load_urban_polygons(
+    geojson_path: str | Path = BAIRROS_GEOJSON_FALLBACK_PATH,
+) -> list[tuple[str, list[list[tuple[float, float]]]]]:
+    """Load bairro polygons as urban perimeter. Cached in memory."""
+    global _urban_polys_cache, _urban_polys_path
+
+    path_str = str(geojson_path)
+    if _urban_polys_cache is not None and _urban_polys_path == path_str:
+        return _urban_polys_cache
+
+    path = Path(geojson_path)
+    if not path.exists():
+        _urban_polys_cache = []
+        _urban_polys_path = path_str
+        return _urban_polys_cache
+
+    content = json.loads(path.read_text(encoding="utf-8"))
+    result: list[tuple[str, list[list[tuple[float, float]]]]] = []
+    for feat in content.get("features", []):
+        props = feat.get("properties", {})
+        name = str(props.get("bairro", "") or "")
+        geom = feat.get("geometry", {})
+        rings = _extract_rings(geom.get("type", ""), geom.get("coordinates", []))
+        if rings:
+            result.append((name, rings))
+
+    _urban_polys_cache = result
+    _urban_polys_path = path_str
+    return result
+
+
+def _classify_unit_location(
+    lon: float,
+    lat: float,
+    geojson_path: str | Path = BAIRROS_GEOJSON_FALLBACK_PATH,
+) -> str | None:
+    """Return the bairro name if the point is inside the urban perimeter, or None if rural."""
+    for name, rings in _load_urban_polygons(geojson_path):
+        if _point_in_multi_polygon(lon, lat, rings):
+            return name
+    return None
 
 
 def _angle_to_sector(theta_deg: float) -> str:
@@ -462,4 +546,144 @@ def build_macrosector_heatpoints(
         "zone": zone,
         "center": {"lat": center_y, "lon": center_x},
         "points": points,
+    }
+
+
+def _compute_center(coords: list[tuple[float, float]]) -> dict[str, float] | None:
+    """Centroid from a list of (lon, lat) pairs."""
+    if not coords:
+        return None
+    cx = sum(x for x, _ in coords) / len(coords)
+    cy = sum(y for _, y in coords) / len(coords)
+    return {"lat": cy, "lon": cx}
+
+
+def _build_unit_point(code: str, count: int) -> tuple[dict[str, Any] | None, str | None]:
+    """Lookup a unit record, classify as urban/rural. Returns (point, bairro_or_none)."""
+    record = lookup_unit_record(code) or {}
+    mun = str(record.get("codigo_municipio") or "").strip()
+    if mun not in MOSSORO_MUNICIPAL_CODES:
+        return None, None
+
+    lat = record.get("latitude")
+    lon = record.get("longitude")
+    bairro: str | None = None
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        bairro = _classify_unit_location(float(lon), float(lat))
+
+    pt = {
+        "codigo_cnes": code,
+        "label": str(record.get("nome_fantasia") or record.get("nome_razao_social") or code),
+        "count": count,
+        "latitude": float(lat) if isinstance(lat, (int, float)) else None,
+        "longitude": float(lon) if isinstance(lon, (int, float)) else None,
+        "endereco": record.get("endereco"),
+        "zona": "URBANA" if bairro else "RURAL",
+        "bairro": bairro,
+    }
+    return pt, bairro
+
+
+def _municipality_centroid() -> tuple[float, float] | None:
+    """Extract centroid from municipality boundary GeoJSON."""
+    payload = get_municipality_boundary()
+    if not isinstance(payload, dict):
+        return None
+    features = payload.get("features", [])
+    if not isinstance(features, list) or not features:
+        return None
+    return _feature_centroid(features[0])
+
+
+def _distribute_equally(
+    total: int, sectors: list[str], lat: float, lon: float
+) -> list[dict[str, Any]]:
+    """Distribute total cases equally among named sectors, remainder to first."""
+    base = total // len(sectors)
+    rem = total % len(sectors)
+    result: list[dict[str, Any]] = []
+    for i, sector in enumerate(sectors):
+        extra = base + (1 if i < rem else 0)
+        if extra > 0:
+            result.append({"sector": sector, "count": extra, "lat": lat, "lon": lon})
+    return result
+
+
+def _build_rural_sectors(
+    df: pd.DataFrame,
+    min_cases: int = 1,
+) -> list[dict[str, Any]]:
+    """Build rural sector points from cases with ZONA=RURAL.
+
+    Since rural bairros lack GeoJSON polygons for georeferencing, all rural
+    cases are distributed equally among the 4 cardinal sectors (N, S, L, O).
+    """
+    work = df.copy()
+    if "ZONA" not in work.columns:
+        return []
+
+    work["zona_norm"] = work["ZONA"].map(_norm_zone)
+    rural = work[work["zona_norm"] == "RURAL"].copy()
+    if rural.empty:
+        return []
+
+    total = len(rural)
+    if total < min_cases:
+        return []
+
+    city_pt = _municipality_centroid()
+    if city_pt is None:
+        return []
+    cx, cy = city_pt
+
+    return _distribute_equally(total, ["N", "S", "L", "O"], cy, cx)
+
+
+def build_rural_heatpoints(df: pd.DataFrame, min_cases: int = 1) -> dict[str, Any]:
+    """Urban points from CNES coordinates + rural fallback by directional sectors.
+
+    Urban points are built by grouping cases by notifying unit (ID_UNIDADE),
+    looking up CNES coordinates, and classifying each point against the bairro
+    (urban) perimeter. Only Mossoró municipality units are included.
+
+    Rural sector points are built from cases with ZONA=RURAL, aggregated by
+    bairro and mapped to 8 directional sectors (classic behaviour).
+    """
+    work = df.copy()
+
+    # --- urban points from CNES coordinates ---
+    urban_points: list[dict[str, Any]] = []
+    urban_coords: list[tuple[float, float]] = []
+
+    if "ID_UNIDADE" in work.columns:
+        grouped = work.groupby("ID_UNIDADE").size().reset_index(name="count")
+        grouped = grouped[grouped["count"] >= min_cases].sort_values("count", ascending=False)
+        for row in grouped.itertuples(index=False):
+            code = str(getattr(row, "ID_UNIDADE", "")).strip()
+            pts = int(getattr(row, "count", 0) or 0)
+            pt, bairro = _build_unit_point(code, pts)
+            if pt is None:
+                continue
+            lat, lon = pt["latitude"], pt["longitude"]
+            if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+                continue
+            if bairro:
+                urban_points.append(pt)
+                urban_coords.append((float(lon), float(lat)))
+
+    # --- rural sector points (fallback) ---
+    rural_sectors = _build_rural_sectors(work, min_cases=min_cases)
+    center: dict[str, float] | None = None
+    if rural_sectors:
+        lats = [p["lat"] for p in rural_sectors]
+        lons = [p["lon"] for p in rural_sectors]
+        center = {"lat": sum(lats) / len(lats), "lon": sum(lons) / len(lons)}
+
+    return {
+        "available": True,
+        "reason": "ok",
+        "center": center,
+        "points": rural_sectors,
+        "urban_center": _compute_center(urban_coords),
+        "urban_points": urban_points,
     }

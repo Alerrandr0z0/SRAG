@@ -25,7 +25,18 @@ export function useTerritoryData(
   const [ruralData, setRuralData] = useState<{
     sectors: Array<{ sector: string; count: number }>;
     points: unknown[];
-    center: { lat: number; lon: number };
+    center: { lat: number; lon: number } | null;
+    urban_points?: Array<{
+      codigo_cnes: string;
+      label: string;
+      count: number;
+      latitude?: number | null;
+      longitude?: number | null;
+      endereco?: string | null;
+      zona?: string;
+      bairro?: string | null;
+    }>;
+    urban_center?: { lat: number; lon: number } | null;
   } | null>(null);
   const [ruralSectorsGeo, setRuralSectorsGeo] = useState<unknown>(null);
   const [entities, setEntities] = useState<Epi.TerritoryBootstrap['territory_entities']>({
@@ -89,15 +100,14 @@ export function useTerritoryData(
 
     async function loadRuralData() {
       try {
-        const [points, geo] = await Promise.all([
-          api.fetchRuralHeatpoints(),
-          api.fetchRuralSectorsGeo(),
-        ]);
+        const [points, geo] = await Promise.all([api.fetchRuralHeatpoints(), api.fetchRuralSectorsGeo()]);
         if (isMounted) {
           setRuralData({
-            sectors: points.sectors,
+            sectors: points.points || [],
             points: [],
             center: points.center,
+            urban_points: points.urban_points || [],
+            urban_center: points.urban_center || null,
           });
           setRuralSectorsGeo(geo);
         }

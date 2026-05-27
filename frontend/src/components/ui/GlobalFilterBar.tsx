@@ -35,7 +35,7 @@ interface GlobalFilterBarProps {
 
   unitFilter: string[];
   setUnitFilter: (u: string[]) => void;
-  unitsList: Array<{ id_unidade: string; count: number }>;
+  unitsList: Array<{ id_unidade: string; nome_fantasia: string; count: number }>;
 
   agentFilter: string[];
   setAgentFilter: (a: string[]) => void;
@@ -148,7 +148,11 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
 
   const filteredUnits = useMemo(() => {
     const search = unitSearch.toLowerCase();
-    const filtered = unitsList.filter((u) => u.id_unidade.toLowerCase().includes(search));
+    const filtered = unitsList.filter(
+      (u) =>
+        u.id_unidade.toLowerCase().includes(search) ||
+        u.nome_fantasia.toLowerCase().includes(search),
+    );
 
     const selectedNames = unitFilter;
     const selectedObjs = unitsList.filter((u) => selectedNames.includes(u.id_unidade));
@@ -305,14 +309,14 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
 
-          {/* Bairro */}
+          {/* Localidade */}
           <div className="gfb-group" style={{ position: 'relative' }}>
-            <span className="gfb-label">Bairro</span>
+            <span className="gfb-label">Localidade</span>
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
                 className="gfb-input"
-                placeholder="Buscar bairro..."
+                placeholder="Buscar bairro ou zona rural..."
                 value={bairroSearch}
                 onChange={(e) => {
                   setBairroSearch(e.target.value);
@@ -338,7 +342,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                       </button>
                     ))}
                     {filteredBairros.length === 0 && (
-                      <p className="gfb-dropdown-empty">Nenhum bairro encontrado</p>
+                      <p className="gfb-dropdown-empty">Nenhuma localidade encontrada</p>
                     )}
                   </div>
                   <button
@@ -381,7 +385,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                         className={`gfb-dropdown-item ${unitFilter.includes(u.id_unidade) ? 'active' : ''}`}
                         onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
                       >
-                        {u.id_unidade} <small style={{ opacity: 0.6 }}>({u.count})</small>
+                        {u.nome_fantasia} <small style={{ opacity: 0.6 }}>({u.count})</small>
                       </button>
                     ))}
                     {filteredUnits.length === 0 && (

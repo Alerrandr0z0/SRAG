@@ -234,15 +234,10 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({
     ) as Record<string, string>;
 
     const sorted = [...data].sort((a, b) => {
-      const aOb = isObito(a) ? 1 : 0;
-      const bOb = isObito(b) ? 1 : 0;
-      if (bOb !== aOb) return bOb - aOb;
       const aT = (a.mediana_sintoma_internacao ?? 0) + (a.mediana_internacao_desfecho ?? 0);
       const bT = (b.mediana_sintoma_internacao ?? 0) + (b.mediana_internacao_desfecho ?? 0);
       return aT - bT;
     });
-
-    const dividerIdx = sorted.findIndex((d) => !isObito(d));
     const nMax = d3.max(sorted, (d) => d.n) ?? 1;
     const strokeW = (d: EnrichedTimeline) => 1.5 + (d.n / nMax) * 4.5;
 
@@ -603,31 +598,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({
         });
     });
 
-    if (dividerIdx > 0) {
-      const divY = yScale(sorted[dividerIdx].perfil)! - ROW_H * 0.12;
-      g.append('line')
-        .attr('x1', -MARGIN.left + 8)
-        .attr('x2', CW + MARGIN.right - 8)
-        .attr('y1', divY)
-        .attr('y2', divY)
-        .attr('stroke', themeColors.muted)
-        .attr('stroke-width', 1)
-        .attr('stroke-dasharray', '4,4');
-      g.append('text')
-        .attr('x', -MARGIN.left + 8)
-        .attr('y', yScale(sorted[0].perfil)! - 10)
-        .attr('font-size', '9px')
-        .attr('font-weight', '700')
-        .attr('fill', COLORS.DANGER)
-        .text('ÓBITO PREDOMINANTE');
-      g.append('text')
-        .attr('x', -MARGIN.left + 8)
-        .attr('y', divY + 12)
-        .attr('font-size', '9px')
-        .attr('font-weight', '700')
-        .attr('fill', COLORS.SUCCESS)
-        .text('CURA PREDOMINANTE');
-    }
+
   }, [data, themeColors]);
 
   const hasData = data.length > 0;

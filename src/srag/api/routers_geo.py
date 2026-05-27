@@ -7,7 +7,6 @@ from typing import Any, Literal
 import json
 from pathlib import Path
 
-import pandas as pd
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 
@@ -16,7 +15,7 @@ from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import apply_global_filters
 from srag.data.geospatial import (
     build_macrosector_heatpoints,
-    _feature_centroid,
+    build_rural_heatpoints,
     get_municipality_boundary,
     _iter_coords,
 )
@@ -69,63 +68,7 @@ def rural_heatpoints(
         occupations=filters.occupations,
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
-    if df.empty:
-        return {"available": False, "sectors": [], "center": None}
-
-    work = df.copy()
-    if "ZONA" not in work.columns and "CS_ZONA" not in work.columns:
-        return {"available": False, "sectors": [], "center": None}
-
-    zona_col = work.get("ZONA")
-    if zona_col is None:
-        zona_col = work.get("CS_ZONA")
-
-    if zona_col is not None:
-        work["zona_norm"] = zona_col.map(lambda v: str(v).strip().upper() if pd.notna(v) else "")
-    else:
-        work["zona_norm"] = ""
-    work = work[work["zona_norm"] == "RURAL"]
-    total_rural = len(work)
-
-    boundary = get_municipality_boundary()
-    center_features = boundary.get("features", []) if isinstance(boundary, dict) else []
-    bbox_center = None
-
-    rural_geo_path = Path("data/geojson/mossoro_rural.geojson")
-    if rural_geo_path.exists():
-        try:
-            rural_geo = json.loads(rural_geo_path.read_text())
-            rural_feat = rural_geo.get("features", [])[0]
-            bbox_center = _feature_centroid(rural_feat)
-        except Exception:
-            bbox_center = None
-
-    city_centroid = (
-        bbox_center
-        or (_feature_centroid(center_features[0]) if center_features else None)
-        or (-37.34, -5.18)
-    )
-    cx, cy = city_centroid
-
-    if total_rural < min_cases:
-        return sanitize_data({"available": True, "sectors": [], "center": {"lat": cy, "lon": cx}})
-
-    base = total_rural // 4
-    remainder = total_rural % 4
-    sector_order = ["N", "S", "L", "O"]
-    sectors: list[dict[str, object]] = []
-
-    for idx, sec in enumerate(sector_order):
-        count = base + (1 if idx < remainder else 0)
-        sectors.append({"sector": sec, "count": count})
-
-    return sanitize_data(
-        {
-            "available": True,
-            "center": {"lat": round(cy, 6), "lon": round(cx, 6)},
-            "sectors": sectors,
-        }
-    )
+    return sanitize_data(build_rural_heatpoints(df, min_cases=min_cases))
 
 
 @router.get("/geo/municipality_boundary")

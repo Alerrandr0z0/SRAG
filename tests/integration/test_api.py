@@ -159,12 +159,24 @@ def test_clinical_flow_ignores_code_3_as_death(mock_df: pd.DataFrame) -> None:
     assert cura_count <= 13
 
 
+def test_clinical_flow_respects_agents_filter(mock_df: pd.DataFrame) -> None:
+    response = client.get("/clinical_flow?agents=Influenza")
+    assert response.status_code == 200
+    assert response.json() == {"nodes": [], "links": []}
+
+
 def test_vaccination_profile(mock_df: pd.DataFrame) -> None:
     response = client.get("/vaccination_profile")
     assert response.status_code == 200
     json_data = response.json()
     assert "gripe" in json_data
     assert "covid_detailed" in json_data
+
+
+def test_vaccination_profile_respects_agents_filter(mock_df: pd.DataFrame) -> None:
+    response = client.get("/vaccination_profile?agents=Influenza")
+    assert response.status_code == 200
+    assert response.json() == {}
 
 
 def test_citizen_bootstrap(mock_df: pd.DataFrame) -> None:
@@ -181,6 +193,12 @@ def test_vaccine_survival(mock_df: pd.DataFrame) -> None:
     json_data = response.json()
     assert "covid" in json_data
     assert "gripe" in json_data
+
+
+def test_vaccine_survival_respects_agents_filter(mock_df: pd.DataFrame) -> None:
+    response = client.get("/vaccine_survival?agents=Influenza")
+    assert response.status_code == 200
+    assert response.json() == {"covid": {}, "gripe": {}}
 
 
 def test_geo_endpoints(mock_df: pd.DataFrame) -> None:

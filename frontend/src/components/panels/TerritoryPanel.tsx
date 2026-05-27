@@ -1,5 +1,5 @@
 import type { FeatureCollection } from 'geojson';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Epi from '../../types/epi';
 import LeafletMap from '../charts/LeafletMap';
 import RankTable from '../ui/RankTable';
@@ -18,10 +18,28 @@ interface TerritoryPanelProps {
   ruralData: {
     sectors: Array<{ sector: string; count: number }>;
     points: unknown[];
-    center: { lat: number; lon: number };
+    center: { lat: number; lon: number } | null;
+    urban_points?: Array<{
+      codigo_cnes: string;
+      label: string;
+      count: number;
+      latitude?: number | null;
+      longitude?: number | null;
+      endereco?: string | null;
+      zona?: string;
+      bairro?: string | null;
+    }>;
+    urban_center?: { lat: number; lon: number } | null;
   } | null;
   ruralSectorsGeo: FeatureCollection;
+  zoneFilter: string[];
 }
+
+const ZONE_FILTER_TO_MAP: Record<string, string> = {
+  URBANA: 'Urbana',
+  RURAL: 'Rural',
+  PERIURBANA: 'Periurbana',
+};
 
 const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   loading,
@@ -30,9 +48,25 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   choropleth,
   ruralData,
   ruralSectorsGeo,
+  zoneFilter,
 }) => {
+  const availableModes = useMemo(() => {
+    if (zoneFilter.length === 0) return ['Urbana', 'Rural'];
+    return zoneFilter
+      .map((k) => ZONE_FILTER_TO_MAP[k])
+      .filter((v): v is string => v !== undefined);
+  }, [zoneFilter]);
+
   const [mapZoneMode, setMapZoneMode] = useState('Urbana');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (availableModes.length === 1) {
+      setMapZoneMode(availableModes[0]);
+    } else if (!availableModes.includes(mapZoneMode)) {
+      setMapZoneMode(availableModes[0] || 'Urbana');
+    }
+  }, [availableModes, mapZoneMode]);
 
   const zoneSummary = useMemo(() => {
     const zonas = territory?.zonas || [];
@@ -103,8 +137,9 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
                   setSelectedSectors([]);
                 }}
               >
-                <option value="Urbana">Urbana</option>
-                <option value="Rural">Rural</option>
+                {availableModes.map((mode) => (
+                  <option key={mode} value={mode}>{mode}</option>
+                ))}
               </select>
             </label>
           </div>

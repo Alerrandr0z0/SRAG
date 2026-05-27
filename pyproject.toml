@@ -22,6 +22,7 @@ dependencies = [
     "lifelines>=0.30.3",
     "duckdb>=1.5.1",
     "pandera>=0.31.1",
+    "openpyxl>=3.1.5",
 ]
 
 [project.optional-dependencies]

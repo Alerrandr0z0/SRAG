@@ -559,7 +559,7 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
       ),
     },
     {
-      title: 'Latência laboratorial',
+      title: 'Latência (RT-PCR)',
       sub: 'Dias entre coleta da amostra e resultado do RT-PCR',
       content: (
         <div

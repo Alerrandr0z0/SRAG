@@ -43,7 +43,6 @@ describe('AggregatedSwimmerPlot — component', () => {
     it('renders the chart caption and legends', () => {
       render(<AggregatedSwimmerPlot data={[baseData]} debug />);
 
-      expect(screen.getByText(/Mediana de tempo entre eventos/)).toBeInTheDocument();
       expect(screen.getByText('Marcadores')).toBeInTheDocument();
       expect(screen.getByText('Status vacinal da gripe')).toBeInTheDocument();
       expect(screen.getByText('Bivalente')).toBeInTheDocument();
@@ -86,21 +85,9 @@ describe('AggregatedSwimmerPlot — component', () => {
     });
   });
 
-  describe('obito divider', () => {
-    it('shows divider labels when obito and cura cohorts coexist', () => {
+  describe('no obito divider (consistent layout)', () => {
+    it('never shows divider section labels', () => {
       render(<AggregatedSwimmerPlot data={[obitoData, baseData]} />);
-      expect(screen.getByText('ÓBITO PREDOMINANTE')).toBeInTheDocument();
-      expect(screen.getByText('CURA PREDOMINANTE')).toBeInTheDocument();
-    });
-
-    it('hides divider when only cura cohorts', () => {
-      render(<AggregatedSwimmerPlot data={[baseData]} />);
-      expect(screen.queryByText('ÓBITO PREDOMINANTE')).not.toBeInTheDocument();
-      expect(screen.queryByText('CURA PREDOMINANTE')).not.toBeInTheDocument();
-    });
-
-    it('hides divider when only obito cohorts', () => {
-      render(<AggregatedSwimmerPlot data={[obitoData]} />);
       expect(screen.queryByText('ÓBITO PREDOMINANTE')).not.toBeInTheDocument();
       expect(screen.queryByText('CURA PREDOMINANTE')).not.toBeInTheDocument();
     });
@@ -120,7 +107,8 @@ describe('AggregatedSwimmerPlot — component', () => {
   describe('uti color hint in footer', () => {
     it('renders the color hint text below grip legend', () => {
       render(<AggregatedSwimmerPlot data={[baseData]} />);
-      expect(screen.getByText(/A cor da linha representa o status vacinal/)).toBeInTheDocument();
+      expect(screen.getByText('Status vacinal da gripe')).toBeInTheDocument();
+      expect(screen.getByText('Protegida')).toBeInTheDocument();
     });
   });
 

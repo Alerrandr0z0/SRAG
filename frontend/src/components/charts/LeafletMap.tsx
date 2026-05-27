@@ -9,12 +9,35 @@ interface ChoroplethType {
   feature_collection?: FeatureCollection;
 }
 
+interface UrbanPoint {
+  codigo_cnes?: string;
+  label?: string;
+  count: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  endereco?: string | null;
+  zona?: string;
+  bairro?: string | null;
+}
+
 interface LeafletMapProps {
   boundary: FeatureCollection | null;
   choropleth: ChoroplethType | null;
   ruralData: {
-    sectors: Array<{ sector: string; count: number }>;
-    center: { lat: number; lon: number };
+    sectors: Array<{
+      codigo_cnes?: string;
+      label?: string;
+      sector?: string;
+      count: number;
+      latitude?: number | null;
+      longitude?: number | null;
+      endereco?: string | null;
+      zona?: string;
+      bairro?: string | null;
+    }>;
+    center: { lat: number; lon: number } | null;
+    urban_points?: UrbanPoint[];
+    urban_center?: { lat: number; lon: number } | null;
   } | null;
   ruralSectorsGeo: FeatureCollection;
   mapZoneMode: string;
@@ -27,12 +50,6 @@ const SECTOR_FILL: Record<string, string> = {
   S: '#d97706',
   L: '#2563eb',
   O: '#dc2626',
-};
-
-const ORDER_STROKE = {
-  first: '#0f766e',
-  second: '#f59e0b',
-  idle: '#1e293b',
 };
 
 const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -120,12 +137,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         }).addTo(mapInstance.current);
       }
 
-      if (mapZoneMode === 'Urbana' && choropleth?.feature_collection?.features?.length) {
+      if (mapZoneMode === 'Urbana') {
         if (mapInstance.current) {
           mapInstance.current.setView([-5.18, -37.34], 12);
         }
 
-          overlayLayer.current = L.geoJSON(choropleth.feature_collection, {
+        const urbanLayer = L.layerGroup();
+
+        if (choropleth?.feature_collection?.features?.length) {
+          L.geoJSON(choropleth.feature_collection, {
             style: (f) => {
               const feature = f as { properties?: { bairro?: string; count?: number } };
               const count = (feature.properties?.count as number) || 0;
@@ -155,9 +175,53 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               );
             }
           },
-        }).addTo(mapInstance.current);
+        }).addTo(urbanLayer);
+        }
+
+        const urbPts = ruralData?.urban_points?.filter(
+          (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
+        );
+        if (urbPts?.length) {
+          urbPts.forEach((pt) => {
+            const marker = L.circleMarker([pt.latitude as number, pt.longitude as number], {
+              radius: Math.max(5, Math.min(12, 5 + (pt.count || 0) / 4)),
+              color: '#2563eb',
+              weight: 2,
+              fillColor: '#60a5fa',
+              fillOpacity: 0.7,
+            });
+            marker.bindTooltip(
+              `<strong>${pt.label || pt.codigo_cnes || 'Unidade'}</strong><br/>${pt.count} casos${pt.bairro ? `<br/>${pt.bairro}` : ''}${pt.endereco ? `<br/>${pt.endereco}` : ''}`,
+              { sticky: true },
+            );
+            marker.addTo(urbanLayer);
+          });
+        }
+
+        overlayLayer.current = urbanLayer.addTo(mapInstance.current);
       } else if (mapZoneMode === 'Rural') {
         const lg = L.layerGroup();
+
+        const unitPoints = ruralData?.sectors?.filter(
+          (s) => typeof s.latitude === 'number' && typeof s.longitude === 'number',
+        );
+
+        if (unitPoints?.length) {
+          unitPoints.forEach((unit) => {
+            const marker = L.circleMarker([unit.latitude as number, unit.longitude as number], {
+              radius: Math.max(5, Math.min(14, 5 + (unit.count || 0) / 4)),
+              color: '#f59e0b',
+              weight: 2,
+              fillColor: '#fb923c',
+              fillOpacity: 0.7,
+            });
+            marker.bindTooltip(
+              `<strong>${unit.label || unit.codigo_cnes || 'Unidade'}</strong><br/>${unit.count} casos${unit.endereco ? `<br/>${unit.endereco}` : ''}`,
+              { sticky: true },
+            );
+            marker.addTo(lg);
+          });
+        }
 
         if (ruralSectorsGeo?.features) {
           L.geoJSON(ruralSectorsGeo, {
@@ -439,8 +503,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         >
           {(['N', 'S', 'L', 'O'] as const).map((s) => {
             const isSelected = selectedSectors.includes(s);
-            const isVertical = s === 'N' || s === 'S';
-            const stroke = isVertical ? ORDER_STROKE.first : ORDER_STROKE.second;
+            const stroke = SECTOR_FILL[s];
             return (
               <button
                 key={s}

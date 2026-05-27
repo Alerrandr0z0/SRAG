@@ -40,7 +40,7 @@ ingest:
 
 cnes-lookup:
 	uv run scripts/fetch_cnes_lookup.py
-	@echo "CNES lookup updated at data/processed/cnes_units.json"
+	@echo "CNES lookup updated at data/processed/cnes_units_geo.json"
 
 start:
 	./scripts/port_control.sh start

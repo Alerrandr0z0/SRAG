@@ -88,7 +88,7 @@ export function useCitizenData(
             bairroFilter,
             unitFilter,
             years,
-            undefined,
+            agents,
             maternalFilter,
             occupationFilter,
           ),

@@ -216,7 +216,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
     };
   }, [labels, bands, matrices, selectedAgent]);
 
-  const { chartRef } = useEcharts(option, [signature]);
+  const { chartRef } = useEcharts(option, [signature, selectedAgent], { replaceOnUpdate: true });
 
   return (
     <div style={{ width: '100%', height: '100%', minHeight: '500px', position: 'relative' }}>

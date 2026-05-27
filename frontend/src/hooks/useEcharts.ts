@@ -8,6 +8,7 @@ import echarts from '../lib/echarts-heatmap';
 export function useEcharts(
   opt: Record<string, unknown> | undefined | null,
   dependencies: unknown[] = [],
+  options: { replaceOnUpdate?: boolean } = {},
 ) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [currentTheme, setCurrentTheme] = useState(
@@ -81,13 +82,16 @@ export function useEcharts(
     const instance = chartInstance.current;
     if (instance && optRef.current && !instance.isDisposed()) {
       try {
+        if (options.replaceOnUpdate) {
+          (instance as { clear?: () => void }).clear?.();
+        }
         instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, false);
         instance.resize();
       } catch (err) {
         console.error('ECharts Error:', err);
       }
     }
-  }, [...dependencies]);
+  }, [...dependencies, options.replaceOnUpdate]);
 
   return { chartRef };
 }

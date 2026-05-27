@@ -190,6 +190,15 @@ def _run_ingest_geo_pass(db_path: Path) -> None:
         conn.commit()
 
 
+def _refresh_cnes_geo(db_path: Path) -> None:
+    """Refresh Mossoro CNES metadata cache from current database codes."""
+    from srag.data.cnes_lookup import build_mossoro_cnes_geo
+
+    print("🏥 Atualizando cache CNES de Mossoró...")
+    mapping = build_mossoro_cnes_geo(db_path=db_path, refresh=True)
+    print(f"  -> {len(mapping)} unidades CNES georreferenciadas")
+
+
 def main(
     db_path_override: Path | None = None, data_dirs_override: list[Path] | None = None
 ) -> None:
@@ -282,6 +291,8 @@ def main(
         "📊 Ingestão consolidada: "
         f"temp_cases={temp_count}, unique_cases={final_count}, duplicates_removed={duplicates}"
     )
+
+    _refresh_cnes_geo(db_path)
 
     # 3. Normalização Inteligente (Pandas Pass)
     _run_ingest_geo_pass(db_path)

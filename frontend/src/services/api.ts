@@ -133,7 +133,7 @@ export const api = {
   ) =>
     fetchJson<Epi.TerritoryBootstrap>(
       withFilters(
-        `${API_BASE}${API_ENDPOINTS.TERRITORY_BOOTSTRAP}?min_cases=5&entities_min_cases=3&entities_limit=40`,
+        `${API_BASE}${API_ENDPOINTS.TERRITORY_BOOTSTRAP}?min_cases=1&entities_min_cases=1&entities_limit=40`,
         p,
         r,
         g,
@@ -463,8 +463,25 @@ export const api = {
   fetchRuralHeatpoints: () =>
     fetchJson<{
       available: boolean;
-      sectors: Array<{ sector: string; count: number }>;
-      center: { lat: number; lon: number };
+      reason?: string;
+      points: Array<{
+        sector: string;
+        count: number;
+        lat: number;
+        lon: number;
+      }>;
+      center: { lat: number; lon: number } | null;
+      urban_points?: Array<{
+        codigo_cnes: string;
+        label: string;
+        count: number;
+        latitude?: number | null;
+        longitude?: number | null;
+        endereco?: string | null;
+        zona?: string;
+        bairro?: string | null;
+      }>;
+      urban_center?: { lat: number; lon: number } | null;
     }>(`${API_BASE}/geo/rural_heatpoints?min_cases=1`),
 
   fetchRuralSectorsGeo: () => fetchJson<FeatureCollection>(`${API_BASE}/geo/rural_sectors`),

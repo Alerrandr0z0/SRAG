@@ -199,6 +199,7 @@ function App() {
   const unitsList = useMemo(() => {
     return (unitsData.units || []).map((item) => ({
       id_unidade: item.id_unidade,
+      nome_fantasia: item.nome_fantasia || item.id_unidade,
       count: item.count,
     }));
   }, [unitsData.units]);
@@ -273,15 +274,18 @@ function App() {
       remover: () => setZoneFilter(zoneFilter.filter((i) => i !== f)),
     })),
     ...bairroFilter.map((f) => ({
-      type: 'Bairro',
+      type: 'Local',
       val: f,
       remover: () => setBairroFilter(bairroFilter.filter((i) => i !== f)),
     })),
-    ...unitFilter.map((f) => ({
-      type: 'Unid',
-      val: f,
-      remover: () => setUnitFilter(unitFilter.filter((i) => i !== f)),
-    })),
+    ...unitFilter.map((f) => {
+      const unit = unitsList.find((u) => u.id_unidade === f);
+      return {
+        type: 'Unid',
+        val: unit ? unit.nome_fantasia : f,
+        remover: () => setUnitFilter(unitFilter.filter((i) => i !== f)),
+      };
+    }),
     ...agentFilter.map((f) => ({
       type: 'Agente',
       val: f,
@@ -376,6 +380,7 @@ function App() {
                 ruralSectorsGeo={
                   territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
                 }
+                zoneFilter={zoneFilter}
               />
             </article>
           )}
