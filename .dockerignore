@@ -33,7 +33,7 @@ docker-compose.yml
 
 # Test files (not needed in Docker images)
 frontend/tests/
-tests/
+backend/tests/
 **/*.spec.ts
 **/*.spec.js
 **/*.test.ts

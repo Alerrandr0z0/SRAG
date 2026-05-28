@@ -29,21 +29,21 @@ help:
 # --- Setup ---
 setup: setup-back setup-front
 setup-back:
-	uv sync
-	uv run pre-commit install
+	cd backend && uv sync
+	cd backend && uv run pre-commit install
 setup-front:
 	cd frontend && npm install
 
 # --- Operational ---
 ingest:
-	uv run scripts/ingest_data.py
+	cd backend && uv run scripts/ingest_data.py
 
 cnes-lookup:
-	uv run scripts/fetch_cnes_lookup.py
+	cd backend && uv run scripts/fetch_cnes_lookup.py
 	@echo "CNES lookup updated at data/processed/cnes_units.json"
 
 start:
-	./scripts/port_control.sh start
+	./backend/scripts/port_control.sh start
 
 start-docker:
 	docker compose up --build -d
@@ -56,72 +56,72 @@ stop-docker:
 	docker compose down
 
 stop:
-	./scripts/port_control.sh stop
+	./backend/scripts/port_control.sh stop
 
 status:
-	./scripts/port_control.sh status
+	./backend/scripts/port_control.sh status
 
 # --- Quality & Security ---
 lint: lint-back lint-front
 lint-back:
-	uv run ruff check .
-	uv run pyright
+	cd backend && uv run ruff check .
+	cd backend && uv run pyright
 lint-front:
 	cd frontend && npm run lint
 
 fix: fix-back fix-front
 fix-back:
-	uv run ruff check . --fix --unsafe-fixes
-	uv run ruff format .
+	cd backend && uv run ruff check . --fix --unsafe-fixes
+	cd backend && uv run ruff format .
 fix-front:
 	cd frontend && npm run fix
 
 security: security-back security-secrets security-deps security-frontend
 security-back:
-	uv run bandit -r src/srag scripts/ -s B101
+	cd backend && uv run bandit -r src/srag scripts/ -s B101
 security-secrets:
-	uv run pre-commit run gitleaks --all-files
+	cd backend && uv run pre-commit run gitleaks --all-files
 security-deps:
-	uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed (vulnerabilities found or tool not available)"
+	cd backend && uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed (vulnerabilities found or tool not available)"
 security-frontend:
 	cd frontend && npm audit --audit-level=high 2>/dev/null || echo "npm audit completed with warnings"
 
 hooks:
-	uv run pre-commit run --all-files
+	cd backend && uv run pre-commit run --all-files
 
 # --- Testing ---
 test: test-back test-front
 test-back:
-	uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
+	cd backend && uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
 test-front:
 	cd frontend && npm run test
 
 property-test: property-test-back property-test-front
 property-test-back:
-	uv run pytest -m "not slow" tests/unit/test_hypothesis_sivep.py
+	cd backend && uv run pytest -m "not slow" tests/unit/test_hypothesis_sivep.py
 property-test-front:
 	cd frontend && npm run test:property
 
 mutation: mutation-back mutation-front
 mutation-back:
-	rm -rf mutants .mutmut-cache
-	uv run mutmut run --max-children 4
+	cd backend && rm -rf mutants .mutmut-cache
+	cd backend && uv run mutmut run --max-children 4
 	@echo "\n=== Mutation Score ==="
-	-uv run mutmut results --no-pager 2>/dev/null | tail -5
+	-cd backend && uv run mutmut results --no-pager 2>/dev/null | tail -5
 mutation-incr:
 	@if [ -z "$(PATHS)" ]; then echo "Uso: make mutation-incr PATHS='...' [TESTS='tests/...']"; exit 1; fi
-	cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" uv run python scripts/_patch_mutmut_config.py && uv run mutmut run --max-children 4 && uv run mutmut results --no-pager 2>/dev/null | tail -10
+	cd backend && cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" uv run python scripts/_patch_mutmut_config.py && uv run mutmut run --max-children 4 && uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-score:
-	uv run mutmut results --no-pager 2>/dev/null | tail -10
+	cd backend && uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-front:
 	cd frontend && npm run test:mutation
 
 bench:
-	uv run pytest tests/unit/test_benchmark.py
+	cd backend && uv run pytest tests/unit/test_benchmark.py
 
 # --- Observability & Knowledge ---
 observability:
-	logfire dashboard
+	cd backend && uv run logfire dashboard
 
 update-graph:
 	uv run graphify update .
