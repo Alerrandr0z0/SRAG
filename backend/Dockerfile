@@ -14,7 +14,6 @@ RUN uv sync --no-dev
 
 COPY backend/src/ ./src/
 COPY backend/main.py ./
-COPY notebooks/ ./notebooks/
 
 ENV PYTHONPATH=/app/src
 ENV PATH="/app/.venv/bin:$PATH"
