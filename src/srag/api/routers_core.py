@@ -25,6 +25,11 @@ from srag.models.forecasting import predict_next_weeks
 router = APIRouter()
 
 
+@router.get("/")
+def root() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

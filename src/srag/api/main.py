@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 import contextlib
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import logfire
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 from srag.api import core as _core
 from srag.api.routes import register_routes
@@ -92,6 +99,16 @@ app.add_middleware(
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["Accept", "Content-Type"],
 )
+
+
+@app.middleware("http")
+async def health_check(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    if request.method == "HEAD" and request.url.path == "/":
+        return Response(status_code=200)
+    return await call_next(request)
+
 
 register_routes(app)
 
