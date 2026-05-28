@@ -39,6 +39,9 @@ backend/tests/
 **/*.test.ts
 **/*.test.js
 
+# Data files (mounted as volumes at runtime)
+data/
+
 # Documentation and temporary files
 docs/
 notebooks/.ipynb_checkpoints/

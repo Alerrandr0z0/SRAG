@@ -16,9 +16,6 @@ COPY backend/src/ ./src/
 COPY backend/main.py ./
 COPY notebooks/ ./notebooks/
 
-COPY data/processed/ ./data/processed/
-COPY data/geojson/ ./data/geojson/
-
 ENV PYTHONPATH=/app/src
 ENV PATH="/app/.venv/bin:$PATH"
 

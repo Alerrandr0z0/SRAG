@@ -8,6 +8,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data/processed:/app/data/processed
+      - ./data/geojson:/app/data/geojson
     environment:
       - PYTHONPATH=/app/src
 
@@ -26,6 +27,7 @@ services:
       - "8888:8888"
     volumes:
       - ./data/processed:/app/data/processed
+      - ./data/geojson:/app/data/geojson
       - ./notebooks:/app/notebooks
     environment:
       - PYTHONPATH=/app/src
