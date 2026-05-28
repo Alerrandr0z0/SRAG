@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from pydantic import ValidationError
+from rapidfuzz import process
 
 from srag.data.schema import SragCase, is_mossoro_case
 
@@ -38,6 +39,150 @@ COLUMN_ALIASES = {
     "FAB_COV_2": "FAB_COV2",
 }
 
+OFFICIAL_BAIRROS = {
+    "ABOLICAO",
+    "ABOLICOES",
+    "AEROPORTO",
+    "ALAGADOS",
+    "ALTO DA CONCEICAO",
+    "ALTO DE SAO MANOEL",
+    "ALTO DO SUMARE",
+    "ALTO DA BELA VISTA",
+    "BELA VISTA",
+    "BARROCAS",
+    "BELO HORIZONTE",
+    "BOA VISTA",
+    "BOM JARDIM",
+    "BOM JESUS",
+    "CENTRO",
+    "DIX-SEPT ROSADO",
+    "GOV DIX SEPT ROSADO",
+    "DOM JAIME CAMARA",
+    "DOZE ANOS",
+    "ILHA DE SANTA LUZIA",
+    "ITAPETINGA",
+    "LAGOA DO MATO",
+    "MONS ALFREDO SIMONETI",
+    "MONSENHOR ALFREDO SIMONETI",
+    "NOVA BETANIA",
+    "PAREDOES",
+    "PINTOS",
+    "PLANALTO TREZE DE MAIO",
+    "PLANALTO 13 DE MAIO",
+    "PRESIDENTE COSTA E SILVA",
+    "COSTA E SILVA",
+    "REDENCAO",
+    "RINCAO",
+    "SANTA DELMIRA",
+    "SANTO ANTONIO",
+    "SANTA JULIA",
+    "AREA RURAL DE MOSSORO",
+    "ZONA RURAL",
+}
+
+SUB_BAIRRO_TO_BAIRRO_MAP = {
+    # 01. ABOLICOES (Maps to official Abolição in GeoJSON)
+    "ABOLICOES": "ABOLICAO",
+    "ABOLICAO I": "ABOLICAO",
+    "ABOLICAO II": "ABOLICAO",
+    "ABOLICAO III": "ABOLICAO",
+    "ABOLICAO IV": "ABOLICAO",
+    "ABOLICAO V": "ABOLICAO",
+    "ABOLICAO 1": "ABOLICAO",
+    "ABOLICAO 2": "ABOLICAO",
+    "ABOLICAO 3": "ABOLICAO",
+    "ABOLICAO 4": "ABOLICAO",
+    "ABOLICAO 5": "ABOLICAO",
+    "CIGANO": "ABOLICAO",
+    "TRES VINTENS": "ABOLICAO",
+    "SEM TERRA": "ABOLICAO",
+    "POUSADA DOS TERMAS": "ABOLICAO",
+    # 02. AEROPORTO
+    "MACARRAO": "AEROPORTO",
+    "IPASA": "AEROPORTO",
+    "QUIXABEIRINHA": "AEROPORTO",
+    # 03. ALTO DE SAO MANOEL
+    "WALFREDO GURGEL": "ALTO DE SAO MANOEL",
+    "URICK GRAFF": "ALTO DE SAO MANOEL",
+    "COAB": "ALTO DE SAO MANOEL",
+    # 04. ALTO DO SUMARE
+    "CIDADE JARDIM": "ALTO DO SUMARE",
+    "MONTE OLIMPO": "ALTO DO SUMARE",
+    # 05. ALTO DA CONCEICAO
+    "PEREIROS": "ALTO DA CONCEICAO",
+    "PANTANAL": "ALTO DA CONCEICAO",
+    # 06. ALTO DA BELA VISTA
+    "MARCIO MARINHO": "ALTO DA BELA VISTA",
+    "QUINTAS ALPHAVILLE": "ALTO DA BELA VISTA",
+    "ALPHAVILLE": "ALTO DA BELA VISTA",
+    "SANVILLE": "ALTO DA BELA VISTA",
+    # 08. BARROCAS
+    "FREITAS NOBRE": "BARROCAS",
+    # 10. BELO HORIZONTE
+    "CARNAUBAL": "BELO HORIZONTE",
+    # 14. COSTA E SILVA (Maps to official Presidente Costa e Silva in GeoJSON)
+    "COSTA E SILVA": "PRESIDENTE COSTA E SILVA",
+    "TEIMOSOS": "PRESIDENTE COSTA E SILVA",
+    "GERALDO MELO": "PRESIDENTE COSTA E SILVA",
+    # 15. DOM JAIME CAMARA
+    "MALVINAS": "DOM JAIME CAMARA",
+    "NOVA VIDA": "DOM JAIME CAMARA",
+    "TRAQUILIM": "DOM JAIME CAMARA",
+    "JARDIM DAS PALMEIRAS": "DOM JAIME CAMARA",
+    # 17. GOV DIX SEPT ROSADO (Maps to official Dix-Sept Rosado in GeoJSON)
+    "GOV DIX SEPT ROSADO": "DIX-SEPT ROSADO",
+    "GOVERNADOR DIX SEPT ROSADO": "DIX-SEPT ROSADO",
+    "FORNO VELHO": "DIX-SEPT ROSADO",
+    "BOM PASTOR": "DIX-SEPT ROSADO",
+    "VERONIQUE": "DIX-SEPT ROSADO",
+    "BOULEVARD": "DIX-SEPT ROSADO",
+    # 18. ITAPETINGA
+    "CIDADA OESTE": "ITAPETINGA",
+    # 20. LAGOA DO MATO
+    "ALTO DO XEREM": "LAGOA DO MATO",
+    # 21. MONS ALFREDO SIMONNETI (Maps to MONS ALFREDO SIMONETI)
+    "ALFREDO SIMONETI": "MONS ALFREDO SIMONETI",
+    "AMERICO": "MONS ALFREDO SIMONETI",
+    # 22. NOVA BETANIA
+    "OURO NEGRO": "NOVA BETANIA",
+    "PORTAL DO SOL": "NOVA BETANIA",
+    # 24. PAREDOES
+    "SAO JOSE": "PAREDOES",
+    # 25. PLANALTO 13 DE MAIO (Maps to official Planalto Treze de Maio in GeoJSON)
+    "PLANALTO 13 DE MAIO": "PLANALTO TREZE DE MAIO",
+    "ALAMEDA DOS CAJUEIROS": "PLANALTO TREZE DE MAIO",
+    "LIBERDADE I E II": "PLANALTO TREZE DE MAIO",
+    "PAPOCO": "PLANALTO TREZE DE MAIO",
+    "INOCOOP": "PLANALTO TREZE DE MAIO",
+    # 26. REDENCAO
+    "INTEGRACAO": "REDENCAO",
+    "INDEPENDENCIA I E II": "REDENCAO",
+    "INDEPENDENCIA": "REDENCAO",
+    "JARDINS": "REDENCAO",
+    # 27. RINCAO
+    "VINGT ROSADO": "RINCAO",
+    "ALTO DA PELONHA": "RINCAO",
+    "ODETE ROSADO": "RINCAO",
+    "ALTO DAS BRISAS": "RINCAO",
+    "PARQUE UNIVERSITARIO": "RINCAO",
+    # 28. SANTO ANTONIO
+    "SANTA HELENA": "SANTO ANTONIO",
+    "WILSON ROSADO": "SANTO ANTONIO",
+    "ESTRADA DA RAIZ": "SANTO ANTONIO",
+    "SANDRA ROSADO": "SANTO ANTONIO",
+    "JOSE AGRIPINO": "SANTO ANTONIO",
+    # 29. SANTA DELMIRA
+    "PARQUE DAS ROSAS": "SANTA DELMIRA",
+    "NOVA ESPERANCA": "SANTA DELMIRA",
+    "ROSILANDIA": "SANTA DELMIRA",
+    "BOA ESPERANCA": "SANTA DELMIRA",
+    "RESISTENCIA": "SANTA DELMIRA",
+    "PROMORAR": "SANTA DELMIRA",
+    # 30. SANTA JULIA
+    "NOVA MOSSORO": "SANTA JULIA",
+    "ROYALVILLE": "SANTA JULIA",
+}
+
 RURAL_KEYWORDS = [
     "RURAL",
     "SITIO",
@@ -61,6 +206,50 @@ def _normalize_bairro_name(value: str | None) -> str | None:
         ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch)
     )
     text = " ".join(text.split())
+
+    # Strip generic sub-bairro prefixes to allow a clean dictionary mapping
+    prefixes_to_strip = [
+        "COMUNIDADE DO ",
+        "COMUNIDADE DA ",
+        "COMUNIDADE DE ",
+        "COMUNIDADE ",
+        "CONJUNTO DO ",
+        "CONJUNTO DA ",
+        "CONJUNTO DE ",
+        "CONJUNTO ",
+        "CONJ. DO ",
+        "CONJ. DA ",
+        "CONJ. DE ",
+        "CONJ. ",
+        "CONJ ",
+        "LOTEAMENTO ",
+        "LOTEAM. ",
+        "LOT. ",
+        "VILA DO ",
+        "VILA ",
+        "MONSENHOR ",
+        "MONS. ",
+        "MONS ",
+    ]
+    for prefix in prefixes_to_strip:
+        if text.startswith(prefix):
+            text = text[len(prefix) :].strip()
+            break
+
+    # Look for exact match in map
+    if text in SUB_BAIRRO_TO_BAIRRO_MAP:
+        return SUB_BAIRRO_TO_BAIRRO_MAP[text]
+
+    # If it is already an official neighborhood name or known parent, preserve it
+    if text in OFFICIAL_BAIRROS or text in SUB_BAIRRO_TO_BAIRRO_MAP.values():
+        return text
+
+    # Fuzzy match with score_cutoff=85.0 for spelling typos (e.g. URIC GRAF -> URICK GRAFF)
+    match = process.extractOne(text, list(SUB_BAIRRO_TO_BAIRRO_MAP.keys()), score_cutoff=85.0)
+    if match:
+        matched_key = match[0]
+        return SUB_BAIRRO_TO_BAIRRO_MAP[matched_key]
+
     return text
 
 
