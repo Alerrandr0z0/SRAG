@@ -78,10 +78,8 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
 
       {!isOnlyMale && (
         <div
+          className="citizen-maternal-layout"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.3fr) minmax(240px, 0.7fr)',
-            gap: '1rem',
             marginTop: '1.5rem',
           }}
         >
@@ -128,11 +126,8 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       )}
 
       <div
-        className="kpi-row"
+        className="citizen-kpi-row"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-          gap: '10px',
           marginTop: '1.5rem',
         }}
       >
@@ -276,10 +271,8 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
 
       {/* GRÁFICOS DE VOLUME (BARRAS) */}
       <div
+        className="citizen-volume-grid"
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '1.5rem',
           marginTop: '1.5rem',
         }}
       >
@@ -392,7 +385,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           Distribuição Proporcional
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+        <div className="citizen-proportional-grid">
           <div style={{ textAlign: 'center' }}>
             <p
               className="meta"
@@ -483,8 +476,7 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
       <section className="vigilance-block" style={{ marginTop: '3rem' }}>
         <h3 className="block-title">Perfil de Imunização</h3>
         <div
-          className="vigilance-insight-grid"
-          style={{ gridTemplateColumns: showCovid ? 'minmax(240px, 0.7fr) minmax(0, 1.3fr)' : '1fr' }}
+          className={`citizen-immunization-grid ${showCovid ? 'citizen-immunization-grid--covid' : 'citizen-immunization-grid--single'}`}
         >
           {showCovid && (
             <div className="stack" style={{ gap: '1rem' }}>

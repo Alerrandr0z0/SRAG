@@ -297,16 +297,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   }, []);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="map-stage">
       <div className="map" ref={mapRef} />
 
       {mapZoneMode === 'Urbana' && colorScale && (
         <div
+          className="map-overlay map-overlay--urban"
           style={{
-            position: 'absolute',
-            bottom: 20,
-            left: 20,
-            zIndex: 1000,
             background: theme === 'dark' ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)',
             borderRadius: 8,
             padding: '10px 14px',
@@ -419,11 +416,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
       {mapZoneMode === 'Rural' && (
         <div
+          className="map-overlay map-overlay--rural-legend"
           style={{
-            position: 'absolute',
-            bottom: 20,
-            left: 20,
-            zIndex: 1000,
             background: theme === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.9)',
             color: 'white',
             borderRadius: 8,
@@ -487,11 +481,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
       {mapZoneMode === 'Rural' && (
         <div
+          className="map-overlay map-overlay--rural-controls"
           style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            zIndex: 1000,
             background: theme === 'dark' ? '#1e293b' : 'white',
             borderRadius: 999,
             padding: '8px 10px',

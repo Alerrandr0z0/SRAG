@@ -41,23 +41,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
   const [thresholds, setThresholds] = useState<{ medium: number; high: number; very_high: number } | undefined>(
     defaultThresholds,
   );
-  const [editingThreshold, setEditingThreshold] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-
   const mode = seriesMode || internalMode;
-
-  const handleThresholdEditStart = (key: string, value: number) => {
-    setEditingThreshold(key);
-    setEditValue(String(value));
-  };
-
-  const handleThresholdEditSave = () => {
-    if (!editingThreshold || !thresholds) return;
-    const val = Number.parseFloat(editValue);
-    if (Number.isNaN(val) || val < 0) return;
-    setThresholds({ ...thresholds, [editingThreshold]: val });
-    setEditingThreshold(null);
-  };
 
   const getOption = () => {
     const isDark = theme === 'dark';
@@ -200,29 +184,29 @@ const TrendChart: React.FC<TrendChartProps> = ({
       };
     }
 
-    return {
-      animation: true,
-      animationDuration: 300,
-      animationDurationUpdate: 700,
-      animationEasing: 'cubicOut',
-      animationEasingUpdate: 'cubicOut',
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-        confine: true,
+      return {
+        animation: true,
+        animationDuration: 300,
+        animationDurationUpdate: 700,
+        animationEasing: 'cubicOut',
+        animationEasingUpdate: 'cubicOut',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross' },
+          confine: true,
         formatter: (params: Array<{ name?: string; seriesName?: string; value?: number }>) => {
           const week = params[0]?.name ?? '';
           const total = params.find((p) => p.seriesName === 'Histórico')?.value ?? 0;
           return `Semana ${week}<br/>Notificações: <b>${Math.round(total).toLocaleString('pt-BR')}</b>`;
         },
       },
-      grid: { left: '3%', right: '3%', bottom: '8%', top: '25px', containLabel: true },
-      dataZoom,
-      xAxis: [{ type: 'category', data: allWeeks, axisPointer: { type: 'shadow' }, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14 } }],
-      yAxis: [{ type: 'value', name: 'Volume', min: 0, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
-      series: [
-        baseSeries,
-      ],
+        grid: { left: '3%', right: '3%', bottom: '15%', top: '25px', containLabel: true },
+        dataZoom,
+        xAxis: [{ type: 'category', data: allWeeks, axisPointer: { type: 'shadow' }, axisLine: { show: true, lineStyle: { color: axisColor } }, axisLabel: { color: textColor, rotate: 35, margin: 14, fontSize: 10 } }],
+        yAxis: [{ type: 'value', name: 'Volume', min: 0, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: axisColor, type: 'dashed' } } }],
+        series: [
+          baseSeries,
+        ],
     };
   };
 
@@ -251,41 +235,27 @@ const TrendChart: React.FC<TrendChartProps> = ({
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ color, fontWeight: 700, fontSize: 14, lineHeight: '10px' }}>━</span>
               <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
-              {editingThreshold === key ? (
-                <input
-                  type="number"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={handleThresholdEditSave}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleThresholdEditSave();
-                    if (e.key === 'Escape') setEditingThreshold(null);
-                  }}
-                  style={{
-                    width: 60,
-                    padding: '1px 4px',
-                    fontSize: 11,
-                    border: `1px solid ${color}`,
-                    borderRadius: 4,
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                  }}
-                />
-              ) : (
-                <span
-                  onClick={() => handleThresholdEditStart(key, thresholds[key as keyof typeof thresholds])}
-                  style={{
-                    cursor: 'pointer',
-                    borderBottom: `1px dashed ${color}`,
-                    padding: '0 2px',
-                    fontWeight: 600,
-                    color: color,
-                  }}
-                  title="Clique para editar"
-                >
-                  {Math.round(thresholds[key as keyof typeof thresholds])}
-                </span>
-              )}
+              <input
+                type="number"
+                value={Math.round(thresholds[key as keyof typeof thresholds])}
+                onChange={(e) => {
+                  const val = Number.parseFloat(e.target.value);
+                  if (Number.isNaN(val) || val < 0) return;
+                  setThresholds({ ...thresholds, [key]: val });
+                }}
+                inputMode="numeric"
+                style={{
+                  width: 68,
+                  padding: '2px 6px',
+                  fontSize: 12,
+                  border: `1px solid ${color}`,
+                  borderRadius: 6,
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontWeight: 700,
+                }}
+                aria-label={`Limite ${label}`}
+              />
             </div>
           ))}
         </div>

@@ -8,6 +8,8 @@ interface SidebarProps {
   setTheme: (theme: 'light' | 'dark') => void;
   status: 'loading' | 'online' | 'offline';
   lastUpdateIso: string | null;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
@@ -27,6 +29,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   setTheme,
   status,
   lastUpdateIso,
+  collapsed,
+  onToggleCollapsed,
   mobileOpen,
   onMobileClose,
 }) => {
@@ -180,26 +184,40 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClick={onMobileClose}
       />
 
-      <aside className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}>
+      <aside
+        className={`sidebar ${mobileOpen ? 'sidebar--open' : ''} ${collapsed ? 'sidebar--collapsed' : ''}`}
+      >
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <div className="logo-icon">SRAG</div>
-            <div className="logo-text">
+            <div className="logo-text sidebar-logo-text">
               <span>Mossoró</span>
               <small>Surveillance</small>
             </div>
           </div>
+          <button
+            type="button"
+            className="sidebar-collapse-toggle"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? 'Expandir sidebar' : 'Encolher sidebar'}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {collapsed ? <path d="m9 18 6-6-6-6" /> : <path d="m15 18-6-6 6-6" />}
+            </svg>
+          </button>
         </div>
 
         <nav className="sidebar-nav">
           {menuItems.map((item) => (
             <button
               key={item.key}
-              className={`nav-item ${activePanel === item.key ? 'active' : ''}`}
+              className={`nav-item ${activePanel === item.key ? 'active' : ''} ${collapsed ? 'nav-item--collapsed' : ''}`}
               onClick={() => handleItemClick(item)}
+              aria-label={item.label}
+              title={collapsed ? item.label : undefined}
             >
               <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
+              <span className="nav-label sidebar-nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -207,13 +225,15 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidebar-footer">
           <button
             onClick={toggleTheme}
-            className="nav-item"
+            className={`nav-item ${collapsed ? 'nav-item--collapsed' : ''}`}
             style={{
               width: '100%',
               marginBottom: '0.75rem',
               border: '1px solid var(--border-subtle)',
               background: 'var(--bg-pill)',
             }}
+            aria-label={theme === 'light' ? 'Mudar para tema escuro' : 'Mudar para tema claro'}
+            title={collapsed ? 'Alternar tema' : undefined}
           >
             <span className="nav-icon">
               {theme === 'light' ? (
@@ -254,12 +274,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </svg>
               )}
             </span>
-            <span className="nav-label" style={{ fontSize: '0.8rem' }}>
+            <span className="nav-label sidebar-nav-label" style={{ fontSize: '0.8rem' }}>
               {theme === 'light' ? 'Escuro' : 'Claro'}
             </span>
           </button>
 
-          <div className="sb-meta">
+          <div className="sb-meta sidebar-footer-meta">
             <div className="sb-meta-item">
               <span className={`sb-dot ${status === 'online' ? 'online' : 'offline'}`} />
               <span className="sb-meta-label">Base</span>
@@ -267,7 +287,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          <div className="sb-version">
+          <div className="sb-version sidebar-footer-meta">
             <span className="v-badge">v{appVersion}</span>
             <span className={`sb-sync-badge ${status === 'online' ? 'sync-ok' : 'sync-off'}`}>
               <span className="sb-sync-dot" />

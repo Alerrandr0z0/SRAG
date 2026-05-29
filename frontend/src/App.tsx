@@ -29,6 +29,7 @@ function App() {
   // Config State
   const [panel, setPanel] = useState('territorio');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
   });
@@ -332,21 +333,25 @@ function App() {
         setTheme={setTheme}
         status={status}
         lastUpdateIso={lastUpdateIso}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
         mobileOpen={sidebarOpen}
         onMobileClose={() => setSidebarOpen(false)}
       />
 
       <main className="app-shell">
-        <button
-          className="mobile-nav-toggle"
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Abrir menu"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        {!sidebarOpen && (
+          <button
+            className="mobile-nav-toggle"
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        )}
 
         {panel !== 'notebooks' && (
           <>
@@ -446,30 +451,17 @@ function App() {
               <section className="main-grid">
                 <article className="panel">
                   <div className="section-header">
-                    <div className="stack" style={{ gap: 4 }}>
+                    <div className="stack vigilance-history-summary" style={{ gap: 4 }}>
                       <h3 style={{ margin: 0 }}>Histórico de Notificações</h3>
                       {currentTrends && (
-                        <div
-                          className="filters"
-                          style={{ fontSize: '12px', color: '#64748b', gap: 12 }}
-                        >
+                        <div className="vigilance-history-stats">
                           <span>
                             Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
-                          </span>
-                          <span>
-                            Média:{' '}
-                            <b>
-                              {(
-                                currentTrends.history.reduce((s, h) => s + h.total, 0) /
-                                (currentTrends.history.length || 1)
-                              ).toFixed(1)}
-                              /semana
-                            </b>
                           </span>
                         </div>
                       )}
                     </div>
-                    <div className="filters">
+                    <div className="filters vigilance-history-controls">
                       <div className="pill-group">
                         {[
                           { v: '0', l: 'Tudo' },
@@ -493,7 +485,7 @@ function App() {
                       </select>
                     </div>
                   </div>
-                  <div className="chart-wrap">
+                  <div className="chart-wrap chart-wrap--tall">
                     {currentTrends && (
                       <TrendChart
                         history={currentTrends.history}
