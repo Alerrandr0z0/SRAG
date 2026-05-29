@@ -28,6 +28,7 @@ import type * as Epi from './types/epi';
 function App() {
   // Config State
   const [panel, setPanel] = useState('territorio');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
   });
@@ -36,6 +37,13 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
   const [weeksWindow, setWeeksWindow] = useState('0');
   const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
@@ -57,7 +65,7 @@ function App() {
   const [virus, setVirus] = useState<Epi.VirusData[] | null>(null);
 
   // Core Data Hook
-  const { data, status, lastUpdate } = useCoreData(
+  const { data, status, lastUpdateIso } = useCoreData(
     weeksWindow,
     lookback,
     virusDetail,
@@ -323,10 +331,23 @@ function App() {
         theme={theme}
         setTheme={setTheme}
         status={status}
-        lastUpdate={lastUpdate}
+        lastUpdateIso={lastUpdateIso}
+        mobileOpen={sidebarOpen}
+        onMobileClose={() => setSidebarOpen(false)}
       />
 
       <main className="app-shell">
+        <button
+          className="mobile-nav-toggle"
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir menu"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
         {panel !== 'notebooks' && (
           <>
             <GlobalFilterBar

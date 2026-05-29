@@ -1,12 +1,15 @@
 import React from 'react';
+import { version as appVersion } from '../../../package.json';
 
 interface SidebarProps {
   activePanel: string;
   setPanel: (panel: string) => void;
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
-  status: string;
-  lastUpdate: string | null;
+  status: 'loading' | 'online' | 'offline';
+  lastUpdateIso: string | null;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 interface MenuItem {
@@ -23,8 +26,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   theme,
   setTheme,
   status,
-  lastUpdate,
+  lastUpdateIso,
+  mobileOpen,
+  onMobileClose,
 }) => {
+  const lastUpdateLabel = lastUpdateIso
+    ? new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(lastUpdateIso))
+    : '---';
+
+  const connectionLabel =
+    status === 'online' ? 'ATIVO' : status === 'loading' ? 'CARREGANDO' : 'OFFLINE';
+
   const menuItems: MenuItem[] = [
     {
       key: 'territorio',
@@ -149,6 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleItemClick = (item: MenuItem) => {
     setPanel(item.key);
+    onMobileClose();
   };
 
   const toggleTheme = () => {
@@ -156,104 +172,111 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <div className="logo-icon">SRAG</div>
-          <div className="logo-text">
-            <span>Mossoró</span>
-            <small>Surveillance</small>
+    <>
+      <button
+        type="button"
+        className={`sidebar-backdrop ${mobileOpen ? 'open' : ''}`}
+        aria-label="Fechar menu"
+        onClick={onMobileClose}
+      />
+
+      <aside className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <div className="logo-icon">SRAG</div>
+            <div className="logo-text">
+              <span>Mossoró</span>
+              <small>Surveillance</small>
+            </div>
           </div>
         </div>
-      </div>
 
-      <nav className="sidebar-nav">
-        {menuItems.map((item) => (
+        <nav className="sidebar-nav">
+          {menuItems.map((item) => (
+            <button
+              key={item.key}
+              className={`nav-item ${activePanel === item.key ? 'active' : ''}`}
+              onClick={() => handleItemClick(item)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
           <button
-            key={item.key}
-            className={`nav-item ${activePanel === item.key ? 'active' : ''}`}
-            onClick={() => handleItemClick(item)}
+            onClick={toggleTheme}
+            className="nav-item"
+            style={{
+              width: '100%',
+              marginBottom: '0.75rem',
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-pill)',
+            }}
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+            <span className="nav-icon">
+              {theme === 'light' ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="18.36" x2="5.64" y2="16.94" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              )}
+            </span>
+            <span className="nav-label" style={{ fontSize: '0.8rem' }}>
+              {theme === 'light' ? 'Escuro' : 'Claro'}
+            </span>
           </button>
-        ))}
-      </nav>
 
-      <div className="sidebar-footer">
-        <button
-          onClick={toggleTheme}
-          className="nav-item"
-          style={{
-            width: '100%',
-            marginBottom: '0.75rem',
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-pill)',
-          }}
-        >
-          <span className="nav-icon">
-            {theme === 'light' ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="18.36" x2="5.64" y2="16.94" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            )}
-          </span>
-          <span className="nav-label" style={{ fontSize: '0.8rem' }}>
-            {theme === 'light' ? 'Escuro' : 'Claro'}
-          </span>
-        </button>
+          <div className="sb-meta">
+            <div className="sb-meta-item">
+              <span className={`sb-dot ${status === 'online' ? 'online' : 'offline'}`} />
+              <span className="sb-meta-label">Base</span>
+              <span className="sb-meta-value">{lastUpdateLabel}</span>
+            </div>
+          </div>
 
-        <div className="sb-meta">
-          <div className="sb-meta-item">
-            <span className={`sb-dot ${status === 'online' ? 'online' : 'offline'}`} />
-            <span className="sb-meta-label">Base</span>
-            <span className="sb-meta-value">
-              {lastUpdate ? new Date(lastUpdate).toLocaleDateString() : '---'}
+          <div className="sb-version">
+            <span className="v-badge">v{appVersion}</span>
+            <span className={`sb-sync-badge ${status === 'online' ? 'sync-ok' : 'sync-off'}`}>
+              <span className="sb-sync-dot" />
+              {connectionLabel}
             </span>
           </div>
         </div>
-
-        <div className="sb-version">
-          <span className="v-badge">v0.1.0</span>
-          <span className={`sb-sync-badge ${status === 'online' ? 'sync-ok' : 'sync-off'}`}>
-            <span className="sb-sync-dot" />
-            {status === 'online' ? 'ATIVO' : 'OFFLINE'}
-          </span>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

@@ -9,6 +9,8 @@ interface CoreDataState {
   laboratoryNetwork?: Epi.LaboratoryNetwork;
 }
 
+type CoreStatus = 'loading' | 'online' | 'offline';
+
 export function useCoreData(
   weeksWindow: string,
   lookback: string,
@@ -25,8 +27,8 @@ export function useCoreData(
   occupations?: string[],
 ) {
   const [data, setData] = useState<CoreDataState | null>(null);
-  const [status, setStatus] = useState('Conectando...');
-  const [lastUpdate, setLastUpdate] = useState('--');
+  const [status, setStatus] = useState<CoreStatus>('loading');
+  const [lastUpdateIso, setLastUpdateIso] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function useCoreData(
     async function loadCore() {
       try {
         setError('');
-        setStatus('Carregando...');
+        setStatus('loading');
 
         const [summary, trends, virus, lab] = await Promise.all([
           api.fetchSummary(
@@ -100,11 +102,11 @@ export function useCoreData(
           laboratoryNetwork: lab,
         });
 
-        setStatus('Conectada');
-        setLastUpdate(new Date().toLocaleString('pt-BR'));
+        setStatus('online');
+        setLastUpdateIso(new Date().toISOString());
       } catch {
         if (!active) return;
-        setStatus('Indisponível');
+        setStatus('offline');
         setError('Falha ao consultar API');
       }
     }
@@ -129,5 +131,5 @@ export function useCoreData(
     occupations,
   ]);
 
-  return { data, setData, status, setStatus, lastUpdate, error, setError };
+  return { data, setData, status, setStatus, lastUpdateIso, error, setError };
 }

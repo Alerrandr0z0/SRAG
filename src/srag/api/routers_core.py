@@ -8,6 +8,7 @@ import pandas as pd
 
 from fastapi import APIRouter, Depends, Query
 
+from srag import __version__
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
@@ -27,7 +28,7 @@ router = APIRouter()
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "version": __version__}
 
 
 @router.get("/summary")
