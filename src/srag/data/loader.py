@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import unicodedata
 from typing import TYPE_CHECKING
 
@@ -82,25 +83,12 @@ OFFICIAL_BAIRROS = {
 
 SUB_BAIRRO_TO_BAIRRO_MAP = {
     # 01. ABOLICOES (Maps to official Abolição in GeoJSON)
-    "ABILICAO": "ABOLICAO",
     "ABOLICOES": "ABOLICAO",
-    "ABOLICAO I": "ABOLICAO",
-    "ABOLICAO II": "ABOLICAO",
-    "ABOLICAO III": "ABOLICAO",
-    "ABOLICAO IV": "ABOLICAO",
-    "ABOLICAO V": "ABOLICAO",
-    "ABOLICAO 1": "ABOLICAO",
-    "ABOLICAO 2": "ABOLICAO",
-    "ABOLICAO 3": "ABOLICAO",
-    "ABOLICAO 4": "ABOLICAO",
-    "ABOLICAO 5": "ABOLICAO",
     "CIGANO": "ABOLICAO",
     "TRES VINTENS": "ABOLICAO",
     "SEM TERRA": "ABOLICAO",
     "POUSADA DOS TERMAS": "ABOLICAO",
     # 02. AEROPORTO
-    "AEROPORTO 1": "AEROPORTO",
-    "AEROPORTO 2": "AEROPORTO",
     "MACARRAO": "AEROPORTO",
     "IPASA": "AEROPORTO",
     "QUIXABEIRINHA": "AEROPORTO",
@@ -154,12 +142,11 @@ SUB_BAIRRO_TO_BAIRRO_MAP = {
     # 25. PLANALTO 13 DE MAIO (Maps to official Planalto Treze de Maio in GeoJSON)
     "PLANALTO 13 DE MAIO": "PLANALTO TREZE DE MAIO",
     "ALAMEDA DOS CAJUEIROS": "PLANALTO TREZE DE MAIO",
-    "LIBERDADE I E II": "PLANALTO TREZE DE MAIO",
+    "LIBERDADE": "PLANALTO TREZE DE MAIO",
     "PAPOCO": "PLANALTO TREZE DE MAIO",
     "INOCOOP": "PLANALTO TREZE DE MAIO",
     # 26. REDENCAO
     "INTEGRACAO": "REDENCAO",
-    "INDEPENDENCIA I E II": "REDENCAO",
     "INDEPENDENCIA": "REDENCAO",
     "JARDINS": "REDENCAO",
     # 27. RINCAO
@@ -185,6 +172,9 @@ SUB_BAIRRO_TO_BAIRRO_MAP = {
     "NOVA MOSSORO": "SANTA JULIA",
     "ROYALVILLE": "SANTA JULIA",
 }
+
+VARIANT_SUFFIX_RE = re.compile(r"\s+(?:\d+|[IVXLCDM]+)$")
+COMPOUND_VARIANT_SUFFIX_RE = re.compile(r"\s+[IVXLCDM]+(?:\s+E\s+[IVXLCDM]+)+$")
 
 RURAL_KEYWORDS = [
     "RURAL",
@@ -239,6 +229,9 @@ def _normalize_bairro_name(value: str | None) -> str | None:
             text = text[len(prefix) :].strip()
             break
 
+    text = _strip_compound_variant_suffix(text)
+    text = _strip_variant_suffix(text)
+
     # Look for exact match in map
     if text in SUB_BAIRRO_TO_BAIRRO_MAP:
         return SUB_BAIRRO_TO_BAIRRO_MAP[text]
@@ -247,13 +240,54 @@ def _normalize_bairro_name(value: str | None) -> str | None:
     if text in OFFICIAL_BAIRROS or text in SUB_BAIRRO_TO_BAIRRO_MAP.values():
         return text
 
+    # Fuzzy fallback on a relaxed variant-stripped form so typos like
+    # "LEBERDADE 1" can still resolve to the intended sub-bairro key.
+    relaxed_text = _relaxed_variant_text(text)
+    if relaxed_text != text:
+        relaxed_match = process.extractOne(
+            relaxed_text, list(SUB_BAIRRO_TO_BAIRRO_MAP.keys()), score_cutoff=85.0
+        )
+        if relaxed_match:
+            return SUB_BAIRRO_TO_BAIRRO_MAP[relaxed_match[0]]
+
     # Fuzzy match with score_cutoff=85.0 for spelling typos (e.g. URIC GRAF -> URICK GRAFF)
     match = process.extractOne(text, list(SUB_BAIRRO_TO_BAIRRO_MAP.keys()), score_cutoff=85.0)
     if match:
         matched_key = match[0]
         return SUB_BAIRRO_TO_BAIRRO_MAP[matched_key]
 
+    official_match = process.extractOne(text, list(OFFICIAL_BAIRROS), score_cutoff=85.0)
+    if official_match:
+        return official_match[0]
+
     return text
+
+
+def _strip_variant_suffix(text: str) -> str:
+    """Collapse numbered or Roman-numeral variants when the base name is official."""
+    candidate = VARIANT_SUFFIX_RE.sub("", text).strip()
+    if candidate != text and (
+        candidate in OFFICIAL_BAIRROS or candidate in SUB_BAIRRO_TO_BAIRRO_MAP.values()
+    ):
+        return candidate
+    return text
+
+
+def _strip_compound_variant_suffix(text: str) -> str:
+    """Collapse compound Roman numeral variants like 'I E II' when the base is official."""
+    candidate = COMPOUND_VARIANT_SUFFIX_RE.sub("", text).strip()
+    if candidate != text and (
+        candidate in OFFICIAL_BAIRROS
+        or candidate in SUB_BAIRRO_TO_BAIRRO_MAP.values()
+        or candidate in SUB_BAIRRO_TO_BAIRRO_MAP
+    ):
+        return candidate
+    return text
+
+
+def _relaxed_variant_text(text: str) -> str:
+    """Remove trailing numeric/Roman suffixes before fuzzy matching only."""
+    return VARIANT_SUFFIX_RE.sub("", text).strip()
 
 
 def _infer_zone_from_bairro(bairro_ref: str | None) -> str | None:

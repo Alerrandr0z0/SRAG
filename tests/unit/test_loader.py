@@ -8,6 +8,9 @@ from srag.data.loader import (
     _normalize_age_to_years,
     _normalize_bairro_name,
     _normalize_zone,
+    _relaxed_variant_text,
+    _strip_compound_variant_suffix,
+    _strip_variant_suffix,
     export_secure_dataset,
     load_and_clean_srag_data,
 )
@@ -25,9 +28,6 @@ def test_normalize_bairro_name() -> None:
 
     # Test sub-bairro mappings
     assert _normalize_bairro_name("ABOLICAO 4") == "ABOLICAO"
-    assert _normalize_bairro_name("ABILICAO") == "ABOLICAO"
-    assert _normalize_bairro_name("AEROPORTO 1") == "AEROPORTO"
-    assert _normalize_bairro_name("AEROPORTO 2") == "AEROPORTO"
     assert _normalize_bairro_name("MALVINAS") == "DOM JAIME CAMARA"
     assert _normalize_bairro_name("VINGT ROSADO") == "RINCAO"
     assert _normalize_bairro_name("MONSENHOR AMERICO") == "MONS ALFREDO SIMONETI"
@@ -46,6 +46,31 @@ def test_normalize_bairro_name() -> None:
     assert _normalize_bairro_name("ALFREDO SIMONNETI") == "MONS ALFREDO SIMONETI"
     assert _normalize_bairro_name("INDEPENCIA") == "REDENCAO"
     assert _normalize_bairro_name("LIBERDADE 1") == "PLANALTO TREZE DE MAIO"
+    assert _normalize_bairro_name("LIBERDADE I E II") == "PLANALTO TREZE DE MAIO"
+    assert _normalize_bairro_name("INDEPENDENCIA I E II") == "REDENCAO"
+    assert _normalize_bairro_name("LEBERDADE 1") == "PLANALTO TREZE DE MAIO"
+    assert _normalize_bairro_name("LIBERTADE 1") == "PLANALTO TREZE DE MAIO"
+    assert _normalize_bairro_name("ABILICAO") == "ABOLICAO"
+
+
+def test_strip_variant_suffix() -> None:
+    assert _strip_variant_suffix("AEROPORTO 1") == "AEROPORTO"
+    assert _strip_variant_suffix("ABOLICAO I") == "ABOLICAO"
+    assert _strip_variant_suffix("LIBERDADE I E II") == "LIBERDADE I E II"
+    assert _strip_variant_suffix("MAISA 2") == "MAISA 2"
+
+
+def test_strip_compound_variant_suffix() -> None:
+    assert _strip_compound_variant_suffix("LIBERDADE I E II") == "LIBERDADE"
+    assert _strip_compound_variant_suffix("INDEPENDENCIA I E II") == "INDEPENDENCIA"
+    assert _strip_compound_variant_suffix("LIBERDADE I E III") == "LIBERDADE"
+    assert _strip_compound_variant_suffix("LIBERDADE I") == "LIBERDADE I"
+
+
+def test_relaxed_variant_text() -> None:
+    assert _relaxed_variant_text("LIBERDADE 1") == "LIBERDADE"
+    assert _relaxed_variant_text("LIBERDADE I") == "LIBERDADE"
+    assert _relaxed_variant_text("LEBERDADE 1") == "LEBERDADE"
 
 
 def test_infer_zone_from_bairro() -> None:
