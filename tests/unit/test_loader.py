@@ -25,6 +25,9 @@ def test_normalize_bairro_name() -> None:
 
     # Test sub-bairro mappings
     assert _normalize_bairro_name("ABOLICAO 4") == "ABOLICAO"
+    assert _normalize_bairro_name("ABILICAO") == "ABOLICAO"
+    assert _normalize_bairro_name("AEROPORTO 1") == "AEROPORTO"
+    assert _normalize_bairro_name("AEROPORTO 2") == "AEROPORTO"
     assert _normalize_bairro_name("MALVINAS") == "DOM JAIME CAMARA"
     assert _normalize_bairro_name("VINGT ROSADO") == "RINCAO"
     assert _normalize_bairro_name("MONSENHOR AMERICO") == "MONS ALFREDO SIMONETI"
