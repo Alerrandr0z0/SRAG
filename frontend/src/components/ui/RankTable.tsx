@@ -19,6 +19,7 @@ interface RankTableProps {
   rows: RankTableRow[];
   pageSizeOptions?: number[];
   initialPageSize?: number;
+  children?: React.ReactNode;
 }
 
 const RankTable: React.FC<RankTableProps> = ({
@@ -29,6 +30,7 @@ const RankTable: React.FC<RankTableProps> = ({
   rows,
   pageSizeOptions = [10, 25, 50],
   initialPageSize = 10,
+  children,
 }) => {
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -53,6 +55,7 @@ const RankTable: React.FC<RankTableProps> = ({
           {subtitle && <p className="meta">{subtitle}</p>}
         </div>
         <div className="filters rank-table__controls">
+          {children}
           <input
             className="rank-search"
             placeholder={searchPlaceholder}
@@ -116,10 +119,15 @@ const RankTable: React.FC<RankTableProps> = ({
 
       <div className="rank-table__footer">
         <span className="meta">
-          Mostrando {filtered.length === 0 ? 0 : start + 1}–{filtered.length === 0 ? 0 : start + pageRows.length} de {filtered.length}
+          Mostrando {filtered.length === 0 ? 0 : start + 1}–
+          {filtered.length === 0 ? 0 : start + pageRows.length} de {filtered.length}
         </span>
         <div className="rank-table__pager">
-          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={safePage <= 1}>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={safePage <= 1}
+          >
             Anterior
           </button>
           <span>

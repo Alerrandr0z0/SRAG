@@ -10,12 +10,20 @@ from fastapi import APIRouter, Depends, Query
 
 from srag import __version__
 from srag.api.dependencies import CommonFilters, get_common_filters
-from srag.api.types import SummaryResponse, TrendsResponse, VirusDistributionItem
+from srag.api.types import (
+    SummaryResponse,
+    TrendsResponse,
+    VirusDistributionItem,
+    AuditBootstrapResponse,
+)
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import (
     apply_global_filters,
     compute_alert_thresholds,
+    compute_completeness_trend,
     compute_data_completeness,
+    compute_logical_inconsistencies,
+    compute_quality_by_unit,
     compute_time_series,
     compute_time_series_by_virus,
     compute_virus_detailed_distribution,
@@ -190,3 +198,39 @@ def get_data_completeness(
     )
     df = apply_surveillance_filters(df, filters.years, filters.agents)
     return compute_data_completeness(df)
+
+
+@router.get("/audit_bootstrap")
+def get_audit_bootstrap(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> AuditBootstrapResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(df, filters.years, filters.agents)
+
+    if df.empty:
+        return {
+            "completeness": [],
+            "completeness_trend": [],
+            "quality_by_unit": [],
+            "inconsistencies": [],
+        }
+
+    return sanitize_data(
+        {
+            "completeness": compute_data_completeness(df),
+            "completeness_trend": compute_completeness_trend(df),
+            "quality_by_unit": compute_quality_by_unit(df),
+            "inconsistencies": compute_logical_inconsistencies(df),
+        }
+    )

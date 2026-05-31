@@ -52,9 +52,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
 }) => {
   const availableModes = useMemo(() => {
     if (zoneFilter.length === 0) return ['Urbana', 'Rural'];
-    return zoneFilter
-      .map((k) => ZONE_FILTER_TO_MAP[k])
-      .filter((v): v is string => v !== undefined);
+    return zoneFilter.map((k) => ZONE_FILTER_TO_MAP[k]).filter((v): v is string => v !== undefined);
   }, [zoneFilter]);
 
   const [mapZoneMode, setMapZoneMode] = useState('Urbana');
@@ -125,7 +123,10 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
         <div className="section-header">
           <div>
             <h3>Mapa territorial</h3>
-            <p className="meta">Cada bairro recebe uma cor na escala amarelo→vermelho conforme sua posição entre 0 e o bairro com mais casos — proporção linear direta</p>
+            <p className="meta">
+              Cada bairro recebe uma cor na escala amarelo→vermelho conforme sua posição entre 0 e o
+              bairro com mais casos — proporção linear direta
+            </p>
           </div>
           <div className="filters">
             <label>
@@ -138,7 +139,9 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
                 }}
               >
                 {availableModes.map((mode) => (
-                  <option key={mode} value={mode}>{mode}</option>
+                  <option key={mode} value={mode}>
+                    {mode}
+                  </option>
                 ))}
               </select>
             </label>

@@ -106,6 +106,24 @@ class TestUnitDistribution:
         unidades = set(res["id_unidade"])
         assert "NAO INFORMADO" in unidades
 
+    def test_geographic_resolution(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ID_UNIDADE": ["U1", "U2"],
+                "ID_MUNICIP": ["240800", "230440"],  # Mossoró, Fortaleza
+                "EVOLUCAO": [1, 1],
+            }
+        )
+        res = compute_unit_distribution(df, min_cases=1)
+        rows = {row["id_unidade"]: row for _, row in res.iterrows()}
+
+        assert "municipio" in res.columns
+        assert "uf" in res.columns
+        assert rows["U1"]["municipio"] == "Mossoró"
+        assert rows["U1"]["uf"] == "RN"
+        assert rows["U2"]["municipio"] == "Fortaleza"
+        assert rows["U2"]["uf"] == "CE"
+
     def test_empty_df(self) -> None:
         assert compute_unit_distribution(pd.DataFrame()).empty
 

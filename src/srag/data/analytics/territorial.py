@@ -55,17 +55,146 @@ def compute_zone_distribution(df: pd.DataFrame) -> pd.DataFrame:
     return grouped.sort_values("count", ascending=False).reset_index(drop=True)
 
 
-def compute_unit_distribution(df: pd.DataFrame, min_cases: int = 3) -> pd.DataFrame:
-    """Aggregate notification records by notifying unit/hospital with CNES names."""
+def _resolve_mun_uf(mun_code: str | float | int | None) -> tuple[str, str]:
+    if pd.isna(mun_code):
+        return "Nao informado", "RN"
+    code = str(mun_code).strip()[:6]
+    if not code or not code.isdigit():
+        return "Nao informado", "RN"
+
+    uf_map = {
+        "11": "RO",
+        "12": "AC",
+        "13": "AM",
+        "14": "RR",
+        "15": "PA",
+        "16": "AP",
+        "17": "TO",
+        "21": "MA",
+        "22": "PI",
+        "23": "CE",
+        "24": "RN",
+        "25": "PB",
+        "26": "PE",
+        "27": "AL",
+        "28": "SE",
+        "29": "BA",
+        "31": "MG",
+        "32": "ES",
+        "33": "RJ",
+        "35": "SP",
+        "41": "PR",
+        "42": "SC",
+        "43": "RS",
+        "50": "MS",
+        "51": "MT",
+        "52": "GO",
+        "53": "DF",
+    }
+
+    mun_map = {
+        "240800": "Mossoró",
+        "240810": "Natal",
+        "240200": "Caicó",
+        "240020": "Açu",
+        "240140": "Baraúna",
+        "240050": "Almino Afonso",
+        "240060": "Apodi",
+        "240080": "Areia Branca",
+        "240260": "Carnaubais",
+        "240325": "Parnamirim",
+        "240440": "Grossos",
+        "240470": "Ielmo Marinho",
+        "240560": "Ipanguaçu",
+        "240750": "Martins",
+        "240970": "Pau dos Ferros",
+        "240940": "Pau dos Ferros",
+        "241030": "Portalegre",
+        "241250": "São Miguel",
+        "241440": "Tibau",
+        "241490": "Umarizal",
+        "240450": "Guamaré",
+        "240310": "Currais Novos",
+        "240100": "Apodi",
+        "230440": "Fortaleza",
+        "230100": "Aracati",
+        "230523": "Horizonte",
+        "230670": "Itapipoca",
+        "230765": "Maracanaú",
+        "230730": "Juazeiro do Norte",
+        "230960": "Pacajus",
+        "231130": "Quixadá",
+        "231140": "Quixeramobim",
+        "231240": "Russas",
+        "231340": "Sobral",
+        "231350": "Tabuleiro do Norte",
+        "130260": "Manaus",
+        "250400": "Campina Grande",
+        "250750": "João Pessoa",
+        "251370": "Santa Rita",
+        "270430": "Maceió",
+        "290830": "Conceição do Almeida",
+        "292740": "Salvador",
+        "312770": "Governador Valadares",
+        "330455": "Rio de Janeiro",
+        "355030": "São Paulo",
+        "411990": "Ponta Grossa",
+    }
+
+    uf = uf_map.get(code[:2], "RN")
+    mun_name = mun_map.get(code, f"Município {code}")
+    return mun_name, uf
+
+
+def compute_unit_distribution(df: pd.DataFrame, min_cases: int = 1) -> pd.DataFrame:
+    """Aggregate notification records by notifying unit/hospital with CNES names and locations."""
     if df.empty or "ID_UNIDADE" not in df.columns:
         return pd.DataFrame(
-            columns=["id_unidade", "nome_fantasia", "count", "curados", "obitos", "ignorados"]
+            columns=[
+                "id_unidade",
+                "nome_fantasia",
+                "count",
+                "curados",
+                "obitos",
+                "ignorados",
+                "municipio",
+                "uf",
+            ]
         )
 
     grouped = _status_counts(df, "ID_UNIDADE")
     grouped = grouped[grouped["count"] >= min_cases]
     grouped = grouped.rename(columns={"ID_UNIDADE": "id_unidade"})
     grouped["nome_fantasia"] = grouped["id_unidade"].apply(lookup_unit_name)
+
+    # Resolve unit locations (municipio and uf)
+    unit_to_mun = {}
+    if "ID_UNIDADE" in df.columns and "ID_MUNICIP" in df.columns:
+        has_uid = df["ID_UNIDADE"].notna()
+        is_not_empty = df["ID_UNIDADE"].astype(str).str.strip() != ""
+        valid_df = df[has_uid & is_not_empty]
+        if not valid_df.empty:
+            freq = valid_df.groupby(["ID_UNIDADE", "ID_MUNICIP"]).size().reset_index(name="sz")
+            idx = freq.groupby("ID_UNIDADE")["sz"].idxmax()
+            unit_to_mun = dict(
+                zip(freq.loc[idx, "ID_UNIDADE"], freq.loc[idx, "ID_MUNICIP"], strict=False)
+            )
+
+    def get_unit_location(unit_id: str) -> tuple[str, str]:
+        # Try CNES record first
+        from srag.data.cnes_lookup import lookup_unit_record
+
+        rec = lookup_unit_record(unit_id)
+        if rec and isinstance(rec, dict) and rec.get("codigo_municipio"):
+            return _resolve_mun_uf(rec["codigo_municipio"])
+        # Fallback to database notifications
+        fallback_code = unit_to_mun.get(unit_id)
+        return _resolve_mun_uf(fallback_code)
+
+    locs = [get_unit_location(str(uid)) for uid in grouped["id_unidade"]]
+    grouped["municipio"] = [loc[0] for loc in locs]
+    grouped["uf"] = [loc[1] for loc in locs]
+
     return grouped.sort_values("count", ascending=False).reset_index(drop=True)
 
 

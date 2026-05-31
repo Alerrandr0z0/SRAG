@@ -40,21 +40,7 @@ afterEach(() => {
 
 describe('useCitizenData', () => {
   it('forwards agents to fetchTimelineAgg', async () => {
-    renderHook(() =>
-      useCitizenData(
-        true,
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [2024],
-        ['Influenza'],
-        [],
-        [],
-      ),
-    );
+    renderHook(() => useCitizenData(true, [], [], [], [], [], [], [2024], ['Influenza'], [], []));
 
     await waitFor(() => expect(apiMocks.fetchTimelineAgg).toHaveBeenCalled());
     expect(apiMocks.fetchTimelineAgg).toHaveBeenCalledWith(

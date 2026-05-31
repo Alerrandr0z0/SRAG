@@ -34,6 +34,11 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
 }) => {
   const isYearSelected = dashboardYear.length > 0;
   const [icuGroupBy, setIcuGroupBy] = useState<Epi.TemporalGrouping>('year');
+  const [selectedUf, setSelectedUf] = useState('');
+  const [selectedMun, setSelectedMun] = useState('');
+  const [munSearch, setMunSearch] = useState('');
+  const [showMunDropdown, setShowMunDropdown] = useState(false);
+
   const selectedAgent = etiologicAgentFilter[0] || 'Todos';
   const showCovid = selectedAgent !== 'Influenza';
   const showGripe = selectedAgent !== 'COVID-19';
@@ -59,19 +64,52 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
     };
   }, [icuBottleneck]);
 
+  const availableUfs = useMemo(() => {
+    const ufs = new Set<string>();
+    (units || []).forEach((u) => {
+      if (u.uf) ufs.add(u.uf);
+    });
+    return Array.from(ufs).sort();
+  }, [units]);
+
+  const availableMuns = useMemo(() => {
+    const muns = new Set<string>();
+    (units || []).forEach((u) => {
+      if (u.municipio && (!selectedUf || u.uf === selectedUf)) {
+        muns.add(u.municipio);
+      }
+    });
+    return Array.from(muns).sort();
+  }, [units, selectedUf]);
+
+  const filteredAvailableMuns = useMemo(() => {
+    const term = munSearch.toLowerCase().trim();
+    if (!term) return availableMuns;
+    return availableMuns.filter((m) => m.toLowerCase().includes(term));
+  }, [availableMuns, munSearch]);
+
+  const filteredUnits = useMemo(() => {
+    return (units || []).filter((item) => {
+      const matchUf = !selectedUf || item.uf === selectedUf;
+      const matchMun = !selectedMun || item.municipio === selectedMun;
+      return matchUf && matchMun;
+    });
+  }, [units, selectedUf, selectedMun]);
+
   const unitRows = useMemo(
     () =>
-      (units || []).map((item) => ({
+      filteredUnits.map((item) => ({
         key: item.nome_fantasia ? `${item.id_unidade}-${item.nome_fantasia}` : item.id_unidade,
         values: {
           unidade: item.nome_fantasia || item.id_unidade,
+          localizacao: item.municipio && item.uf ? `${item.municipio} - ${item.uf}` : 'Não informado',
           count: item.count,
           curados: item.curados ?? 0,
           obitos: item.obitos ?? 0,
           ignorados: item.ignorados ?? 0,
         },
       })),
-    [units],
+    [filteredUnits],
   );
 
   return (
@@ -85,13 +123,167 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
           searchPlaceholder="Buscar unidade"
           columns={[
             { key: 'unidade', label: 'Unidade' },
+            { key: 'localizacao', label: 'Localização' },
             { key: 'count', label: 'Notificados', align: 'right' },
             { key: 'curados', label: 'Curados', align: 'right' },
             { key: 'obitos', label: 'Óbitos', align: 'right' },
             { key: 'ignorados', label: 'Ignorados', align: 'right' },
           ]}
           rows={unitRows}
-        />
+        >
+          {/* UF Filter Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <label htmlFor="uf-select" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>UF</label>
+            <select
+              id="uf-select"
+              value={selectedUf}
+              onChange={(e) => {
+                setSelectedUf(e.target.value);
+                setSelectedMun('');
+                setMunSearch('');
+              }}
+              style={{
+                fontSize: '11px',
+                padding: '5px 8px',
+                borderRadius: '6px',
+                border: '1px solid var(--border-subtle)',
+                background: 'var(--bg-panel)',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="">Todas</option>
+              {availableUfs.map((uf) => (
+                <option key={uf} value={uf}>
+                  {uf}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Searchable Municipality Filter Autocomplete */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+            <label htmlFor="mun-search" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Município</label>
+            <div style={{ position: 'relative', width: '150px' }}>
+              <input
+                id="mun-search"
+                type="text"
+                placeholder="Buscar cidade..."
+                value={munSearch}
+                onChange={(e) => {
+                  setMunSearch(e.target.value);
+                  setShowMunDropdown(true);
+                }}
+                onFocus={() => setShowMunDropdown(true)}
+                style={{
+                  fontSize: '11px',
+                  padding: '5px 24px 5px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-panel)',
+                  color: 'var(--text-main)',
+                  width: '100%',
+                }}
+              />
+              {(munSearch || selectedMun) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMunSearch('');
+                    setSelectedMun('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '0',
+                    lineHeight: '1',
+                  }}
+                >
+                  ×
+                </button>
+              )}
+              {showMunDropdown && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: '0',
+                    width: '100%',
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    background: 'var(--bg-panel)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '6px',
+                    zIndex: 100,
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    marginTop: '4px',
+                  }}
+                >
+                  {filteredAvailableMuns.map((mun) => (
+                    <button
+                      key={mun}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMun(mun);
+                        setMunSearch(mun);
+                        setShowMunDropdown(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '6px 10px',
+                        fontSize: '11px',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: selectedMun === mun ? 'rgba(15, 118, 110, 0.12)' : 'none',
+                        color: selectedMun === mun ? 'var(--text-main)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontWeight: selectedMun === mun ? 600 : 'normal',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-status)';
+                        e.currentTarget.style.color = 'var(--text-main)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = selectedMun === mun ? 'rgba(15, 118, 110, 0.12)' : 'none';
+                        e.currentTarget.style.color = selectedMun === mun ? 'var(--text-main)' : 'var(--text-muted)';
+                      }}
+                    >
+                      {mun}
+                    </button>
+                  ))}
+                  {filteredAvailableMuns.length === 0 && (
+                    <div style={{ padding: '8px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                      Nenhuma cidade
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Click outside detection helper */}
+            {showMunDropdown && (
+              <div
+                onClick={() => setShowMunDropdown(false)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 99,
+                  background: 'transparent',
+                }}
+              />
+            )}
+          </div>
+        </RankTable>
       </article>
 
       <article className="panel">
@@ -305,16 +497,16 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                 ? 'Jornada Clínica por Perfil Vacinal - COVID-19'
                 : 'Jornada Clínica por Perfil Vacinal'}
           </h3>
-            <div className="filters">
-              <select
-                value={swimmerVirus}
-                onChange={(e) => setSwimmerVirus(e.target.value as 'covid' | 'gripe')}
-                style={{ padding: '4px 8px', borderRadius: '6px' }}
-              >
-                {showCovid && <option value="covid">Visão COVID-19</option>}
-                {showGripe && <option value="gripe">Visão Influenza</option>}
-              </select>
-            </div>
+          <div className="filters">
+            <select
+              value={swimmerVirus}
+              onChange={(e) => setSwimmerVirus(e.target.value as 'covid' | 'gripe')}
+              style={{ padding: '4px 8px', borderRadius: '6px' }}
+            >
+              {showCovid && <option value="covid">Visão COVID-19</option>}
+              {showGripe && <option value="gripe">Visão Influenza</option>}
+            </select>
+          </div>
         </div>
         <div style={{ marginTop: '20px' }}>
           <AggregatedSwimmerPlot data={timelineData} swimmerVirus={swimmerVirus} />

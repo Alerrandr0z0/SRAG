@@ -447,9 +447,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
           <h3>Assinatura Clínica de Sintomas</h3>
         </div>
         <div className="chart-wrap" style={{ height: '600px' }}>
-            {symptomsSignature && (
-              <SymptomsSignatureGrid signature={symptomsSignature} selectedAgent={selectedAgent} />
-            )}
+          {symptomsSignature && (
+            <SymptomsSignatureGrid signature={symptomsSignature} selectedAgent={selectedAgent} />
+          )}
         </div>
       </article>
 

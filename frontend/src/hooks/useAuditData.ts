@@ -16,6 +16,9 @@ export function useAuditData(
   occupations?: string[],
 ) {
   const [completeness, setCompleteness] = useState<Epi.DataCompletenessGroup[]>([]);
+  const [completenessTrend, setCompletenessTrend] = useState<Epi.CompletenessTrendPoint[]>([]);
+  const [qualityByUnit, setQualityByUnit] = useState<Epi.UnitQualityScore[]>([]);
+  const [inconsistencies, setInconsistencies] = useState<Epi.LogicalInconsistency[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export function useAuditData(
     async function load() {
       setLoading(true);
       try {
-        const data = await api.fetchDataCompleteness(
+        const data = await api.fetchAuditBootstrap(
           profile,
           raceFilter,
           genderFilter,
@@ -38,7 +41,10 @@ export function useAuditData(
           occupations,
         );
         if (isMounted) {
-          setCompleteness(data);
+          setCompleteness(data.completeness || []);
+          setCompletenessTrend(data.completeness_trend || []);
+          setQualityByUnit(data.quality_by_unit || []);
+          setInconsistencies(data.inconsistencies || []);
         }
       } catch (error) {
         console.error('Failed to load audit data', error);
@@ -64,5 +70,11 @@ export function useAuditData(
     occupations,
   ]);
 
-  return { completeness, loading };
+  return {
+    completeness,
+    completenessTrend,
+    qualityByUnit,
+    inconsistencies,
+    loading,
+  };
 }

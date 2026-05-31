@@ -31,8 +31,11 @@ from srag.data.analytics.filters import (
     outcome_valid_mask,
 )
 from srag.data.analytics.quality import (
+    compute_completeness_trend,
     compute_data_completeness,
     compute_diagnostic_latency,
+    compute_logical_inconsistencies,
+    compute_quality_by_unit,
     compute_sample_type_distribution,
     compute_testing_coverage,
 )
@@ -96,6 +99,7 @@ __all__ = [
     "compute_clinical_timing_metrics",
     "compute_closure_criteria",
     "compute_codetection_matrix",
+    "compute_completeness_trend",
     "compute_data_completeness",
     # quality
     "compute_diagnostic_latency",
@@ -104,11 +108,13 @@ __all__ = [
     "compute_influenza_subtypes",
     "compute_laboratory_network_summary",
     "compute_lethality_heatmap",
+    "compute_logical_inconsistencies",
     "compute_maternal_profile",
     "compute_mortality_by_treatment_agent",
     "compute_notification_delay_series",
     "compute_occupation_profile",
     "compute_positivity_trend",
+    "compute_quality_by_unit",
     "compute_race_profile",
     "compute_risk_factor_profile",
     "compute_risk_factors_full_profile",

@@ -4,8 +4,11 @@ import numpy as np
 import pandas as pd
 
 from srag.data.analytics.quality import (
+    compute_completeness_trend,
     compute_data_completeness,
     compute_diagnostic_latency,
+    compute_logical_inconsistencies,
+    compute_quality_by_unit,
     compute_sample_type_distribution,
     compute_testing_coverage,
 )
@@ -143,7 +146,113 @@ class TestDataCompleteness:
         assert "Linha do Cuidado" in res
         assert "Coleta e Diagnóstico" in res
         assert "Vacinação e Gestação" in res
-        assert res["Vacinação e Gestação"] == 62.5
+        assert res["Vacinação e Gestação"] == 70.8
 
     def test_empty_df(self) -> None:
         assert compute_data_completeness(pd.DataFrame()) == []
+
+
+class TestCompletenessTrend:
+    def test_empty_df(self) -> None:
+        assert compute_completeness_trend(pd.DataFrame()) == []
+
+    def test_completeness_trend_calculation(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-08"],
+                "CLASSI_FIN": [1, 9],
+                "EVOLUCAO": [1, 9],
+                "AMOSTRA": [1, 9],
+                "PCR_RESUL": [1, 9],
+                "VACINA_COV": [1, 9],
+                "CS_RACA": [1, 9],
+                "UTI": [1, 9],
+                "DT_COLETA": ["2023-01-01", ""],
+            }
+        )
+        res = compute_completeness_trend(df)
+        assert len(res) == 2
+        assert res[0]["score"] == 100.0
+        assert res[1]["score"] == 0.0
+        assert res[0]["total"] == 1
+        assert res[1]["total"] == 1
+
+
+class TestQualityByUnit:
+    def test_empty_df(self) -> None:
+        assert compute_quality_by_unit(pd.DataFrame()) == []
+
+    def test_quality_by_unit_sorting(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ID_UNIDADE": ["UnitA", "UnitB"],
+                "DT_NOTIFIC": ["2023-01-01", "2023-01-01"],
+                "DT_SIN_PRI": ["2023-01-02", "2023-01-02"],
+                "CS_SEXO": ["M", "I"],
+                "NU_IDADE_N": [10, np.nan],
+                "TP_IDADE": [3, np.nan],
+                "ID_MUNICIP": [1, np.nan],
+                "CS_RACA": [1, np.nan],
+            }
+        )
+        res = compute_quality_by_unit(df)
+        assert len(res) == 2
+        assert res[0]["id_unidade"] == "UnitB"
+        assert res[1]["id_unidade"] == "UnitA"
+        assert res[0]["score"] < res[1]["score"]
+        assert res[0]["total"] == 1
+        assert res[1]["total"] == 1
+        assert res[0]["worst_field"] is not None
+
+
+class TestLogicalInconsistencies:
+    def test_empty_df(self) -> None:
+        assert compute_logical_inconsistencies(pd.DataFrame()) == []
+
+    def test_inconsistencies_rules(self) -> None:
+        df = pd.DataFrame(
+            {
+                "EVOLUCAO": [2, 1, 1, 1, 1, 1, 1, 2],
+                "DT_EVOLUCA": [
+                    "",
+                    "2023-01-05",
+                    "2023-01-05",
+                    "2023-01-05",
+                    "2023-01-05",
+                    "2023-01-05",
+                    "2023-01-05",
+                    "2023-01-01",
+                ],
+                "HOSPITAL": [2, 1, 2, 2, 2, 2, 2, 2],
+                "DT_INTERNA": ["", "", "", "", "", "", "", ""],
+                "UTI": [2, 2, 1, 2, 2, 2, 2, 2],
+                "DT_ENTUTI": ["", "", "", "", "", "", "", ""],
+                "PCR_RESUL": [2, 2, 2, 1, 2, 9, 2, 2],
+                "CLASSI_FIN": [1, 1, 1, 4, 1, 1, 1, 1],
+                "ANTIVIRAL": [2, 2, 2, 2, 1, 2, 2, 2],
+                "DT_ANTIVIR": ["", "", "", "", "", "", "", ""],
+                "AMOSTRA": [2, 2, 2, 2, 2, 1, 2, 2],
+                "RES_AN": [9, 9, 9, 9, 9, 9, 9, 9],
+                "CRITERIO": [1, 1, 1, 1, 1, 1, "", 1],
+                "DT_SIN_PRI": [
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-01",
+                    "2023-01-10",
+                ],
+            }
+        )
+        res = compute_logical_inconsistencies(df)
+        inconsistencies = {r["rule"]: r["count"] for r in res}
+        assert inconsistencies["R1"] == 1
+        assert inconsistencies["R2"] == 1
+        assert inconsistencies["R3"] == 1
+        assert inconsistencies["R4"] == 1
+        assert inconsistencies["R5"] == 1
+        assert inconsistencies["R6"] == 1
+        assert inconsistencies["R7"] == 1
+        assert inconsistencies["R8"] == 1

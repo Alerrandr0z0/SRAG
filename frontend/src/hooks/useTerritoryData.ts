@@ -46,7 +46,6 @@ export function useTerritoryData(
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!active) return;
     let isMounted = true;
 
     async function loadBootstrap() {
@@ -81,7 +80,6 @@ export function useTerritoryData(
       isMounted = false;
     };
   }, [
-    active,
     profile,
     raceFilter,
     genderFilter,
@@ -100,7 +98,10 @@ export function useTerritoryData(
 
     async function loadRuralData() {
       try {
-        const [points, geo] = await Promise.all([api.fetchRuralHeatpoints(), api.fetchRuralSectorsGeo()]);
+        const [points, geo] = await Promise.all([
+          api.fetchRuralHeatpoints(),
+          api.fetchRuralSectorsGeo(),
+        ]);
         if (isMounted) {
           setRuralData({
             sectors: points.points || [],

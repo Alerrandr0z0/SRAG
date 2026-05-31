@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as Epi from '../../types/epi';
 import BarChart from '../charts/BarChart';
-import EpidemicCurveChart from '../charts/EpidemicCurveChart';
+
 import HeatmapChart from '../charts/HeatmapChart';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
@@ -22,10 +22,6 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
   laboratoryNetwork,
   etiologicAgentFilter = [],
 }) => {
-  const [curveMode, setCurveMode] = useState<'composicao' | 'positividade' | 'acumulado'>(
-    'positividade',
-  );
-  const [curveWeeks, setCurveWeeks] = useState('0');
   const [delayWeeks, setDelayWeeks] = useState('0');
 
   if (loading) return <p className="meta">Carregando inteligência de vigilância...</p>;
@@ -132,62 +128,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
         ))}
       </div>
 
-      {/* BLOCO 1: CIRCULAÇÃO VIRAL CONFIRMADA */}
-      <section className="vigilance-block">
-        <div className="vigilance-insight-grid" style={{ gridTemplateColumns: '1fr' }}>
-          <article className="panel">
-            <div className="section-header">
-              <div className="stack" style={{ gap: 4 }}>
-                <h3 style={{ margin: 0 }}>Circulação Viral Confirmada</h3>
-                {virusTrends.length > 0 && (
-                  <div className="filters" style={{ fontSize: '12px', color: '#64748b', gap: 12 }}>
-                    <span>
-                      Total Positivos: <b>{virusTrends.reduce((s, h) => s + h.count, 0)}</b>
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="filters">
-                <div className="pill-group">
-                  {[
-                    { v: '0', l: 'Tudo' },
-                    { v: '52', l: '52s' },
-                    { v: '26', l: '26s' },
-                    { v: '12', l: '12s' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.v}
-                      type="button"
-                      className={`pill-btn ${curveWeeks === opt.v ? 'active' : ''}`}
-                      onClick={() => setCurveWeeks(opt.v)}
-                    >
-                      {opt.l}
-                    </button>
-                  ))}
-                </div>
-                <select
-                  value={curveMode}
-                  onChange={(e) =>
-                    setCurveMode(e.target.value as 'composicao' | 'positividade' | 'acumulado')
-                  }
-                >
-                  <option value="composicao">Composição</option>
-                  <option value="acumulado">Acumulado</option>
-                  <option value="positividade">Taxa de Positividade</option>
-                </select>
-              </div>
-            </div>
-            <div className="chart-wrap chart-wrap--tall">
-              <EpidemicCurveChart
-                virusTrends={virusTrends}
-                positivityTrend={positivityTrend}
-                forcedMode={curveMode}
-                forcedWeeks={curveWeeks}
-              />
-            </div>
-          </article>
-        </div>
-      </section>
+
 
       {/* BLOCO 2: SEVERIDADE VIRAL */}
       <section className="vigilance-block">
@@ -201,11 +142,9 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
             {isAgentFiltered && lethality ? (
               <BarChart
                 labels={lethality.age_bands || []}
-                data={
-                  (lethality.matrix?.[selectedAgent === 'Influenza' ? 1 : 2] || []).map(
-                    (v) => Number(v || 0),
-                  )
-                }
+                data={(lethality.matrix?.[selectedAgent === 'Influenza' ? 1 : 2] || []).map((v) =>
+                  Number(v || 0),
+                )}
                 horizontal={true}
                 color={selectedAgent === 'Influenza' ? '#1d4ed8' : '#0f766e'}
               />

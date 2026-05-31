@@ -64,6 +64,8 @@ export interface UnitStats {
   obitos?: number;
   ignorados?: number;
   nome_fantasia?: string;
+  municipio?: string;
+  uf?: string;
   [key: string]: unknown;
 }
 
@@ -269,6 +271,38 @@ export interface DataCompletenessGroup {
   group: string;
   overall_score: number;
   fields: Array<{ field: string; rate: number }>;
+}
+
+export interface CompletenessTrendPoint {
+  epi_week: string;
+  score: number;
+  total: number;
+}
+
+export interface UnitQualityScore {
+  id_unidade: string;
+  nome_fantasia: string;
+  score: number;
+  total: number;
+  worst_field: string;
+  worst_rate: number;
+  municipio?: string;
+  uf?: string;
+}
+
+export interface LogicalInconsistency {
+  rule: string;
+  description: string;
+  count: number;
+  pct: number;
+  severity: 'critical' | 'warning' | 'info';
+}
+
+export interface AuditBootstrap {
+  completeness: DataCompletenessGroup[];
+  completeness_trend: CompletenessTrendPoint[];
+  quality_by_unit: UnitQualityScore[];
+  inconsistencies: LogicalInconsistency[];
 }
 
 export type TemporalGrouping = 'year' | 'month' | 'week';

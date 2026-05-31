@@ -597,8 +597,6 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({
           setTooltip(null);
         });
     });
-
-
   }, [data, themeColors]);
 
   const hasData = data.length > 0;

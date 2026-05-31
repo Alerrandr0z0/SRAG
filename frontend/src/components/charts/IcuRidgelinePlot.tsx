@@ -89,6 +89,30 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({ data = [], groupBy 
     p75: number;
     p90: number;
   } | null>(null);
+  const [page, setPage] = useState(0);
+
+  const pageCount = useMemo(() => {
+    if (data.length === 0) return 1;
+    const enriched = data.map((d) => ({ ...d, ...buildKeys(d, groupBy) }));
+    const counts = d3.rollup(
+      enriched,
+      (v) => v.length,
+      (d) => d.groupKey,
+    );
+    let keys = Array.from(counts.keys())
+      .filter((k) => (counts.get(k) ?? 0) >= MIN_CASES[groupBy])
+      .sort();
+    if (keys.length === 0) {
+      keys = Array.from(counts.keys()).sort();
+    }
+    return Math.max(1, Math.ceil(keys.length / 10));
+  }, [data, groupBy]);
+
+  useEffect(() => {
+    if (page >= pageCount) {
+      setPage(pageCount - 1);
+    }
+  }, [pageCount, page]);
 
   const theme = useThemeMode();
 
@@ -123,12 +147,13 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({ data = [], groupBy 
         .filter((k) => (counts.get(k) ?? 0) >= MIN_CASES[groupBy])
         .sort();
 
-      const maxGroups = 14;
+      const maxGroups = 10;
       if (validKeys.length === 0) {
-        validKeys = Array.from(counts.keys()).sort().slice(-maxGroups);
-      } else {
-        validKeys = validKeys.slice(-maxGroups);
+        validKeys = Array.from(counts.keys()).sort();
       }
+      const totalPages = Math.max(1, Math.ceil(validKeys.length / maxGroups));
+      const currentPage = Math.min(page, totalPages - 1);
+      validKeys = validKeys.slice(-(currentPage + 1) * maxGroups, -(currentPage * maxGroups) || undefined);
       validKeys.reverse();
 
       const filteredAll = enriched.filter((d) => validKeys.includes(d.groupKey));
@@ -466,7 +491,7 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({ data = [], groupBy 
     } catch (err) {
       console.error('Erro render Ridgeline:', err);
     }
-  }, [data, groupBy, themeColors]);
+  }, [data, groupBy, themeColors, page]);
 
   return (
     <div style={{ width: '100%', position: 'relative' }}>
@@ -573,6 +598,76 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({ data = [], groupBy 
           </div>
         )}
       </div>
+
+      {pageCount > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '8px 0 4px',
+            marginTop: '4px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${themeColors.border}`,
+              background: themeColors.bg,
+              color: page === 0 ? themeColors.muted : themeColors.main,
+              fontWeight: 600,
+              fontSize: '12px',
+              cursor: page === 0 ? 'default' : 'pointer',
+              opacity: page === 0 ? 0.5 : 1,
+            }}
+          >
+            ‹ Anterior
+          </button>
+          {Array.from({ length: pageCount }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setPage(i)}
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                border: `1px solid ${i === page ? 'var(--primary-teal)' : themeColors.border}`,
+                background: i === page ? 'var(--primary-teal)' : themeColors.bg,
+                color: i === page ? '#fff' : themeColors.text,
+                fontWeight: i === page ? 700 : 500,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            disabled={page === pageCount - 1}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${themeColors.border}`,
+              background: themeColors.bg,
+              color: page === pageCount - 1 ? themeColors.muted : themeColors.main,
+              fontWeight: 600,
+              fontSize: '12px',
+              cursor: page === pageCount - 1 ? 'default' : 'pointer',
+              opacity: page === pageCount - 1 ? 0.5 : 1,
+            }}
+          >
+            Próximo ›
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -38,8 +38,10 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       { key: 'gripe', title: 'Influenza' },
       { key: 'vsr', title: 'VSR' },
     ].filter((p) => {
-      if (selectedAgent === 'COVID-19') return p.key === 'covid' && !!matrices[p.key as keyof typeof matrices];
-      if (selectedAgent === 'Influenza') return p.key === 'gripe' && !!matrices[p.key as keyof typeof matrices];
+      if (selectedAgent === 'COVID-19')
+        return p.key === 'covid' && !!matrices[p.key as keyof typeof matrices];
+      if (selectedAgent === 'Influenza')
+        return p.key === 'gripe' && !!matrices[p.key as keyof typeof matrices];
       return !!matrices[p.key as keyof typeof matrices];
     });
 

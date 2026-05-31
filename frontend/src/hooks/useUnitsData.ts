@@ -24,82 +24,98 @@ export function useUnitsData(
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!active) return;
-
     let isMounted = true;
     async function load() {
       setLoading(true);
       try {
-        const [unitsData, flowData, hospData, timeline, bottleneck] = await Promise.all([
-          api.fetchUnits(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          ),
-          api.fetchClinicalFlow(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          ),
-          api.fetchHospitalizationDuration(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          ),
-          api.fetchTimelineAgg(
-            swimmerVirus,
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          ),
-          api.fetchIcuBottleneck(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          ),
-        ]);
+        if (active) {
+          const [unitsData, flowData, hospData, timeline, bottleneck] = await Promise.all([
+            api.fetchUnits(
+              profile,
+              raceFilter,
+              genderFilter,
+              zoneFilter,
+              bairroFilter,
+              unitFilter,
+              years,
+              agents,
+              maternal,
+              occupations,
+            ),
+            api.fetchClinicalFlow(
+              profile,
+              raceFilter,
+              genderFilter,
+              zoneFilter,
+              bairroFilter,
+              unitFilter,
+              years,
+              agents,
+              maternal,
+              occupations,
+            ),
+            api.fetchHospitalizationDuration(
+              profile,
+              raceFilter,
+              genderFilter,
+              zoneFilter,
+              bairroFilter,
+              unitFilter,
+              years,
+              agents,
+              maternal,
+              occupations,
+            ),
+            api.fetchTimelineAgg(
+              swimmerVirus,
+              profile,
+              raceFilter,
+              genderFilter,
+              zoneFilter,
+              bairroFilter,
+              unitFilter,
+              years,
+              agents,
+              maternal,
+              occupations,
+            ),
+            api.fetchIcuBottleneck(
+              profile,
+              raceFilter,
+              genderFilter,
+              zoneFilter,
+              bairroFilter,
+              unitFilter,
+              years,
+              agents,
+              maternal,
+              occupations,
+            ),
+          ]);
 
-        if (isMounted) {
-          setUnits(unitsData);
-          setClinicalFlow(flowData);
-          setHospitalization(hospData);
-          setTimelineData(timeline);
-          setIcuBottleneck(bottleneck);
+          if (isMounted) {
+            setUnits(unitsData);
+            setClinicalFlow(flowData);
+            setHospitalization(hospData);
+            setTimelineData(timeline);
+            setIcuBottleneck(bottleneck);
+          }
+        } else {
+          const unitsData = await api.fetchUnits(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          );
+          if (isMounted) {
+            setUnits(unitsData);
+          }
         }
       } catch (error) {
         console.error('Failed to load units data', error);

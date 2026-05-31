@@ -161,7 +161,7 @@ export const api = {
   ) =>
     fetchJson<Epi.UnitStats[]>(
       withFilters(
-        `${API_BASE}${API_ENDPOINTS.UNITS}?min_cases=3`,
+        `${API_BASE}${API_ENDPOINTS.UNITS}?min_cases=1`,
         p,
         r,
         g,
@@ -376,6 +376,22 @@ export const api = {
       withFilters(`${API_BASE}/data_completeness`, p, r, g, z, b, u, years, agents, m, occ),
     ),
 
+  fetchAuditBootstrap: (
+    p?: string[],
+    r?: string[],
+    g?: string[],
+    z?: string[],
+    b?: string[],
+    u?: string[],
+    years?: number[],
+    agents?: string[],
+    m?: string[],
+    occ?: string[],
+  ) =>
+    fetchJson<Epi.AuditBootstrap>(
+      withFilters(`${API_BASE}/audit_bootstrap`, p, r, g, z, b, u, years, agents, m, occ),
+    ),
+
   fetchLaboratoryNetwork: (
     p?: string[],
     r?: string[],
@@ -404,12 +420,7 @@ export const api = {
       ),
     ),
 
-  fetchOccupations: (
-    years?: number[],
-    zonas?: string[],
-    bairros?: string[],
-    agents?: string[],
-  ) =>
+  fetchOccupations: (years?: number[], zonas?: string[], bairros?: string[], agents?: string[]) =>
     fetchJson<Array<{ label: string; count: number }>>(
       withFilters(
         `${API_BASE}/occupations?limit=60`,

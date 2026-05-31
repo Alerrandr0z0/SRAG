@@ -106,7 +106,7 @@ def territory_bootstrap(
 
 @router.get("/units")
 def get_units(
-    min_cases: int = 3,
+    min_cases: int = 1,
     filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()

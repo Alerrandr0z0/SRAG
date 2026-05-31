@@ -149,3 +149,12 @@ class CitizenBootstrapResponse(TypedDict):
     symptoms_signature: dict[str, Any]
     risk_factors_full: list[dict[str, Any]]
     maternal_profile: dict[str, Any]
+
+
+class AuditBootstrapResponse(TypedDict):
+    """Audit bootstrap response."""
+
+    completeness: list[dict[str, Any]]
+    completeness_trend: list[dict[str, Any]]
+    quality_by_unit: list[dict[str, Any]]
+    inconsistencies: list[dict[str, Any]]

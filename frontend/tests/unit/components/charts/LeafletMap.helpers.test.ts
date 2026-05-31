@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatRangeValue, getChoroplethStyle } from '../../../../src/components/charts/LeafletMap.helpers';
+import {
+  formatRangeValue,
+  getChoroplethStyle,
+} from '../../../../src/components/charts/LeafletMap.helpers';
 
 describe('LeafletMap helpers', () => {
   it('formats range values with pt-BR separators', () => {

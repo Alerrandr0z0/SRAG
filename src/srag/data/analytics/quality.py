@@ -5,6 +5,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from srag.data.cnes_lookup import lookup_unit_name
+from srag.utils.epi_weeks import format_epi_week, get_epi_week
+
 
 def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     """Calculate quartiles for time between sample collection and PCR result for Box Plot."""
@@ -99,13 +102,22 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
         if col not in df.columns:
             return 0.0
         series = df[col]
+        denom = total
+
+        # Gestante e Puérpera: apenas mulheres (CS_SEXO == "F")
+        if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in df.columns:
+            is_female = df["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+            series = series[is_female]
+            denom = int(is_female.sum())
+
         # Considere NaN e strings vazias como incompletos
         valid = series.notna() & (series.astype(str).str.strip() != "")
         if ignore_vals:
             # Converte ignore_vals para string para comparação segura se necessário,
             # mas o SIVEP usa códigos numéricos em campos int
-            valid = valid & ~series.isin(ignore_vals)
-        return round((valid.sum() / total) * 100, 1)
+            ignores = ignore_vals + [str(v) for v in ignore_vals]
+            valid = valid & ~series.isin(ignores)
+        return round((valid.sum() / denom) * 100, 1) if denom > 0 else 100.0
 
     # Definição dos blocos de auditoria focados em qualidade do registro
     audit_blocks = {
@@ -124,7 +136,6 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Ocupação", calc_rate("PAC_DSCBO", [9, "9"])),
             ("Zona", calc_rate("CS_ZONA", [9])),
             ("Bairro", calc_rate("NM_BAIRRO")),
-            ("CEP", calc_rate("NU_CEP")),
             ("Município de Residência", calc_rate("ID_MN_RESI")),
         ],
         "Linha do Cuidado": [
@@ -169,4 +180,434 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             }
         )
 
+    return results
+
+
+def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Calculate epidemiological week trends of completeness for 8 sentinel fields."""
+    if df.empty:
+        return []
+
+    out = df.copy()
+
+    # Derived epi week fields
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out = out[out["epi_week"] != "N/A"]
+
+    if out.empty:
+        return []
+
+    sentinel_rules = [
+        ("CLASSI_FIN", [9]),
+        ("EVOLUCAO", [9]),
+        ("AMOSTRA", [9]),
+        ("PCR_RESUL", [9, 4, 5]),
+        ("VACINA_COV", [9]),
+        ("CS_RACA", [9]),
+        ("UTI", [9]),
+        ("DT_COLETA", []),
+    ]
+
+    # Pre-calculate boolean validity for each sentinel column
+    valid_cols = []
+    for col, ignore_vals in sentinel_rules:
+        valid_col = f"valid_{col}"
+        valid_cols.append(valid_col)
+        if col in out.columns:
+            series = out[col]
+            is_valid = series.notna() & (series.astype(str).str.strip() != "")
+            if ignore_vals:
+                ignores = ignore_vals + [str(v) for v in ignore_vals]
+                is_valid = is_valid & ~series.isin(ignores)
+            out[valid_col] = is_valid
+        else:
+            out[valid_col] = False
+
+    # Row-wise completeness score (%)
+    out["row_score"] = out[valid_cols].mean(axis=1) * 100
+
+    # Group by epidemiological week
+    trend = (
+        out.groupby("epi_week")
+        .agg(score=("row_score", "mean"), total=("row_score", "size"))
+        .reset_index()
+    )
+
+    trend["score"] = trend["score"].round(1)
+    return [
+        {
+            "epi_week": str(r.get("epi_week", "")),
+            "score": float(r.get("score", 0.0)),
+            "total": int(r.get("total", 0)),
+        }
+        for r in trend.sort_values("epi_week").to_dict(orient="records")
+    ]
+
+
+def _geolocate_quality_units(
+    unit_grouped: pd.DataFrame, df: pd.DataFrame
+) -> tuple[list[str], list[str]]:
+    """Resolve notifying unit locations (municipio and uf) from CNES lookup or notifications."""
+    from srag.data.analytics.territorial import _resolve_mun_uf
+    from srag.data.cnes_lookup import lookup_unit_record
+
+    unit_to_mun = {}
+    if "ID_UNIDADE" in df.columns and "ID_MUNICIP" in df.columns:
+        has_uid = df["ID_UNIDADE"].notna()
+        is_not_empty = df["ID_UNIDADE"].astype(str).str.strip() != ""
+        valid_df = df[has_uid & is_not_empty]
+        if not valid_df.empty:
+            freq = valid_df.groupby(["ID_UNIDADE", "ID_MUNICIP"]).size().reset_index(name="sz")
+            idx = freq.groupby("ID_UNIDADE")["sz"].idxmax()
+            unit_to_mun = dict(
+                zip(freq.loc[idx, "ID_UNIDADE"], freq.loc[idx, "ID_MUNICIP"], strict=False)
+            )
+
+    muns = []
+    ufs = []
+    for uid in unit_grouped["id_unidade"]:
+        unit_id = str(uid)
+        rec = lookup_unit_record(unit_id)
+        if rec and isinstance(rec, dict) and rec.get("codigo_municipio"):
+            mun, uf = _resolve_mun_uf(rec["codigo_municipio"])
+        else:
+            fallback_code = unit_to_mun.get(unit_id)
+            mun, uf = _resolve_mun_uf(fallback_code)
+        muns.append(mun)
+        ufs.append(uf)
+
+    return muns, ufs
+
+
+def compute_quality_by_unit(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Group by notifying unit (CNES).
+
+    Computes global quality score and most neglected field.
+    """
+    if df.empty:
+        return []
+
+    out = df.copy()
+    out["ID_UNIDADE"] = out["ID_UNIDADE"].fillna("Nao informado").astype(str).str.strip()
+
+    fields_to_audit = [
+        # Label, Column, Ignore values
+        ("Data da Notificação", "DT_NOTIFIC", []),
+        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+        ("Sexo", "CS_SEXO", ["I"]),
+        ("Idade Normalizada", "NU_IDADE_N", []),
+        ("Tipo de Idade", "TP_IDADE", []),
+        ("Município de Notificação", "ID_MUNICIP", []),
+        ("Unidade Notificadora", "ID_UNIDADE", []),
+        ("Raça/Cor", "CS_RACA", [9]),
+        ("Escolaridade", "CS_ESCOL_N", [9]),
+        ("Ocupação", "PAC_DSCBO", [9, "9"]),
+        ("Zona", "CS_ZONA", [9]),
+        ("Bairro", "NM_BAIRRO", []),
+        ("Município de Residência", "ID_MN_RESI", []),
+        ("Internação Hospitalar", "HOSPITAL", [9]),
+        ("Data de Internação", "DT_INTERNA", []),
+        ("UTI", "UTI", [9]),
+        ("Entrada em UTI", "DT_ENTUTI", []),
+        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+        ("Evolução", "EVOLUCAO", [9]),
+        ("Data de Evolução", "DT_EVOLUCA", []),
+        ("Classificação Final", "CLASSI_FIN", [9]),
+        ("Critério de Confirmação", "CRITERIO", [9]),
+        ("Amostra Coletada", "AMOSTRA", [9]),
+        ("Data de Coleta", "DT_COLETA", []),
+        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+        ("Resultado Antígeno", "RES_AN", [9]),
+        ("Data do PCR", "DT_PCR", []),
+        ("Laboratório", "LAB_AN", []),
+        ("Vacina COVID-19", "VACINA_COV", [9]),
+        ("Dose 1 COVID", "DOSE_1_COV", [9]),
+        ("Dose 2 COVID", "DOSE_2_COV", [9]),
+        ("Reforço COVID", "DOSE_REF", [9]),
+        ("Vacina Influenza", "VACINA", [9]),
+        ("Data da Última Dose", "DT_UT_DOSE", []),
+        ("Gestante", "CS_GESTANT", [9]),
+        ("Puérpera", "PUERPERA", [9]),
+    ]
+
+    blocks = {
+        "Identificação": [
+            "DT_NOTIFIC",
+            "DT_SIN_PRI",
+            "CS_SEXO",
+            "NU_IDADE_N",
+            "TP_IDADE",
+            "ID_MUNICIP",
+            "ID_UNIDADE",
+        ],
+        "Demografia": [
+            "CS_RACA",
+            "CS_ESCOL_N",
+            "PAC_DSCBO",
+            "CS_ZONA",
+            "NM_BAIRRO",
+            "ID_MN_RESI",
+        ],
+        "Cuidado": [
+            "HOSPITAL",
+            "DT_INTERNA",
+            "UTI",
+            "DT_ENTUTI",
+            "SUPORT_VEN",
+            "EVOLUCAO",
+            "DT_EVOLUCA",
+            "CLASSI_FIN",
+            "CRITERIO",
+        ],
+        "Diagnóstico": [
+            "AMOSTRA",
+            "DT_COLETA",
+            "TP_AMOSTRA",
+            "PCR_RESUL",
+            "RES_AN",
+            "DT_PCR",
+            "LAB_AN",
+        ],
+        "Vacinação": [
+            "VACINA_COV",
+            "DOSE_1_COV",
+            "DOSE_2_COV",
+            "DOSE_REF",
+            "VACINA",
+            "DT_UT_DOSE",
+            "CS_GESTANT",
+            "PUERPERA",
+        ],
+    }
+
+    # Pre-calculate boolean validity for each field
+    for _, col, ignore_vals in fields_to_audit:
+        valid_col = f"valid_{col}"
+        if col in out.columns:
+            series = out[col]
+            is_valid = series.notna() & (series.astype(str).str.strip() != "")
+            if ignore_vals:
+                ignores = ignore_vals + [str(v) for v in ignore_vals]
+                is_valid = is_valid & ~series.isin(ignores)
+
+            # Gestante e Puérpera: apenas para mulheres
+            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
+                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+                is_valid = is_valid | ~is_female
+
+            out[valid_col] = is_valid
+        else:
+            out[valid_col] = False
+
+    # Block scores per row
+    block_cols = []
+    for block_name, cols in blocks.items():
+        block_col = f"block_score_{block_name}"
+        block_cols.append(block_col)
+        valid_cols = [f"valid_{col}" for col in cols]
+        out[block_col] = out[valid_cols].mean(axis=1) * 100
+
+    # Row global score: mean of block scores
+    out["row_score"] = out[block_cols].mean(axis=1)
+
+    # Group by unit
+    valid_cols = [f"valid_{col}" for _, col, _ in fields_to_audit]
+    agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
+    agg_dict["row_score"] = "mean"
+
+    unit_grouped = out.groupby("ID_UNIDADE").agg(agg_dict).reset_index()
+    unit_grouped = unit_grouped.rename(columns={"ID_UNIDADE": "id_unidade", "row_score": "score"})
+
+    # Let's count occurrences per unit
+    unit_counts = out["ID_UNIDADE"].value_counts().reset_index(name="total")
+    unit_grouped = unit_grouped.merge(
+        unit_counts, left_on="id_unidade", right_on="ID_UNIDADE"
+    ).drop(columns=["ID_UNIDADE"])
+
+    # Compute worst field and worst rate for each unit
+    field_labels = {f"valid_{col}": label for label, col, _ in fields_to_audit}
+    val_df = unit_grouped[valid_cols] * 100
+
+    worst_col = val_df.idxmin(axis=1)
+    worst_rate = val_df.min(axis=1)
+
+    unit_grouped["worst_field"] = worst_col.map(field_labels)
+    unit_grouped["worst_rate"] = worst_rate.round(1)
+    unit_grouped["score"] = unit_grouped["score"].round(1)
+    unit_grouped["nome_fantasia"] = unit_grouped["id_unidade"].apply(lookup_unit_name)
+
+    # Resolve unit locations (municipio and uf)
+    muns, ufs = _geolocate_quality_units(unit_grouped, df)
+    unit_grouped["municipio"] = muns
+    unit_grouped["uf"] = ufs
+
+    result_cols = [
+        "id_unidade",
+        "nome_fantasia",
+        "score",
+        "total",
+        "worst_field",
+        "worst_rate",
+        "municipio",
+        "uf",
+    ]
+    unit_grouped = unit_grouped.sort_values("score", ascending=True)
+    return [
+        {
+            "id_unidade": str(r.get("id_unidade", "")),
+            "nome_fantasia": str(r.get("nome_fantasia", "")),
+            "score": float(r.get("score", 0.0)),
+            "total": int(r.get("total", 0)),
+            "worst_field": str(r.get("worst_field", "")),
+            "worst_rate": float(r.get("worst_rate", 0.0)),
+            "municipio": str(r.get("municipio", "")),
+            "uf": str(r.get("uf", "")),
+        }
+        for r in unit_grouped[result_cols].to_dict(orient="records")
+    ]
+
+
+def _is_eq(df: pd.DataFrame, col: str, val: object) -> pd.Series:
+    if col not in df.columns:
+        return pd.Series(False, index=df.index)
+    series = df[col]
+    return (series == val) | (series == str(val)) | (pd.to_numeric(series, errors="coerce") == val)
+
+
+def _is_null_or_empty(df: pd.DataFrame, col: str) -> pd.Series:
+    if col not in df.columns:
+        return pd.Series(True, index=df.index)
+    series = df[col]
+    return series.isna() | (series.astype(str).str.strip() == "") | series.isin([9, "9"])
+
+
+def _is_date_empty(df: pd.DataFrame, col: str) -> pd.Series:
+    if col not in df.columns:
+        return pd.Series(True, index=df.index)
+    return df[col].isna() | (df[col].astype(str).str.strip() == "")
+
+
+def _is_evolution_before_symptoms(df: pd.DataFrame) -> pd.Series:
+    if "DT_EVOLUCA" not in df.columns or "DT_SIN_PRI" not in df.columns:
+        return pd.Series(False, index=df.index)
+    dt_evol = pd.to_datetime(df["DT_EVOLUCA"], errors="coerce")
+    dt_sint = pd.to_datetime(df["DT_SIN_PRI"], errors="coerce")
+    return dt_evol.notna() & dt_sint.notna() & (dt_evol < dt_sint)
+
+
+def compute_logical_inconsistencies(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Verify data logical inconsistencies cross-referencing multiple SIVEP fields."""
+    if df.empty:
+        return []
+
+    total = len(df)
+    results = []
+
+    # R1: Óbito sem data
+    r1_mask = _is_eq(df, "EVOLUCAO", 2) & _is_date_empty(df, "DT_EVOLUCA")
+
+    # R2: Internação sem data
+    r2_mask = _is_eq(df, "HOSPITAL", 1) & _is_date_empty(df, "DT_INTERNA")
+
+    # R3: UTI sem entrada
+    r3_mask = _is_eq(df, "UTI", 1) & _is_date_empty(df, "DT_ENTUTI")
+
+    # R4: PCR detectável sem agente
+    r4_mask = _is_eq(df, "PCR_RESUL", 1) & (
+        _is_null_or_empty(df, "CLASSI_FIN") | _is_eq(df, "CLASSI_FIN", 4)
+    )
+
+    # R5: Antiviral sem data
+    dt_antivir_col = (
+        "DT_ANTIVIR"
+        if "DT_ANTIVIR" in df.columns
+        else ("DT_ANTIVIRAL" if "DT_ANTIVIRAL" in df.columns else "DT_ANTIVIR")
+    )
+    r5_mask = _is_eq(df, "ANTIVIRAL", 1) & _is_date_empty(df, dt_antivir_col)
+
+    # R6: Coleta sem resultado
+    r6_mask = (
+        _is_eq(df, "AMOSTRA", 1)
+        & _is_null_or_empty(df, "PCR_RESUL")
+        & _is_null_or_empty(df, "RES_AN")
+    )
+
+    # R7: Classificação sem critério
+    r7_mask = (
+        ~_is_null_or_empty(df, "CLASSI_FIN")
+        & ~_is_eq(df, "CLASSI_FIN", 4)
+        & _is_null_or_empty(df, "CRITERIO")
+    )
+
+    # R8: Evolução incoerente com datas
+    r8_mask = _is_evolution_before_symptoms(df)
+
+    rules = [
+        (
+            "R1",
+            "Óbito por SRAG sem data de evolução/óbito preenchida",
+            r1_mask,
+            "critical",
+        ),
+        (
+            "R2",
+            "Internação hospitalar marcada como Sim sem data de internação",
+            r2_mask,
+            "warning",
+        ),
+        (
+            "R3",
+            "Admissão em UTI marcada como Sim sem data de entrada em UTI",
+            r3_mask,
+            "warning",
+        ),
+        (
+            "R4",
+            "Resultado de PCR detectável mas classificação final ausente ou não especificada",
+            r4_mask,
+            "critical",
+        ),
+        (
+            "R5",
+            "Uso de antiviral marcado como Sim sem data de início do tratamento",
+            r5_mask,
+            "info",
+        ),
+        (
+            "R6",
+            "Amostra coletada mas sem resultado de PCR ou Teste Antigênico",
+            r6_mask,
+            "warning",
+        ),
+        (
+            "R7",
+            "Caso classificado sem indicação do critério de encerramento",
+            r7_mask,
+            "info",
+        ),
+        (
+            "R8",
+            "Data de evolução/óbito anterior à data de primeiros sintomas",
+            r8_mask,
+            "critical",
+        ),
+    ]
+
+    for rule_code, desc, mask, severity in rules:
+        count = int(mask.sum())
+        pct = round((count / total) * 100, 1) if total > 0 else 0.0
+        results.append(
+            {
+                "rule": rule_code,
+                "description": desc,
+                "count": count,
+                "pct": pct,
+                "severity": severity,
+            }
+        )
+
+    severity_order = {"critical": 0, "warning": 1, "info": 2}
+    results.sort(key=lambda x: (severity_order[x["severity"]], -x["count"]))
     return results

@@ -16,9 +16,7 @@ const MaternalOutcomeChart: React.FC<MaternalOutcomeChartProps> = ({ data }) => 
   const cureData = data.map((d) => (d.cure / d.total) * 100);
   const icuData = data.map((d) => (d.icu / d.total) * 100);
   const deathData = data.map((d) => (d.death / d.total) * 100);
-  const otherData = data.map(
-    (d) => ((d.total - d.cure - d.icu - d.death) / d.total) * 100,
-  );
+  const otherData = data.map((d) => ((d.total - d.cure - d.icu - d.death) / d.total) * 100);
 
   const { canvasRef } = useChartJs(
     () => ({

@@ -194,17 +194,26 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span>Mossoró</span>
               <small>Surveillance</small>
             </div>
+            <button
+              type="button"
+              className={`sidebar-collapse-toggle${collapsed ? ' toggle-overlay' : ''}`}
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? 'Expandir sidebar' : 'Encolher sidebar'}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {collapsed ? <path d="m9 18 6-6-6-6" /> : <path d="m15 18-6-6 6-6" />}
+              </svg>
+            </button>
           </div>
-          <button
-            type="button"
-            className="sidebar-collapse-toggle"
-            onClick={onToggleCollapsed}
-            aria-label={collapsed ? 'Expandir sidebar' : 'Encolher sidebar'}
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {collapsed ? <path d="m9 18 6-6-6-6" /> : <path d="m15 18-6-6 6-6" />}
-            </svg>
-          </button>
         </div>
 
         <nav className="sidebar-nav">

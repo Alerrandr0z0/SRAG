@@ -165,17 +165,17 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 colorForCount: baseFill,
               });
             },
-          onEachFeature: (feature, layer) => {
-            const feat = feature as { properties?: { bairro?: string; count?: number } };
-            if (feat.properties?.bairro) {
-              const c = feat.properties.count || 0;
-              layer.bindTooltip(
-                `<strong>${feat.properties.bairro}</strong><br/>${c} ${c === 1 ? 'caso' : 'casos'}`,
-                { sticky: true },
-              );
-            }
-          },
-        }).addTo(urbanLayer);
+            onEachFeature: (feature, layer) => {
+              const feat = feature as { properties?: { bairro?: string; count?: number } };
+              if (feat.properties?.bairro) {
+                const c = feat.properties.count || 0;
+                layer.bindTooltip(
+                  `<strong>${feat.properties.bairro}</strong><br/>${c} ${c === 1 ? 'caso' : 'casos'}`,
+                  { sticky: true },
+                );
+              }
+            },
+          }).addTo(urbanLayer);
         }
 
         const urbPts = ruralData?.urban_points?.filter(
@@ -313,7 +313,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             minWidth: 180,
           }}
         >
-            <p
+          <p
             style={{
               margin: '0 0 6px 0',
               fontSize: '10px',
@@ -324,25 +324,25 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             }}
           >
             Casos por Bairro
-            </p>
-            <div style={{ position: 'relative' }}>
-              <div
-                ref={barRef}
-                onMouseMove={(e) => {
-                  if (!barRef.current) return;
-                  const rect = barRef.current.getBoundingClientRect();
-                  const pct = (e.clientX - rect.left) / rect.width;
-                  setHoveringBar(true);
-                  setHoverValue(Math.round(Math.min(Math.max(pct, 0), 1) * maxVal));
-                }}
-                onMouseLeave={() => {
-                  setHoveringBar(false);
-                  setHoverValue(null);
-                }}
-                style={{
-                  width: '100%',
-                  height: 12,
-                  borderRadius: 4,
+          </p>
+          <div style={{ position: 'relative' }}>
+            <div
+              ref={barRef}
+              onMouseMove={(e) => {
+                if (!barRef.current) return;
+                const rect = barRef.current.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                setHoveringBar(true);
+                setHoverValue(Math.round(Math.min(Math.max(pct, 0), 1) * maxVal));
+              }}
+              onMouseLeave={() => {
+                setHoveringBar(false);
+                setHoverValue(null);
+              }}
+              style={{
+                width: '100%',
+                height: 12,
+                borderRadius: 4,
                 cursor: 'crosshair',
                 background:
                   'linear-gradient(to right, #fff7ec, #fee8c8, #fdd49e, #fdbb84, #fc8d59, #ef6548, #d7301f, #990000)',
@@ -368,50 +368,50 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
                 {hoverValue.toLocaleString('pt-BR')}
               </div>
             )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-              <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
-                {formatRangeValue(rangeMin)}
-              </span>
-              <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
-                {formatRangeValue(rangeMax)}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
-                Mín: {formatRangeValue(rangeMin)}
-              </span>
-              <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
-                Máx: {formatRangeValue(rangeMax)}
-              </span>
-            </div>
-            <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                type="range"
-                min={0}
-                max={maxVal}
-                step={1}
-                value={rangeMin}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setRangeMin(Math.min(v, rangeMax));
-                }}
-                style={{ flex: 1, height: 4, accentColor: '#f97316' }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={maxVal}
-                step={1}
-                value={rangeMax}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setRangeMax(Math.max(v, rangeMin));
-                }}
-                style={{ flex: 1, height: 4, accentColor: '#dc2626' }}
-              />
-            </div>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
+              {formatRangeValue(rangeMin)}
+            </span>
+            <span style={{ fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b' }}>
+              {formatRangeValue(rangeMax)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+            <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
+              Mín: {formatRangeValue(rangeMin)}
+            </span>
+            <span style={{ fontSize: 10, color: theme === 'dark' ? '#cbd5e1' : '#334155' }}>
+              Máx: {formatRangeValue(rangeMax)}
+            </span>
+          </div>
+          <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="range"
+              min={0}
+              max={maxVal}
+              step={1}
+              value={rangeMin}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setRangeMin(Math.min(v, rangeMax));
+              }}
+              style={{ flex: 1, height: 4, accentColor: '#f97316' }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={maxVal}
+              step={1}
+              value={rangeMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setRangeMax(Math.max(v, rangeMin));
+              }}
+              style={{ flex: 1, height: 4, accentColor: '#dc2626' }}
+            />
+          </div>
+        </div>
       )}
 
       {mapZoneMode === 'Rural' && (

@@ -35,7 +35,13 @@ interface GlobalFilterBarProps {
 
   unitFilter: string[];
   setUnitFilter: (u: string[]) => void;
-  unitsList: Array<{ id_unidade: string; nome_fantasia: string; count: number }>;
+  unitsList: Array<{
+    id_unidade: string;
+    nome_fantasia: string;
+    count: number;
+    municipio?: string;
+    uf?: string;
+  }>;
 
   agentFilter: string[];
   setAgentFilter: (a: string[]) => void;
@@ -121,7 +127,6 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const [showBairroDropdown, setShowBairroDropdown] = useState(false);
   const [unitSearch, setUnitSearch] = useState('');
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
-
   const isFemaleSelected = genderFilter.includes('F');
 
   const filteredOccupations = useMemo(() => {
@@ -148,17 +153,20 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
 
   const filteredUnits = useMemo(() => {
     const search = unitSearch.toLowerCase();
-    const filtered = unitsList.filter(
-      (u) =>
+    const filtered = unitsList.filter((u) => {
+      return (
         u.id_unidade.toLowerCase().includes(search) ||
-        u.nome_fantasia.toLowerCase().includes(search),
-    );
+        u.nome_fantasia.toLowerCase().includes(search) ||
+        u.municipio?.toLowerCase().includes(search) ||
+        u.uf?.toLowerCase().includes(search)
+      );
+    });
 
     const selectedNames = unitFilter;
     const selectedObjs = unitsList.filter((u) => selectedNames.includes(u.id_unidade));
     const unselectedObjs = filtered.filter((u) => !selectedNames.includes(u.id_unidade));
 
-    return [...selectedObjs, ...unselectedObjs].slice(0, 25);
+    return [...selectedObjs, ...unselectedObjs].slice(0, 30);
   }, [unitsList, unitSearch, unitFilter]);
 
   const totalActive = activeFilters.length;
@@ -377,15 +385,39 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 </button>
               )}
               {showUnitDropdown && (
-                <div className="gfb-dropdown">
+                <div className="gfb-dropdown" style={{ width: '320px' }}>
                   <div className="gfb-dropdown-list">
                     {filteredUnits.map((u) => (
                       <button
                         key={u.id_unidade}
                         className={`gfb-dropdown-item ${unitFilter.includes(u.id_unidade) ? 'active' : ''}`}
                         onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          width: '100%',
+                          padding: '8px 12px',
+                        }}
                       >
-                        {u.nome_fantasia} <small style={{ opacity: 0.6 }}>({u.count})</small>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                            {u.nome_fantasia}
+                          </span>
+                          {u.municipio && u.uf && (
+                            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                              {u.municipio} - {u.uf} (CNES: {u.id_unidade})
+                            </span>
+                          )}
+                        </div>
+                        <small style={{ opacity: 0.6, marginLeft: '8px' }}>({u.count})</small>
                       </button>
                     ))}
                     {filteredUnits.length === 0 && (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
 // Charts
+import EpidemicCurveChart from './components/charts/EpidemicCurveChart';
 import TrendChart from './components/charts/TrendChart';
 import VirusProfileChart from './components/charts/VirusProfileChart';
 import AuditPanel from './components/panels/AuditPanel';
@@ -48,6 +49,11 @@ function App() {
   const [weeksWindow, setWeeksWindow] = useState('0');
   const [lookback] = useState('0');
   const [seriesMode, setSeriesMode] = useState('weekly');
+  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados'>('notificados');
+  const [curveMode, setCurveMode] = useState<'composicao' | 'positividade' | 'acumulado'>(
+    'positividade',
+  );
+  const [curveWeeks, setCurveWeeks] = useState('0');
   const [virusDetail, setVirusDetail] = useState('summary');
   const [dashboardYear, setDashboardYear] = useState<number[]>([]);
   // Citizen State
@@ -106,7 +112,20 @@ function App() {
     return () => {
       active = false;
     };
-  }, [panel, virusDetail, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
+  }, [
+    panel,
+    virusDetail,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+  ]);
 
   useEffect(() => {
     if (panel !== 'vigilancia') return;
@@ -133,7 +152,21 @@ function App() {
     return () => {
       active = false;
     };
-  }, [panel, weeksWindow, lookback, citizenTab, raceFilter, genderFilter, zoneFilter, bairroFilter, unitFilter, dashboardYear, agentFilter, maternalFilter, occupationFilter]);
+  }, [
+    panel,
+    weeksWindow,
+    lookback,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+  ]);
 
   // Lazy Loaded Data Hooks
   const territoryData = useTerritoryData(
@@ -210,6 +243,8 @@ function App() {
       id_unidade: item.id_unidade,
       nome_fantasia: item.nome_fantasia || item.id_unidade,
       count: item.count,
+      municipio: item.municipio,
+      uf: item.uf,
     }));
   }, [unitsData.units]);
 
@@ -390,7 +425,6 @@ function App() {
               <KpiCard label="Total UTI" value={kpis.uti} />
               <KpiCard label="Letalidade" value={kpis.death} />
             </section>
-
           </>
         )}
 
@@ -452,41 +486,108 @@ function App() {
                 <article className="panel">
                   <div className="section-header">
                     <div className="stack vigilance-history-summary" style={{ gap: 4 }}>
-                      <h3 style={{ margin: 0 }}>Histórico de Notificações</h3>
-                      {currentTrends && (
+                      <h3 style={{ margin: 0 }}>Histórico de casos</h3>
+                      {casosMode === 'notificados' && currentTrends && (
                         <div className="vigilance-history-stats">
                           <span>
                             Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
                           </span>
                         </div>
                       )}
+                      {casosMode === 'confirmados' && data?.laboratoryNetwork?.virus_trends && (
+                        <div className="vigilance-history-stats">
+                          <span>
+                            Total Positivos:{' '}
+                            <b>
+                              {data.laboratoryNetwork.virus_trends.reduce(
+                                (s: number, h: { epi_week: string; virus: string; count: number }) =>
+                                  s + h.count,
+                                0,
+                              )}
+                            </b>
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="filters vigilance-history-controls">
                       <div className="pill-group">
-                        {[
-                          { v: '0', l: 'Tudo' },
-                          { v: '52', l: '52s' },
-                          { v: '26', l: '26s' },
-                          { v: '12', l: '12s' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.v}
-                            className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
-                            onClick={() => setWeeksWindow(opt.v)}
-                          >
-                            {opt.l}
-                          </button>
-                        ))}
+                        <button
+                          type="button"
+                          className={`pill-btn ${casosMode === 'notificados' ? 'active' : ''}`}
+                          onClick={() => setCasosMode('notificados')}
+                        >
+                          Notificados
+                        </button>
+                        <button
+                          type="button"
+                          className={`pill-btn ${casosMode === 'confirmados' ? 'active' : ''}`}
+                          onClick={() => setCasosMode('confirmados')}
+                        >
+                          Confirmados
+                        </button>
                       </div>
-                      <select value={seriesMode} onChange={(e) => setSeriesMode(e.target.value)}>
-                        <option value="weekly">Semanal</option>
-                        <option value="cumulative">Acumulada</option>
-                        <option value="composition">Composição</option>
-                      </select>
+                      {casosMode === 'notificados' && (
+                        <>
+                          <div className="pill-group">
+                            {[
+                              { v: '0', l: 'Tudo' },
+                              { v: '52', l: '52s' },
+                              { v: '26', l: '26s' },
+                              { v: '12', l: '12s' },
+                            ].map((opt) => (
+                              <button
+                                key={opt.v}
+                                className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
+                                onClick={() => setWeeksWindow(opt.v)}
+                              >
+                                {opt.l}
+                              </button>
+                            ))}
+                          </div>
+                          <select
+                            value={seriesMode}
+                            onChange={(e) => setSeriesMode(e.target.value)}
+                          >
+                            <option value="weekly">Semanal</option>
+                            <option value="cumulative">Acumulada</option>
+                            <option value="composition">Composição</option>
+                          </select>
+                        </>
+                      )}
+                      {casosMode === 'confirmados' && (
+                        <>
+                          <div className="pill-group">
+                            {[
+                              { v: '0', l: 'Tudo' },
+                              { v: '52', l: '52s' },
+                              { v: '26', l: '26s' },
+                              { v: '12', l: '12s' },
+                            ].map((opt) => (
+                              <button
+                                key={opt.v}
+                                className={`pill-btn ${curveWeeks === opt.v ? 'active' : ''}`}
+                                onClick={() => setCurveWeeks(opt.v)}
+                              >
+                                {opt.l}
+                              </button>
+                            ))}
+                          </div>
+                          <select
+                            value={curveMode}
+                            onChange={(e) =>
+                              setCurveMode(e.target.value as 'composicao' | 'positividade' | 'acumulado')
+                            }
+                          >
+                            <option value="composicao">Composição</option>
+                            <option value="acumulado">Acumulado</option>
+                            <option value="positividade">Taxa de Positividade</option>
+                          </select>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="chart-wrap chart-wrap--tall">
-                    {currentTrends && (
+                    {casosMode === 'notificados' && currentTrends && (
                       <TrendChart
                         history={currentTrends.history}
                         forecast={currentTrends.forecast}
@@ -496,6 +597,14 @@ function App() {
                         seriesMode={seriesMode}
                         weeksWindow={weeksWindow}
                         showForecast={false}
+                      />
+                    )}
+                    {casosMode === 'confirmados' && data?.laboratoryNetwork && (
+                      <EpidemicCurveChart
+                        virusTrends={data.laboratoryNetwork.virus_trends || []}
+                        positivityTrend={data.laboratoryNetwork.positivity_trend || []}
+                        forcedMode={curveMode as 'composicao' | 'positividade' | 'acumulado'}
+                        forcedWeeks={curveWeeks}
                       />
                     )}
                   </div>
@@ -510,7 +619,11 @@ function App() {
                       onChange={(e) => setVirusDetail(e.target.value)}
                       onFocus={() => {
                         if (agentFilter[0] && virusDetail === 'summary') {
-                          setVirusDetail(agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed');
+                          setVirusDetail(
+                            agentFilter[0] === 'Influenza'
+                              ? 'influenza_detailed'
+                              : 'covid_detailed',
+                          );
                         }
                       }}
                     >
@@ -524,9 +637,7 @@ function App() {
                       )}
                     </select>
                   </div>
-                  <div className="chart-wrap">
-                    {virus && <VirusProfileChart data={virus} />}
-                  </div>
+                  <div className="chart-wrap">{virus && <VirusProfileChart data={virus} />}</div>
                 </article>
               </section>
               <article className="panel">
@@ -540,7 +651,13 @@ function App() {
           )}
 
           {panel === 'auditoria' && (
-            <AuditPanel loading={auditData.loading} completeness={auditData.completeness} />
+            <AuditPanel
+              loading={auditData.loading}
+              completeness={auditData.completeness}
+              completenessTrend={auditData.completenessTrend}
+              qualityByUnit={auditData.qualityByUnit}
+              inconsistencies={auditData.inconsistencies}
+            />
           )}
 
           {panel === 'notebooks' && <NotebooksPanel />}
