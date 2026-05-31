@@ -14,10 +14,14 @@ export function useAuditData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  _months?: number[],
+  _days?: number[],
 ) {
   const [completeness, setCompleteness] = useState<Epi.DataCompletenessGroup[]>([]);
   const [completenessTrend, setCompletenessTrend] = useState<Epi.CompletenessTrendPoint[]>([]);
   const [qualityByUnit, setQualityByUnit] = useState<Epi.UnitQualityScore[]>([]);
+  const [qualityByBairro, setQualityByBairro] = useState<Epi.BairroQualityScore[]>([]);
+  const [qualityByLaboratory, setQualityByLaboratory] = useState<Epi.LaboratorioQualityScore[]>([]);
   const [inconsistencies, setInconsistencies] = useState<Epi.LogicalInconsistency[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +48,8 @@ export function useAuditData(
           setCompleteness(data.completeness || []);
           setCompletenessTrend(data.completeness_trend || []);
           setQualityByUnit(data.quality_by_unit || []);
+          setQualityByBairro(data.quality_by_bairro || []);
+          setQualityByLaboratory(data.quality_by_laboratory || []);
           setInconsistencies(data.inconsistencies || []);
         }
       } catch (error) {
@@ -74,6 +80,8 @@ export function useAuditData(
     completeness,
     completenessTrend,
     qualityByUnit,
+    qualityByBairro,
+    qualityByLaboratory,
     inconsistencies,
     loading,
   };

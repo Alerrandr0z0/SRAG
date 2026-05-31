@@ -184,13 +184,12 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
-    """Calculate epidemiological week trends of completeness for 8 sentinel fields."""
+    """Calculate epidemiological week trends of completeness per semantic block."""
     if df.empty:
         return []
 
     out = df.copy()
 
-    # Derived epi week fields
     out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
     out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
     out = out[out["epi_week"] != "N/A"]
@@ -198,50 +197,107 @@ def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
     if out.empty:
         return []
 
-    sentinel_rules = [
-        ("CLASSI_FIN", [9]),
-        ("EVOLUCAO", [9]),
-        ("AMOSTRA", [9]),
-        ("PCR_RESUL", [9, 4, 5]),
-        ("VACINA_COV", [9]),
-        ("CS_RACA", [9]),
-        ("UTI", [9]),
-        ("DT_COLETA", []),
-    ]
+    _blocks: dict[str, list[tuple[str, str, list[Any]]]] = {
+        "identificacao": [
+            ("Data da Notificação", "DT_NOTIFIC", []),
+            ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+            ("Sexo", "CS_SEXO", ["I"]),
+            ("Idade Normalizada", "NU_IDADE_N", []),
+            ("Tipo de Idade", "TP_IDADE", []),
+            ("Município de Notificação", "ID_MUNICIP", []),
+            ("Unidade Notificadora", "ID_UNIDADE", []),
+        ],
+        "demografia": [
+            ("Raça/Cor", "CS_RACA", [9]),
+            ("Escolaridade", "CS_ESCOL_N", [9]),
+            ("Ocupação", "PAC_DSCBO", [9, "9"]),
+            ("Zona", "CS_ZONA", [9]),
+            ("Bairro", "NM_BAIRRO", []),
+            ("Município de Residência", "ID_MN_RESI", []),
+        ],
+        "cuidado": [
+            ("Internação Hospitalar", "HOSPITAL", [9]),
+            ("Data de Internação", "DT_INTERNA", []),
+            ("UTI", "UTI", [9]),
+            ("Entrada em UTI", "DT_ENTUTI", []),
+            ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+            ("Evolução", "EVOLUCAO", [9]),
+            ("Data de Evolução", "DT_EVOLUCA", []),
+            ("Classificação Final", "CLASSI_FIN", [9]),
+            ("Critério de Confirmação", "CRITERIO", [9]),
+        ],
+        "diagnostico": [
+            ("Amostra Coletada", "AMOSTRA", [9]),
+            ("Data de Coleta", "DT_COLETA", []),
+            ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+            ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+            ("Resultado Antígeno", "RES_AN", [9]),
+            ("Data do PCR", "DT_PCR", []),
+            ("Laboratório", "LAB_AN", []),
+        ],
+        "vacinacao": [
+            ("Vacina COVID-19", "VACINA_COV", [9]),
+            ("Dose 1 COVID", "DOSE_1_COV", [9]),
+            ("Dose 2 COVID", "DOSE_2_COV", [9]),
+            ("Reforço COVID", "DOSE_REF", [9]),
+            ("Vacina Influenza", "VACINA", [9]),
+            ("Data da Última Dose", "DT_UT_DOSE", []),
+            ("Gestante", "CS_GESTANT", [9]),
+            ("Puérpera", "PUERPERA", [9]),
+        ],
+    }
 
-    # Pre-calculate boolean validity for each sentinel column
-    valid_cols = []
-    for col, ignore_vals in sentinel_rules:
+    _block_display = {
+        "identificacao": "Identificação do Caso",
+        "demografia": "Demografia e Residência",
+        "cuidado": "Linha do Cuidado",
+        "diagnostico": "Coleta e Diagnóstico",
+        "vacinacao": "Vacinação e Gestação",
+    }
+
+    all_fields: list[tuple[str, str, list[Any]]] = []
+    for fields in _blocks.values():
+        all_fields.extend(fields)
+
+    for _, col, ignore_vals in all_fields:
         valid_col = f"valid_{col}"
-        valid_cols.append(valid_col)
         if col in out.columns:
             series = out[col]
             is_valid = series.notna() & (series.astype(str).str.strip() != "")
             if ignore_vals:
                 ignores = ignore_vals + [str(v) for v in ignore_vals]
                 is_valid = is_valid & ~series.isin(ignores)
+            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
+                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+                is_valid = is_valid | ~is_female
             out[valid_col] = is_valid
         else:
             out[valid_col] = False
 
-    # Row-wise completeness score (%)
-    out["row_score"] = out[valid_cols].mean(axis=1) * 100
+    # Per-row block scores
+    for bkey, fields in _blocks.items():
+        vcols = [f"valid_{col}" for _, col, _ in fields]
+        out[f"bs_{bkey}"] = out[vcols].mean(axis=1) * 100
 
-    # Group by epidemiological week
-    trend = (
-        out.groupby("epi_week")
-        .agg(score=("row_score", "mean"), total=("row_score", "size"))
-        .reset_index()
+    all_vcols = [f"valid_{col}" for _, col, _ in all_fields]
+    out["row_score"] = out[all_vcols].mean(axis=1) * 100
+
+    # Group by epi week
+    bs_keys = [f"bs_{b}" for b in _blocks]
+    trend = out.groupby("epi_week")[[*bs_keys, "row_score"]].mean().reset_index()
+    trend["total"] = (
+        out["epi_week"].value_counts().reindex(trend["epi_week"]).fillna(0).astype(int).values
     )
+    trend = trend.sort_values("epi_week")
 
-    trend["score"] = trend["score"].round(1)
     return [
         {
             "epi_week": str(r.get("epi_week", "")),
-            "score": float(r.get("score", 0.0)),
+            "score": round(float(r.get("row_score", 0.0)), 1),
             "total": int(r.get("total", 0)),
+            "blocks": {_block_display[b]: round(float(r.get(f"bs_{b}", 0.0)), 1) for b in _blocks},
         }
-        for r in trend.sort_values("epi_week").to_dict(orient="records")
+        for r in trend.to_dict(orient="records")
     ]
 
 
@@ -611,3 +667,320 @@ def compute_logical_inconsistencies(df: pd.DataFrame) -> list[dict[str, Any]]:
     severity_order = {"critical": 0, "warning": 1, "info": 2}
     results.sort(key=lambda x: (severity_order[x["severity"]], -x["count"]))
     return results
+
+
+def compute_quality_by_bairro(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Group by BAIRRO_REF (neighborhood/community within Mossoró)."""
+    if df.empty or "BAIRRO_REF" not in df.columns:
+        return []
+
+    out = df.copy()
+    out["BAIRRO_REF"] = (
+        out["BAIRRO_REF"].fillna("NAO INFORMADO").astype(str).str.strip().str.upper()
+    )
+
+    fields_to_audit = [
+        ("Data da Notificação", "DT_NOTIFIC", []),
+        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+        ("Sexo", "CS_SEXO", ["I"]),
+        ("Idade Normalizada", "NU_IDADE_N", []),
+        ("Tipo de Idade", "TP_IDADE", []),
+        ("Município de Notificação", "ID_MUNICIP", []),
+        ("Raça/Cor", "CS_RACA", [9]),
+        ("Escolaridade", "CS_ESCOL_N", [9]),
+        ("Ocupação", "PAC_DSCBO", [9, "9"]),
+        ("Zona", "CS_ZONA", [9]),
+        ("Bairro", "NM_BAIRRO", []),
+        ("Município de Residência", "ID_MN_RESI", []),
+        ("Internação Hospitalar", "HOSPITAL", [9]),
+        ("Data de Internação", "DT_INTERNA", []),
+        ("UTI", "UTI", [9]),
+        ("Entrada em UTI", "DT_ENTUTI", []),
+        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+        ("Evolução", "EVOLUCAO", [9]),
+        ("Data de Evolução", "DT_EVOLUCA", []),
+        ("Classificação Final", "CLASSI_FIN", [9]),
+        ("Critério de Confirmação", "CRITERIO", [9]),
+        ("Amostra Coletada", "AMOSTRA", [9]),
+        ("Data de Coleta", "DT_COLETA", []),
+        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+        ("Resultado Antígeno", "RES_AN", [9]),
+        ("Data do PCR", "DT_PCR", []),
+        ("Laboratório", "LAB_AN", []),
+        ("Vacina COVID-19", "VACINA_COV", [9]),
+        ("Dose 1 COVID", "DOSE_1_COV", [9]),
+        ("Dose 2 COVID", "DOSE_2_COV", [9]),
+        ("Reforço COVID", "DOSE_REF", [9]),
+        ("Vacina Influenza", "VACINA", [9]),
+        ("Data da Última Dose", "DT_UT_DOSE", []),
+        ("Gestante", "CS_GESTANT", [9]),
+        ("Puérpera", "PUERPERA", [9]),
+    ]
+
+    blocks = {
+        "Identificação": [
+            "DT_NOTIFIC",
+            "DT_SIN_PRI",
+            "CS_SEXO",
+            "NU_IDADE_N",
+            "TP_IDADE",
+            "ID_MUNICIP",
+        ],
+        "Demografia": [
+            "CS_RACA",
+            "CS_ESCOL_N",
+            "PAC_DSCBO",
+            "CS_ZONA",
+            "NM_BAIRRO",
+            "ID_MN_RESI",
+        ],
+        "Cuidado": [
+            "HOSPITAL",
+            "DT_INTERNA",
+            "UTI",
+            "DT_ENTUTI",
+            "SUPORT_VEN",
+            "EVOLUCAO",
+            "DT_EVOLUCA",
+            "CLASSI_FIN",
+            "CRITERIO",
+        ],
+        "Diagnóstico": [
+            "AMOSTRA",
+            "DT_COLETA",
+            "TP_AMOSTRA",
+            "PCR_RESUL",
+            "RES_AN",
+            "DT_PCR",
+            "LAB_AN",
+        ],
+        "Vacinação": [
+            "VACINA_COV",
+            "DOSE_1_COV",
+            "DOSE_2_COV",
+            "DOSE_REF",
+            "VACINA",
+            "DT_UT_DOSE",
+            "CS_GESTANT",
+            "PUERPERA",
+        ],
+    }
+
+    for _, col, ignore_vals in fields_to_audit:
+        valid_col = f"valid_{col}"
+        if col in out.columns:
+            series = out[col]
+            is_valid = series.notna() & (series.astype(str).str.strip() != "")
+            if ignore_vals:
+                ignores = ignore_vals + [str(v) for v in ignore_vals]
+                is_valid = is_valid & ~series.isin(ignores)
+            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
+                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+                is_valid = is_valid | ~is_female
+            out[valid_col] = is_valid
+        else:
+            out[valid_col] = False
+
+    block_cols = []
+    for block_name, cols in blocks.items():
+        block_col = f"block_score_{block_name}"
+        block_cols.append(block_col)
+        valid_cols = [f"valid_{col}" for col in cols]
+        out[block_col] = out[valid_cols].mean(axis=1) * 100
+
+    out["row_score"] = out[block_cols].mean(axis=1)
+
+    valid_cols = [f"valid_{col}" for _, col, _ in fields_to_audit]
+    agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
+    agg_dict["row_score"] = "mean"
+
+    bairro_grouped = out.groupby("BAIRRO_REF").agg(agg_dict).reset_index()
+    bairro_grouped = bairro_grouped.rename(columns={"BAIRRO_REF": "bairro", "row_score": "score"})
+
+    bairro_counts = out["BAIRRO_REF"].value_counts().reset_index(name="total")
+    bairro_grouped = bairro_grouped.merge(
+        bairro_counts, left_on="bairro", right_on="BAIRRO_REF"
+    ).drop(columns=["BAIRRO_REF"])
+
+    field_labels = {f"valid_{col}": label for label, col, _ in fields_to_audit}
+    val_df = bairro_grouped[valid_cols] * 100
+    worst_col = val_df.idxmin(axis=1)
+    worst_rate = val_df.min(axis=1)
+
+    bairro_grouped["worst_field"] = worst_col.map(field_labels)
+    bairro_grouped["worst_rate"] = worst_rate.round(1)
+    bairro_grouped["score"] = bairro_grouped["score"].round(1)
+
+    bairro_grouped = bairro_grouped.sort_values("score", ascending=True)
+
+    result_cols = ["bairro", "score", "total", "worst_field", "worst_rate"]
+    return [
+        {
+            "bairro": str(r.get("bairro", "")),
+            "score": float(r.get("score", 0.0)),
+            "total": int(r.get("total", 0)),
+            "worst_field": str(r.get("worst_field", "")),
+            "worst_rate": float(r.get("worst_rate", 0.0)),
+        }
+        for r in bairro_grouped[result_cols].to_dict(orient="records")
+    ]
+
+
+def compute_quality_by_laboratory(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Group by LAB_AN (antigen test laboratory)."""
+    if df.empty or "LAB_AN" not in df.columns:
+        return []
+
+    out = df.copy()
+    out["LAB_AN"] = out["LAB_AN"].fillna("Sem laboratório").astype(str).str.strip().str.upper()
+
+    fields_to_audit = [
+        ("Data da Notificação", "DT_NOTIFIC", []),
+        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+        ("Sexo", "CS_SEXO", ["I"]),
+        ("Idade Normalizada", "NU_IDADE_N", []),
+        ("Tipo de Idade", "TP_IDADE", []),
+        ("Município de Notificação", "ID_MUNICIP", []),
+        ("Unidade Notificadora", "ID_UNIDADE", []),
+        ("Raça/Cor", "CS_RACA", [9]),
+        ("Escolaridade", "CS_ESCOL_N", [9]),
+        ("Ocupação", "PAC_DSCBO", [9, "9"]),
+        ("Zona", "CS_ZONA", [9]),
+        ("Bairro", "NM_BAIRRO", []),
+        ("Município de Residência", "ID_MN_RESI", []),
+        ("Internação Hospitalar", "HOSPITAL", [9]),
+        ("Data de Internação", "DT_INTERNA", []),
+        ("UTI", "UTI", [9]),
+        ("Entrada em UTI", "DT_ENTUTI", []),
+        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+        ("Evolução", "EVOLUCAO", [9]),
+        ("Data de Evolução", "DT_EVOLUCA", []),
+        ("Classificação Final", "CLASSI_FIN", [9]),
+        ("Critério de Confirmação", "CRITERIO", [9]),
+        ("Amostra Coletada", "AMOSTRA", [9]),
+        ("Data de Coleta", "DT_COLETA", []),
+        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+        ("Resultado Antígeno", "RES_AN", [9]),
+        ("Data do PCR", "DT_PCR", []),
+        ("Laboratório", "LAB_AN", []),
+        ("Vacina COVID-19", "VACINA_COV", [9]),
+        ("Dose 1 COVID", "DOSE_1_COV", [9]),
+        ("Dose 2 COVID", "DOSE_2_COV", [9]),
+        ("Reforço COVID", "DOSE_REF", [9]),
+        ("Vacina Influenza", "VACINA", [9]),
+        ("Data da Última Dose", "DT_UT_DOSE", []),
+        ("Gestante", "CS_GESTANT", [9]),
+        ("Puérpera", "PUERPERA", [9]),
+    ]
+
+    blocks = {
+        "Identificação": [
+            "DT_NOTIFIC",
+            "DT_SIN_PRI",
+            "CS_SEXO",
+            "NU_IDADE_N",
+            "TP_IDADE",
+            "ID_MUNICIP",
+            "ID_UNIDADE",
+        ],
+        "Demografia": [
+            "CS_RACA",
+            "CS_ESCOL_N",
+            "PAC_DSCBO",
+            "CS_ZONA",
+            "NM_BAIRRO",
+            "ID_MN_RESI",
+        ],
+        "Cuidado": [
+            "HOSPITAL",
+            "DT_INTERNA",
+            "UTI",
+            "DT_ENTUTI",
+            "SUPORT_VEN",
+            "EVOLUCAO",
+            "DT_EVOLUCA",
+            "CLASSI_FIN",
+            "CRITERIO",
+        ],
+        "Diagnóstico": [
+            "AMOSTRA",
+            "DT_COLETA",
+            "TP_AMOSTRA",
+            "PCR_RESUL",
+            "RES_AN",
+            "DT_PCR",
+            "LAB_AN",
+        ],
+        "Vacinação": [
+            "VACINA_COV",
+            "DOSE_1_COV",
+            "DOSE_2_COV",
+            "DOSE_REF",
+            "VACINA",
+            "DT_UT_DOSE",
+            "CS_GESTANT",
+            "PUERPERA",
+        ],
+    }
+
+    for _, col, ignore_vals in fields_to_audit:
+        valid_col = f"valid_{col}"
+        if col in out.columns:
+            series = out[col]
+            is_valid = series.notna() & (series.astype(str).str.strip() != "")
+            if ignore_vals:
+                ignores = ignore_vals + [str(v) for v in ignore_vals]
+                is_valid = is_valid & ~series.isin(ignores)
+            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
+                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+                is_valid = is_valid | ~is_female
+            out[valid_col] = is_valid
+        else:
+            out[valid_col] = False
+
+    block_cols = []
+    for block_name, cols in blocks.items():
+        block_col = f"block_score_{block_name}"
+        block_cols.append(block_col)
+        valid_cols = [f"valid_{col}" for col in cols]
+        out[block_col] = out[valid_cols].mean(axis=1) * 100
+
+    out["row_score"] = out[block_cols].mean(axis=1)
+
+    has_pcr = out.get("valid_PCR_RESUL", pd.Series(False, index=out.index))
+    has_an = out.get("valid_RES_AN", pd.Series(False, index=out.index))
+    out["has_resultado"] = has_pcr | has_an
+
+    valid_cols = [f"valid_{col}" for _, col, _ in fields_to_audit]
+    agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
+    agg_dict["row_score"] = "mean"
+    agg_dict["block_score_Diagnóstico"] = "mean"
+    agg_dict["has_resultado"] = "mean"
+
+    lab_grouped = out.groupby("LAB_AN").agg(agg_dict).reset_index()
+    lab_grouped = lab_grouped.rename(columns={"LAB_AN": "laboratorio", "row_score": "score"})
+
+    lab_counts = out["LAB_AN"].value_counts().reset_index(name="total")
+    lab_grouped = lab_grouped.merge(lab_counts, left_on="laboratorio", right_on="LAB_AN").drop(
+        columns=["LAB_AN"]
+    )
+
+    lab_grouped["score"] = lab_grouped["score"].round(1)
+    lab_grouped["diagnostico_score"] = lab_grouped["block_score_Diagnóstico"].round(1)
+    lab_grouped["resultado_pct"] = (lab_grouped["has_resultado"] * 100).round(1)
+
+    lab_grouped = lab_grouped.sort_values("score", ascending=True)
+
+    result_cols = ["laboratorio", "score", "total", "diagnostico_score", "resultado_pct"]
+    return [
+        {
+            "laboratorio": str(r.get("laboratorio", "")),
+            "score": float(r.get("score", 0.0)),
+            "total": int(r.get("total", 0)),
+            "diagnostico_score": float(r.get("diagnostico_score", 0.0)),
+            "resultado_pct": float(r.get("resultado_pct", 0.0)),
+        }
+        for r in lab_grouped[result_cols].to_dict(orient="records")
+    ]

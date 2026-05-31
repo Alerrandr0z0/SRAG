@@ -14,6 +14,8 @@ class CommonFilters(BaseModel):
     bairros: list[str] | None = None
     unidades: list[str] | None = None
     years: list[int] | None = None
+    months: list[int] | None = None
+    days: list[int] | None = None
     agents: list[str] | None = None
     maternal: list[str] | None = None
     occupations: list[str] | None = None
@@ -25,6 +27,22 @@ def _validate_years(years: list[int] | None) -> None:
     for y in years:
         if not (1900 <= y <= 2030):
             raise HTTPException(status_code=422, detail=f"Year {y} out of range [1900, 2030]")
+
+
+def _validate_months(months: list[int] | None) -> None:
+    if months is None:
+        return
+    for m in months:
+        if not (1 <= m <= 12):
+            raise HTTPException(status_code=422, detail=f"Month {m} out of range [1, 12]")
+
+
+def _validate_days(days: list[int] | None) -> None:
+    if days is None:
+        return
+    for d in days:
+        if not (1 <= d <= 31):
+            raise HTTPException(status_code=422, detail=f"Day {d} out of range [1, 31]")
 
 
 def _validate_string_lists(v: list[str] | None) -> None:
@@ -43,12 +61,16 @@ def get_common_filters(
     bairros: list[str] | None = Query(None),  # noqa: B008
     unidades: list[str] | None = Query(None),  # noqa: B008
     years: list[int] | None = Query(None),  # noqa: B008
+    months: list[int] | None = Query(None),  # noqa: B008
+    days: list[int] | None = Query(None),  # noqa: B008
     agents: list[str] | None = Query(None),  # noqa: B008
     maternal: list[str] | None = Query(None),  # noqa: B008
     occupations: list[str] | None = Query(None),  # noqa: B008
 ) -> CommonFilters:
     """Dependency provider for common filters across endpoints."""
     _validate_years(years)
+    _validate_months(months)
+    _validate_days(days)
     _validate_string_lists(profile)
     _validate_string_lists(race)
     _validate_string_lists(gender)
@@ -66,6 +88,8 @@ def get_common_filters(
         bairros=bairros,
         unidades=unidades,
         years=years,
+        months=months,
+        days=days,
         agents=agents,
         maternal=maternal,
         occupations=occupations,

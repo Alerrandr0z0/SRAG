@@ -42,8 +42,10 @@ def apply_surveillance_filters(
     df: pd.DataFrame,
     years: list[int] | None = None,
     agents: list[str] | None = None,
+    months: list[int] | None = None,
+    days: list[int] | None = None,
 ) -> pd.DataFrame:
-    """Apply year and etiologic-agent filters consistently across surveillance endpoints."""
+    """Apply temporal and etiologic-agent filters consistently across surveillance endpoints."""
     out = df
     if years and "DT_SIN_PRI" in out.columns:
         year_values = set(years)
@@ -52,6 +54,12 @@ def apply_surveillance_filters(
         sun = dt_s - pd.to_timedelta(idx, unit="D")
         se_years = (sun + pd.to_timedelta(3, unit="D")).dt.year
         out = out[se_years.isin(year_values)]
+    if months and "DT_SIN_PRI" in out.columns:
+        month_values = set(months)
+        out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.month.isin(month_values)]
+    if days and "DT_SIN_PRI" in out.columns:
+        day_values = set(days)
+        out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.day.isin(day_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
         out = out[infer_etiologic_agent(out).str.upper().isin(agent_norm)]
@@ -112,6 +120,7 @@ _KNOWN_COLUMNS = frozenset(
         "DT_RES_AN",
         "DT_COLETA",
         "CO_LAB_AN",
+        "LAB_AN",
         "ASMA",
         "DIABETES",
         "OBESIDADE",
@@ -238,6 +247,7 @@ def get_df() -> pd.DataFrame:
             "DT_RES_AN",
             "DT_COLETA",
             "CO_LAB_AN",
+            "LAB_AN",
             "ASMA",
             "DIABETES",
             "OBESIDADE",

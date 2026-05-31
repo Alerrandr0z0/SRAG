@@ -9,6 +9,7 @@ class SummaryResponse(TypedDict):
     uti_rate: float
     uti_total: int
     death_rate: float
+    death_count: int
     total: int
     notification_total: int
     available_years: list[int]
@@ -157,4 +158,6 @@ class AuditBootstrapResponse(TypedDict):
     completeness: list[dict[str, Any]]
     completeness_trend: list[dict[str, Any]]
     quality_by_unit: list[dict[str, Any]]
+    quality_by_bairro: list[dict[str, Any]]
+    quality_by_laboratory: list[dict[str, Any]]
     inconsistencies: list[dict[str, Any]]

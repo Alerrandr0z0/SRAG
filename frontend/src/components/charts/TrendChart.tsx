@@ -101,8 +101,11 @@ const TrendChart: React.FC<TrendChartProps> = ({
         yearGroups[yearGroups.length - 1].end = w;
       }
     }
-    const yearMarkAreaData = yearGroups.map((g, i) => [
-      { xAxis: g.start, itemStyle: { color: i % 2 === 0 ? 'rgba(15,118,110,0.18)' : 'transparent' } },
+    const yearMarkAreaData = yearGroups.map((g) => [
+      {
+        xAxis: g.start,
+        itemStyle: { color: g.year % 2 === 0 ? 'rgba(15,118,110,0.18)' : 'transparent' },
+      },
       { xAxis: g.end },
     ]);
     const yearMarkLineData = yearGroups.slice(1).map((g) => ({
@@ -122,7 +125,9 @@ const TrendChart: React.FC<TrendChartProps> = ({
     const yearMark = {
       markArea: { silent: true, data: yearMarkAreaData as any },
       markLine: {
-        silent: true, symbol: 'none', data: yearMarkLineData,
+        silent: true,
+        symbol: 'none',
+        data: yearMarkLineData,
       },
     };
 
@@ -185,7 +190,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       lineStyle: { width: 2 },
       markArea: yearMark.markArea,
       markLine: thresholdMarkLine
-        ? { silent: true, symbol: 'none', data: [...yearMarkLineData, ...thresholdMarkLine.data] }
+        ? { ...thresholdMarkLine, data: [...yearMarkLineData, ...thresholdMarkLine.data] }
         : yearMark.markLine,
     };
 
@@ -226,7 +231,12 @@ const TrendChart: React.FC<TrendChartProps> = ({
             boundaryGap: false,
             data: allWeeks,
             axisLine: { show: true, lineStyle: { color: axisColor } },
-            axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14, formatter: (v: string) => `S${v.split('-')[1]}` },
+            axisLabel: {
+              color: textColor,
+              rotate: weeksWindow === '0' ? 0 : 45,
+              margin: 14,
+              formatter: (v: string) => `S${v.split('-')[1]}`,
+            },
           },
         ],
         yAxis: [
@@ -263,7 +273,12 @@ const TrendChart: React.FC<TrendChartProps> = ({
             boundaryGap: false,
             data: allWeeks,
             axisLine: { show: true, lineStyle: { color: axisColor } },
-            axisLabel: { color: textColor, rotate: weeksWindow === '0' ? 0 : 45, margin: 14, formatter: (v: string) => `S${v.split('-')[1]}` },
+            axisLabel: {
+              color: textColor,
+              rotate: weeksWindow === '0' ? 0 : 45,
+              margin: 14,
+              formatter: (v: string) => `S${v.split('-')[1]}`,
+            },
           },
         ],
         yAxis: [
@@ -316,13 +331,21 @@ const TrendChart: React.FC<TrendChartProps> = ({
           data: allWeeks,
           axisPointer: { type: 'shadow' },
           axisLine: { show: true, lineStyle: { color: axisColor } },
-          axisLabel: { color: textColor, rotate: 35, margin: 14, fontSize: 10, formatter: (v: string) => `S${v.split('-')[1]}` },
+          axisLabel: {
+            color: textColor,
+            rotate: 35,
+            margin: 14,
+            fontSize: 10,
+            formatter: (v: string) => `S${v.split('-')[1]}`,
+          },
         },
       ],
       yAxis: [
         {
           type: 'value',
           name: 'Volume',
+          nameLocation: 'middle',
+          nameGap: 35,
           min: 0,
           axisLabel: { color: textColor },
           splitLine: { lineStyle: { color: axisColor, type: 'dashed' } },

@@ -30,9 +30,9 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
   const quality = laboratoryNetwork?.quality_metrics;
   const treatment = laboratoryNetwork?.treatment_metrics;
   const delaySeries = laboratoryNetwork?.notification_delay || [];
-  const virusTrends = laboratoryNetwork?.virus_trends || [];
+  const _virusTrends = laboratoryNetwork?.virus_trends || [];
   const antiviralTypes = laboratoryNetwork?.antiviral_types || [];
-  const positivityTrend = laboratoryNetwork?.positivity_trend || [];
+  const _positivityTrend = laboratoryNetwork?.positivity_trend || [];
   const selectedAgent = etiologicAgentFilter[0] || '';
   const isAgentFiltered = selectedAgent === 'COVID-19' || selectedAgent === 'Influenza';
   const lethality = laboratoryNetwork?.agent_lethality_heatmap;
@@ -127,8 +127,6 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
           />
         ))}
       </div>
-
-
 
       {/* BLOCO 2: SEVERIDADE VIRAL */}
       <section className="vigilance-block">

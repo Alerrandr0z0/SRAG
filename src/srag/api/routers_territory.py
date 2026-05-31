@@ -44,7 +44,9 @@ def territory_bootstrap(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
 
     # Define default/empty structures for contract stability
     empty_result = sanitize_data(
@@ -121,7 +123,9 @@ def get_units(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return []
     dist = compute_unit_distribution(df, min_cases=min_cases)

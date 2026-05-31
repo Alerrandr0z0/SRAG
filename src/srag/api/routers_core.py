@@ -23,6 +23,8 @@ from srag.data.analytics import (
     compute_completeness_trend,
     compute_data_completeness,
     compute_logical_inconsistencies,
+    compute_quality_by_bairro,
+    compute_quality_by_laboratory,
     compute_quality_by_unit,
     compute_time_series,
     compute_time_series_by_virus,
@@ -63,13 +65,16 @@ def get_summary(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return sanitize_data(
             {
                 "uti_rate": 0.0,
                 "uti_total": 0,
                 "death_rate": 0.0,
+                "death_count": 0,
                 "total": 0,
                 "notification_total": 0,
                 "available_years": available_years,
@@ -93,6 +98,7 @@ def get_summary(
             "death_rate": round((death_cases / closed_count * 100), 2)
             if closed_count > 0
             else 0.0,
+            "death_count": death_cases,
             "total": hospitalized,
             "notification_total": len(df),
             "available_years": available_years,
@@ -119,7 +125,9 @@ def get_trends(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {
             "history": [],
@@ -168,7 +176,9 @@ def get_virus(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return []
 
@@ -196,7 +206,9 @@ def get_data_completeness(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     return compute_data_completeness(df)
 
 
@@ -216,13 +228,17 @@ def get_audit_bootstrap(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
 
     if df.empty:
         return {
             "completeness": [],
             "completeness_trend": [],
             "quality_by_unit": [],
+            "quality_by_bairro": [],
+            "quality_by_laboratory": [],
             "inconsistencies": [],
         }
 
@@ -231,6 +247,8 @@ def get_audit_bootstrap(
             "completeness": compute_data_completeness(df),
             "completeness_trend": compute_completeness_trend(df),
             "quality_by_unit": compute_quality_by_unit(df),
+            "quality_by_bairro": compute_quality_by_bairro(df),
+            "quality_by_laboratory": compute_quality_by_laboratory(df),
             "inconsistencies": compute_logical_inconsistencies(df),
         }
     )

@@ -1,5 +1,5 @@
-import { test } from '@playwright/test';
 import path from 'node:path';
+import { test } from '@playwright/test';
 
 test('captures units panel screenshots', async ({ page }) => {
   // Navigate to Vite dev server

@@ -50,6 +50,11 @@ interface GlobalFilterBarProps {
 
   activeFilters: ActiveFilter[];
   clearAllFilters: () => void;
+
+  dashboardMonth: number[];
+  setDashboardMonth: (m: number[]) => void;
+  dashboardDay: number[];
+  setDashboardDay: (d: number[]) => void;
 }
 
 const PERFIL_OPTS: FilterOption[] = [
@@ -120,6 +125,10 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   occupationOptions,
   activeFilters,
   clearAllFilters,
+  dashboardMonth,
+  setDashboardMonth,
+  dashboardDay,
+  setDashboardDay,
 }) => {
   const [occSearch, setOccSearch] = useState('');
   const [showOccDropdown, setShowOccDropdown] = useState(false);
@@ -202,6 +211,53 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mês */}
+          <div className="gfb-group">
+            <span className="gfb-label">Mês</span>
+            <select
+              className="gfb-select"
+              value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
+              onChange={(e) => setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])}
+            >
+              <option value="">Todos</option>
+              {[
+                [1, 'Jan'],
+                [2, 'Fev'],
+                [3, 'Mar'],
+                [4, 'Abr'],
+                [5, 'Mai'],
+                [6, 'Jun'],
+                [7, 'Jul'],
+                [8, 'Ago'],
+                [9, 'Set'],
+                [10, 'Out'],
+                [11, 'Nov'],
+                [12, 'Dez'],
+              ].map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dia */}
+          <div className="gfb-group">
+            <span className="gfb-label">Dia</span>
+            <select
+              className="gfb-select"
+              value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
+              onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
+            >
+              <option value="">Todos</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
                 </option>
               ))}
             </select>

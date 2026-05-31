@@ -41,7 +41,9 @@ def macrosector_heatpoints(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {"available": False, "points": []}
     result = build_macrosector_heatpoints(
@@ -67,7 +69,9 @@ def rural_heatpoints(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     return sanitize_data(build_rural_heatpoints(df, min_cases=min_cases))
 
 

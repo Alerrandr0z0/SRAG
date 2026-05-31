@@ -14,6 +14,8 @@ export function useCitizenData(
   agents?: string[],
   maternalFilter?: string[],
   occupationFilter?: string[],
+  months?: number[],
+  days?: number[],
 ) {
   const [profiles, setProfiles] = useState<Epi.CitizenProfile[]>([]);
   const [pyramid, setPyramid] = useState<Epi.PyramidRow[]>([]);
@@ -54,6 +56,8 @@ export function useCitizenData(
             agents,
             maternalFilter,
             occupationFilter,
+            months,
+            days,
           ),
           api.fetchVaccinationProfile(
             profile,
@@ -66,6 +70,8 @@ export function useCitizenData(
             agents,
             maternalFilter,
             occupationFilter,
+            months,
+            days,
           ),
           api.fetchVaccineSurvival(
             profile,
@@ -78,6 +84,8 @@ export function useCitizenData(
             agents,
             maternalFilter,
             occupationFilter,
+            months,
+            days,
           ),
           api.fetchTimelineAgg(
             swimmerVirus,
@@ -91,6 +99,8 @@ export function useCitizenData(
             agents,
             maternalFilter,
             occupationFilter,
+            months,
+            days,
           ),
         ]);
 
@@ -132,6 +142,8 @@ export function useCitizenData(
     agents,
     maternalFilter,
     occupationFilter,
+    months,
+    days,
   ]);
 
   return {

@@ -62,7 +62,9 @@ def laboratory_network(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {}
 
@@ -142,7 +144,9 @@ def context_trends(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return sanitize_data({"history": [], "forecast": [], "thresholds": {}, "composition": []})
 
@@ -188,7 +192,9 @@ def timeline_agg(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return []
 
@@ -214,7 +220,9 @@ def icu_bottleneck(
             maternal=filters.maternal,
             occupations=filters.occupations,
         )
-        df = apply_surveillance_filters(df, filters.years, filters.agents)
+        df = apply_surveillance_filters(
+            df, filters.years, filters.agents, filters.months, filters.days
+        )
         if df.empty:
             return []
 

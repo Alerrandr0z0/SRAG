@@ -25,6 +25,8 @@ export function useCoreData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  _months?: number[],
+  _days?: number[],
 ) {
   const [data, setData] = useState<CoreDataState | null>(null);
   const [status, setStatus] = useState<CoreStatus>('loading');

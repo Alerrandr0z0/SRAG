@@ -24,6 +24,8 @@ function withFilters(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  months?: number[],
+  days?: number[],
 ) {
   const params = new URLSearchParams(baseUrl.includes('?') ? baseUrl.split('?')[1] : '');
   const base = baseUrl.split('?')[0];
@@ -38,6 +40,8 @@ function withFilters(
   if (agents) agents.forEach((a) => params.append('agents', a));
   if (maternal) maternal.forEach((m) => params.append('maternal', m));
   if (occupations) occupations.forEach((o) => params.append('occupations', o));
+  if (months) months.forEach((m) => params.append('months', String(m)));
+  if (days) days.forEach((d) => params.append('days', String(d)));
 
   const queryString = params.toString();
   return queryString ? `${base}?${queryString}` : base;
@@ -55,9 +59,25 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.SummaryData>(
-      withFilters(`${API_BASE}${API_ENDPOINTS.SUMMARY}`, p, r, g, z, b, u, years, agents, m, occ),
+      withFilters(
+        `${API_BASE}${API_ENDPOINTS.SUMMARY}`,
+        p,
+        r,
+        g,
+        z,
+        b,
+        u,
+        years,
+        agents,
+        m,
+        occ,
+        months,
+        days,
+      ),
     ),
 
   fetchTrends: (
@@ -73,6 +93,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.TrendsData>(
       withFilters(
@@ -87,6 +109,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -102,6 +126,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.VirusData[]>(
       withFilters(
@@ -116,6 +142,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -130,6 +158,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.TerritoryBootstrap>(
       withFilters(
@@ -144,6 +174,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -158,6 +190,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.UnitStats[]>(
       withFilters(
@@ -172,6 +206,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -186,6 +222,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.ClinicalFlow>(
       withFilters(
@@ -200,6 +238,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -214,6 +254,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<number[]>(
       withFilters(
@@ -228,6 +270,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -242,6 +286,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.CitizenBootstrap>(
       withFilters(
@@ -256,6 +302,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -270,6 +318,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.VaccinationProfile>(
       withFilters(
@@ -284,6 +334,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -298,6 +350,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.VaccineSurvival>(
       withFilters(
@@ -312,6 +366,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -327,6 +383,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.AggregatedTimeline[]>(
       withFilters(
@@ -341,6 +399,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -355,9 +415,25 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.IcuBottleneckRecord[]>(
-      withFilters(`${API_BASE}/icu_bottleneck`, p, r, g, z, b, u, years, agents, m, occ),
+      withFilters(
+        `${API_BASE}/icu_bottleneck`,
+        p,
+        r,
+        g,
+        z,
+        b,
+        u,
+        years,
+        agents,
+        m,
+        occ,
+        months,
+        days,
+      ),
     ),
 
   fetchDataCompleteness: (
@@ -371,9 +447,25 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.DataCompletenessGroup[]>(
-      withFilters(`${API_BASE}/data_completeness`, p, r, g, z, b, u, years, agents, m, occ),
+      withFilters(
+        `${API_BASE}/data_completeness`,
+        p,
+        r,
+        g,
+        z,
+        b,
+        u,
+        years,
+        agents,
+        m,
+        occ,
+        months,
+        days,
+      ),
     ),
 
   fetchAuditBootstrap: (
@@ -387,9 +479,25 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.AuditBootstrap>(
-      withFilters(`${API_BASE}/audit_bootstrap`, p, r, g, z, b, u, years, agents, m, occ),
+      withFilters(
+        `${API_BASE}/audit_bootstrap`,
+        p,
+        r,
+        g,
+        z,
+        b,
+        u,
+        years,
+        agents,
+        m,
+        occ,
+        months,
+        days,
+      ),
     ),
 
   fetchLaboratoryNetwork: (
@@ -403,6 +511,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.LaboratoryNetwork>(
       withFilters(
@@ -417,6 +527,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 
@@ -449,6 +561,8 @@ export const api = {
     agents?: string[],
     m?: string[],
     occ?: string[],
+    months?: number[],
+    days?: number[],
   ) =>
     fetchJson<Epi.TrendsData>(
       withFilters(
@@ -463,6 +577,8 @@ export const api = {
         agents,
         m,
         occ,
+        months,
+        days,
       ),
     ),
 

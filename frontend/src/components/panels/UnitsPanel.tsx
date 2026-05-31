@@ -102,7 +102,8 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
         key: item.nome_fantasia ? `${item.id_unidade}-${item.nome_fantasia}` : item.id_unidade,
         values: {
           unidade: item.nome_fantasia || item.id_unidade,
-          localizacao: item.municipio && item.uf ? `${item.municipio} - ${item.uf}` : 'Não informado',
+          localizacao:
+            item.municipio && item.uf ? `${item.municipio} - ${item.uf}` : 'Não informado',
           count: item.count,
           curados: item.curados ?? 0,
           obitos: item.obitos ?? 0,
@@ -133,7 +134,12 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
         >
           {/* UF Filter Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <label htmlFor="uf-select" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>UF</label>
+            <label
+              htmlFor="uf-select"
+              style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}
+            >
+              UF
+            </label>
             <select
               id="uf-select"
               value={selectedUf}
@@ -163,7 +169,12 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
 
           {/* Searchable Municipality Filter Autocomplete */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
-            <label htmlFor="mun-search" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Município</label>
+            <label
+              htmlFor="mun-search"
+              style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}
+            >
+              Município
+            </label>
             <div style={{ position: 'relative', width: '150px' }}>
               <input
                 id="mun-search"
@@ -252,15 +263,24 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
                         e.currentTarget.style.color = 'var(--text-main)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = selectedMun === mun ? 'rgba(15, 118, 110, 0.12)' : 'none';
-                        e.currentTarget.style.color = selectedMun === mun ? 'var(--text-main)' : 'var(--text-muted)';
+                        e.currentTarget.style.background =
+                          selectedMun === mun ? 'rgba(15, 118, 110, 0.12)' : 'none';
+                        e.currentTarget.style.color =
+                          selectedMun === mun ? 'var(--text-main)' : 'var(--text-muted)';
                       }}
                     >
                       {mun}
                     </button>
                   ))}
                   {filteredAvailableMuns.length === 0 && (
-                    <div style={{ padding: '8px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    <div
+                      style={{
+                        padding: '8px',
+                        fontSize: '11px',
+                        color: 'var(--text-muted)',
+                        textAlign: 'center',
+                      }}
+                    >
                       Nenhuma cidade
                     </div>
                   )}

@@ -153,7 +153,10 @@ const IcuRidgelinePlot: React.FC<IcuRidgelinePlotProps> = ({ data = [], groupBy 
       }
       const totalPages = Math.max(1, Math.ceil(validKeys.length / maxGroups));
       const currentPage = Math.min(page, totalPages - 1);
-      validKeys = validKeys.slice(-(currentPage + 1) * maxGroups, -(currentPage * maxGroups) || undefined);
+      validKeys = validKeys.slice(
+        -(currentPage + 1) * maxGroups,
+        -(currentPage * maxGroups) || undefined,
+      );
       validKeys.reverse();
 
       const filteredAll = enriched.filter((d) => validKeys.includes(d.groupKey));

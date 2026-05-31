@@ -15,6 +15,8 @@ export function useUnitsData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  _months?: number[],
+  _days?: number[],
 ) {
   const [units, setUnits] = useState<Epi.UnitStats[]>([]);
   const [clinicalFlow, setClinicalFlow] = useState<Epi.ClinicalFlow>({ nodes: [], links: [] });

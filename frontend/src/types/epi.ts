@@ -2,6 +2,7 @@ export interface SummaryData {
   uti_rate: number;
   uti_total: number;
   death_rate: number;
+  death_count: number;
   total: number;
   notification_total: number;
   available_years: number[];
@@ -277,6 +278,7 @@ export interface CompletenessTrendPoint {
   epi_week: string;
   score: number;
   total: number;
+  blocks?: Record<string, number>;
 }
 
 export interface UnitQualityScore {
@@ -288,6 +290,22 @@ export interface UnitQualityScore {
   worst_rate: number;
   municipio?: string;
   uf?: string;
+}
+
+export interface BairroQualityScore {
+  bairro: string;
+  score: number;
+  total: number;
+  worst_field: string;
+  worst_rate: number;
+}
+
+export interface LaboratorioQualityScore {
+  laboratorio: string;
+  score: number;
+  total: number;
+  diagnostico_score: number;
+  resultado_pct: number;
 }
 
 export interface LogicalInconsistency {
@@ -302,6 +320,8 @@ export interface AuditBootstrap {
   completeness: DataCompletenessGroup[];
   completeness_trend: CompletenessTrendPoint[];
   quality_by_unit: UnitQualityScore[];
+  quality_by_bairro: BairroQualityScore[];
+  quality_by_laboratory: LaboratorioQualityScore[];
   inconsistencies: LogicalInconsistency[];
 }
 

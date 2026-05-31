@@ -56,6 +56,8 @@ function App() {
   const [curveWeeks, setCurveWeeks] = useState('0');
   const [virusDetail, setVirusDetail] = useState('summary');
   const [dashboardYear, setDashboardYear] = useState<number[]>([]);
+  const [dashboardMonth, setDashboardMonth] = useState<number[]>([]);
+  const [dashboardDay, setDashboardDay] = useState<number[]>([]);
   // Citizen State
   const [citizenTab, setCitizenTab] = useState<string[]>([]);
   const [raceFilter, setRaceFilter] = useState<string[]>([]);
@@ -86,6 +88,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    dashboardMonth,
+    dashboardDay,
   );
 
   useEffect(() => {
@@ -182,6 +186,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    dashboardMonth,
+    dashboardDay,
   );
   const unitsData = useUnitsData(
     panel === 'unidades',
@@ -196,6 +202,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    dashboardMonth,
+    dashboardDay,
   );
   const citizenData = useCitizenData(
     panel === 'cidadao',
@@ -209,6 +217,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    dashboardMonth,
+    dashboardDay,
   );
   const auditData = useAuditData(
     panel === 'auditoria',
@@ -222,6 +232,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    dashboardMonth,
+    dashboardDay,
   );
   const vigilanceLoading = panel === 'vigilancia' && !data?.laboratoryNetwork;
 
@@ -281,13 +293,14 @@ function App() {
   // KPIs Memo
   const kpis = useMemo(() => {
     if (!data?.summary) {
-      return { total: 0, notif: 0, uti: '0%', death: '0%', next: '--' };
+      return { total: 0, notif: 0, uti: '0%', death: '0%', deathCount: 0, next: '--' };
     }
     return {
       total: data.summary.total ?? 0,
       notif: data.summary.notification_total ?? 0,
       uti: data.summary.uti_total ?? 0,
       death: `${data.summary.death_rate ?? 0}%`,
+      deathCount: data.summary.death_count ?? 0,
       next: data.trends?.forecast?.[0]?.predicted_cases?.toString() ?? '--',
     };
   }, [data]);
@@ -345,6 +358,16 @@ function App() {
       val: f,
       remover: () => setOccupationFilter(occupationFilter.filter((i) => i !== f)),
     })),
+    ...dashboardMonth.map((f) => ({
+      type: 'Mês',
+      val: String(f),
+      remover: () => setDashboardMonth([]),
+    })),
+    ...dashboardDay.map((f) => ({
+      type: 'Dia',
+      val: String(f),
+      remover: () => setDashboardDay([]),
+    })),
   ];
 
   const clearAllFilters = () => {
@@ -357,6 +380,8 @@ function App() {
     setAgentFilter([]);
     setMaternalFilter([]);
     setOccupationFilter([]);
+    setDashboardMonth([]);
+    setDashboardDay([]);
   };
 
   return (
@@ -417,12 +442,17 @@ function App() {
               occupationOptions={availableOccupations}
               activeFilters={activeFilters}
               clearAllFilters={clearAllFilters}
+              dashboardMonth={dashboardMonth}
+              setDashboardMonth={setDashboardMonth}
+              dashboardDay={dashboardDay}
+              setDashboardDay={setDashboardDay}
             />
 
             <section className="kpi-grid">
               <KpiCard label="Total Notificações" value={kpis.notif} />
               <KpiCard label="Total Internações" value={kpis.total} />
               <KpiCard label="Total UTI" value={kpis.uti} />
+              <KpiCard label="Óbitos" value={kpis.deathCount} />
               <KpiCard label="Letalidade" value={kpis.death} />
             </section>
           </>
@@ -500,8 +530,10 @@ function App() {
                             Total Positivos:{' '}
                             <b>
                               {data.laboratoryNetwork.virus_trends.reduce(
-                                (s: number, h: { epi_week: string; virus: string; count: number }) =>
-                                  s + h.count,
+                                (
+                                  s: number,
+                                  h: { epi_week: string; virus: string; count: number },
+                                ) => s + h.count,
                                 0,
                               )}
                             </b>
@@ -575,12 +607,14 @@ function App() {
                           <select
                             value={curveMode}
                             onChange={(e) =>
-                              setCurveMode(e.target.value as 'composicao' | 'positividade' | 'acumulado')
+                              setCurveMode(
+                                e.target.value as 'composicao' | 'positividade' | 'acumulado',
+                              )
                             }
                           >
-                            <option value="composicao">Composição</option>
-                            <option value="acumulado">Acumulado</option>
                             <option value="positividade">Taxa de Positividade</option>
+                            <option value="acumulado">Acumulado</option>
+                            <option value="composicao">Composição</option>
                           </select>
                         </>
                       )}
@@ -656,6 +690,8 @@ function App() {
               completeness={auditData.completeness}
               completenessTrend={auditData.completenessTrend}
               qualityByUnit={auditData.qualityByUnit}
+              qualityByBairro={auditData.qualityByBairro}
+              qualityByLaboratory={auditData.qualityByLaboratory}
               inconsistencies={auditData.inconsistencies}
             />
           )}

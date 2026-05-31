@@ -214,7 +214,7 @@ const EpidemicCurveChart: React.FC<EpidemicCurveChartProps> = ({
     theme,
   ]);
 
-  return <div ref={chartRef} style={{ height: '100%', width: '100%' }} />;
+  return <div ref={chartRef} key={mode} style={{ height: '100%', width: '100%' }} />;
 };
 
 export default EpidemicCurveChart;

@@ -15,6 +15,8 @@ export function useTerritoryData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  _months?: number[],
+  _days?: number[],
 ) {
   const [territory, setTerritory] = useState<Epi.TerritoryBootstrap['territory']>({
     bairros: [],

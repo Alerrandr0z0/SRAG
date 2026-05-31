@@ -49,7 +49,9 @@ def get_occupations(
         bairros=filters.bairros,
         years=filters.years,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     return compute_occupation_profile(df, top_n=limit)
 
 
@@ -71,7 +73,9 @@ def clinical_flow(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {"nodes": [], "links": []}
 
@@ -140,7 +144,9 @@ def hospitalization_duration(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return []
 
@@ -210,7 +216,9 @@ def vaccination_profile(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {}
 
@@ -247,7 +255,9 @@ def citizen_bootstrap(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df_filtered = apply_surveillance_filters(df_filtered, filters.years, filters.agents)
+    df_filtered = apply_surveillance_filters(
+        df_filtered, filters.years, filters.agents, filters.months, filters.days
+    )
 
     valid_profiles = [p for p in (filters.profile or []) if p]
     heatmap_profile = valid_profiles[0] if len(valid_profiles) == 1 else "all"
@@ -287,7 +297,9 @@ def clinical_timing(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     return compute_clinical_timing_metrics(df)
 
 
@@ -309,7 +321,9 @@ def vaccine_survival(
         maternal=filters.maternal,
         occupations=filters.occupations,
     )
-    df = apply_surveillance_filters(df, filters.years, filters.agents)
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
     if df.empty:
         return {"covid": {}, "gripe": {}}
 

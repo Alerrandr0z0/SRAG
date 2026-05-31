@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from srag.data.analytics.quality import (
     compute_completeness_trend,
@@ -160,22 +161,63 @@ class TestCompletenessTrend:
         df = pd.DataFrame(
             {
                 "DT_SIN_PRI": ["2023-01-01", "2023-01-08"],
-                "CLASSI_FIN": [1, 9],
-                "EVOLUCAO": [1, 9],
-                "AMOSTRA": [1, 9],
-                "PCR_RESUL": [1, 9],
-                "VACINA_COV": [1, 9],
+                "DT_NOTIFIC": ["2023-01-01", "2023-01-08"],
+                "CS_SEXO": ["F", "F"],
+                "NU_IDADE_N": [30, 30],
+                "TP_IDADE": [3, 3],
+                "ID_MUNICIP": ["240800", "240800"],
+                "ID_UNIDADE": ["1", "1"],
                 "CS_RACA": [1, 9],
+                "CS_ESCOL_N": [1, 9],
+                "PAC_DSCBO": ["123", ""],
+                "CS_ZONA": [1, 9],
+                "NM_BAIRRO": ["Centro", ""],
+                "ID_MN_RESI": ["240800", "240800"],
+                "HOSPITAL": [1, 9],
+                "DT_INTERNA": ["2023-01-02", ""],
                 "UTI": [1, 9],
+                "DT_ENTUTI": ["2023-01-02", ""],
+                "SUPORT_VEN": [1, 9],
+                "EVOLUCAO": [1, 9],
+                "DT_EVOLUCA": ["2023-01-10", ""],
+                "CLASSI_FIN": [1, 9],
+                "CRITERIO": [1, 9],
+                "AMOSTRA": [1, 9],
                 "DT_COLETA": ["2023-01-01", ""],
+                "TP_AMOSTRA": [1, 9],
+                "PCR_RESUL": [1, 9],
+                "RES_AN": [1, 9],
+                "DT_PCR": ["2023-01-01", ""],
+                "LAB_AN": ["LAB A", ""],
+                "VACINA_COV": [1, 9],
+                "DOSE_1_COV": [1, 9],
+                "DOSE_2_COV": [1, 9],
+                "DOSE_REF": [1, 9],
+                "VACINA": [1, 9],
+                "DT_UT_DOSE": ["2023-01-01", ""],
+                "CS_GESTANT": [9, 9],
+                "PUERPERA": [9, 9],
             }
         )
         res = compute_completeness_trend(df)
         assert len(res) == 2
-        assert res[0]["score"] == 100.0
-        assert res[1]["score"] == 0.0
+        # Row 0: 35/37 fields valid (CS_GESTANT=9 e PUERPERA=9 ignorados para mulheres)
+        assert res[0]["score"] == pytest.approx(94.6, abs=0.1)
+        # Row 1: 8/37 fields valid (the 7 identification + ID_MN_RESI)
+        assert res[1]["score"] == pytest.approx(21.6, abs=0.1)
         assert res[0]["total"] == 1
         assert res[1]["total"] == 1
+        # Blocks should be present
+        for r in res:
+            assert "blocks" in r
+            for b in [
+                "Identificação do Caso",
+                "Demografia e Residência",
+                "Linha do Cuidado",
+                "Coleta e Diagnóstico",
+                "Vacinação e Gestação",
+            ]:
+                assert b in r["blocks"]
 
 
 class TestQualityByUnit:
