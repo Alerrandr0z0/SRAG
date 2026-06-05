@@ -4,7 +4,7 @@
         setup-back setup-front test-back test-front lint-back lint-front \
         fix-back fix-front mutation-back mutation-front mutation-incr mutation-score \
         observability property-test property-test-back property-test-front \
-        security security-back security-secrets hooks
+        e2e security security-back security-secrets hooks
 
 # --- Default ---
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  stop              Stop all services"
 	@echo "  test              Run all tests (back + front)"
 	@echo "  property-test     Run property-based tests"
+	@echo "  e2e               Run integrated-flow E2E tests (requires make start)"
 	@echo "  lint              Run all quality checks"
 	@echo "  security          Run all security scanners (Bandit + Gitleaks)"
 	@echo "  hooks             Run all pre-commit hooks on all files"
@@ -107,6 +108,12 @@ property-test-back:
 	uv run pytest -m "not slow" tests/unit/test_hypothesis_sivep.py
 property-test-front:
 	cd frontend && npm run test:property
+
+e2e:
+	@echo "E2E flow tests require backend (port 8000) + Vite (port 5173) running."
+	@echo "Start with: make start --no-jupyter"
+	@echo ""
+	cd frontend && npm run test:e2e:dashboard
 
 mutation: mutation-back mutation-front
 mutation-back:

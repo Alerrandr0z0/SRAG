@@ -137,14 +137,14 @@ default_language_version = { python = "python3.14" }
 [tool.mutmut]
 paths_to_mutate = ["src"]
 backup = false
-runner = "PYTHONPATH=. uv run pytest -x --ignore=tests/integration"
+runner = "PYTHONPATH=. uv run pytest -x"
 diff_line_numbers = true
 global = true
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-v --tb=short --ignore=tests/integration"
+addopts = "-v --tb=short"
 norecursedirs = ["mutants"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

@@ -1,6 +1,6 @@
 """Type definitions for API responses."""
 
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 
 class SummaryResponse(TypedDict):
@@ -204,7 +204,7 @@ class SeverityKpiPoint(TypedDict):
     death_rate: float
     median_hospitalization_days: float
     median_uti_days: float
-    epi_week: str | None
+    epi_week: NotRequired[str | None]
 
 
 class SeverityKpisResponse(TypedDict):
