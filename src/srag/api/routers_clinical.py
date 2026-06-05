@@ -5,12 +5,14 @@
 import logging
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from fastapi import APIRouter, Depends, Query
 
 logger = logging.getLogger(__name__)
 
+from srag.api.types import ComorbiditiesTreemapResponse
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import (
@@ -24,12 +26,14 @@ from srag.data.analytics import (
     compute_occupation_profile,
     compute_race_profile,
     compute_risk_factors_full_profile,
+    compute_comorbidities_treemap,
     compute_schooling_profile,
     compute_symptoms_heatmap,
     compute_symptoms_signature,
     compute_traditional_community_distribution,
     compute_vaccine_manufacturer_distribution,
     compute_vaccine_survival,
+    outcome_death_mask,
 )
 
 router = APIRouter()
@@ -126,11 +130,107 @@ def clinical_flow(
     return {"nodes": nodes, "links": links_raw}
 
 
+EMPTY_HOSPITALIZATION = {
+    "cure": [],
+    "death": [],
+    "kde_cure": [],
+    "kde_death": [],
+    "kde_x": [],
+    "median_cure": 0.0,
+    "median_death": 0.0,
+    "difference": 0.0,
+    "ratio": 0.0,
+    "cure_count": 0,
+    "death_count": 0,
+}
+
+HOSPITALIZATION_MAX_DAYS = 90
+KDE_GRID_STEP = 0.5
+KDE_GRID_MAX = 45.5
+KDE_BANDWIDTH_CURE = 4.0
+KDE_BANDWIDTH_DEATH = 3.0
+
+
+def _epanechnikov_kde(values: np.ndarray, bandwidth: float, grid: np.ndarray) -> np.ndarray:
+    """Epanechnikov kernel density estimate evaluated on `grid`.
+
+    Bandwidth selection follows Silverman's rule of thumb for daily counts;
+    we then scale by the bin width so the curve aligns with histogram bars.
+    """
+    if values.size == 0:
+        return np.zeros_like(grid)
+    diffs = (grid[:, None] - values[None, :]) / bandwidth
+    mask = np.abs(diffs) <= 1.0
+    kernel = np.zeros_like(diffs)
+    kernel[mask] = 0.75 * (1.0 - diffs[mask] ** 2) / bandwidth
+    density = kernel.mean(axis=1)
+    return density * values.size
+
+
+def _extract_hospitalization_durations(df: pd.DataFrame) -> pd.DataFrame:
+    """Return closed cases (cured/deceased) with valid duration in days."""
+    df = df.copy()
+    df["DT_INTERNA"] = pd.to_datetime(df["DT_INTERNA"], errors="coerce")
+    df["DT_EVOLUCA"] = pd.to_datetime(df["DT_EVOLUCA"], errors="coerce")
+    closed = df[df["EVOLUCAO"].isin([1, 2])].copy()
+    dur = (closed["DT_EVOLUCA"] - closed["DT_INTERNA"]).dt.days
+    valid = dur[(dur >= 0) & (dur <= HOSPITALIZATION_MAX_DAYS)].dropna()
+    if valid.empty:
+        return pd.DataFrame(columns=["EVOLUCAO", "days"])
+    out = closed.loc[valid.index, ["EVOLUCAO"]].copy()
+    out["days"] = valid
+    return out
+
+
+def _summarize_hospitalization(cure: pd.Series, death: pd.Series) -> dict[str, float | int]:
+    """Compute medians, difference, and ratio for the two outcome groups."""
+    median_cure = float(round(cure.median(), 1)) if not cure.empty else 0.0
+    median_death = float(round(death.median(), 1)) if not death.empty else 0.0
+    difference = float(round(median_cure - median_death, 1)) if len(death) > 0 else 0.0
+    ratio = float(round(median_cure / median_death, 1)) if median_death > 0 else 0.0
+    return {
+        "median_cure": median_cure,
+        "median_death": median_death,
+        "difference": difference,
+        "ratio": ratio,
+        "cure_count": int(len(cure)),
+        "death_count": int(len(death)),
+    }
+
+
+def _compute_kde_curves(
+    cure: pd.Series, death: pd.Series
+) -> tuple[list[float], list[float], list[float]]:
+    """Compute KDE curves on a fixed 0-45d grid with Epanechnikov kernel.
+
+    Both curves always have the same length as the grid; empty groups yield
+    a zero-filled array, so the frontend can plot a degenerate series.
+    """
+    grid = np.arange(0.0, KDE_GRID_MAX, KDE_GRID_STEP)
+    cure_arr = cure.to_numpy() if not cure.empty else np.array([])
+    death_arr = death.to_numpy() if not death.empty else np.array([])
+    kde_cure = (
+        _epanechnikov_kde(cure_arr, KDE_BANDWIDTH_CURE, grid)
+        if cure_arr.size
+        else np.zeros_like(grid)
+    )
+    kde_death = (
+        _epanechnikov_kde(death_arr, KDE_BANDWIDTH_DEATH, grid)
+        if death_arr.size
+        else np.zeros_like(grid)
+    )
+    return (
+        [float(x) for x in grid.tolist()],
+        [round(float(y), 2) for y in kde_cure.tolist()],
+        [round(float(y), 2) for y in kde_death.tolist()],
+    )
+
+
 @router.get("/hospitalization_duration")
 def hospitalization_duration(
     filters: CommonFilters = Depends(get_common_filters),
-) -> list[float]:
-    """Calcula a distribuição de dias de internação (DT_EVOLUCA - DT_INTERNA)."""
+) -> dict[str, Any]:
+    """Calcula a distribuição de dias de internação separada por cura e óbito, com KDE."""
     df = get_df()
     df = apply_global_filters(
         df,
@@ -148,16 +248,32 @@ def hospitalization_duration(
         df, filters.years, filters.agents, filters.months, filters.days
     )
     if df.empty:
-        return []
+        return dict(EMPTY_HOSPITALIZATION)
 
     try:
-        df["DT_INTERNA"] = pd.to_datetime(df["DT_INTERNA"], errors="coerce")
-        df["DT_EVOLUCA"] = pd.to_datetime(df["DT_EVOLUCA"], errors="coerce")
-        dur = (df["DT_EVOLUCA"] - df["DT_INTERNA"]).dt.days
-        return [float(x) for x in dur[(dur >= 0) & (dur <= 90)].dropna()]
+        closed = _extract_hospitalization_durations(df)
+        if closed.empty:
+            return dict(EMPTY_HOSPITALIZATION)
+
+        cure_mask = closed["EVOLUCAO"] == 1
+        death_mask = outcome_death_mask(closed["EVOLUCAO"])
+        cure = closed.loc[cure_mask, "days"].astype(float)
+        death = closed.loc[death_mask, "days"].astype(float)
+
+        summary = _summarize_hospitalization(cure, death)
+        kde_x, kde_cure, kde_death = _compute_kde_curves(cure, death)
+
+        return {
+            "cure": [float(x) for x in cure.tolist()],
+            "death": [float(x) for x in death.tolist()],
+            "kde_x": kde_x,
+            "kde_cure": kde_cure,
+            "kde_death": kde_death,
+            **summary,
+        }
     except Exception:
         logger.exception("Failed to compute hospitalization duration")
-        return []
+        return dict(EMPTY_HOSPITALIZATION)
 
 
 def _get_last_covid_dose(row: pd.Series) -> str:
@@ -336,3 +452,28 @@ def vaccine_survival(
             "gripe": compute_vaccine_survival(df, "DT_UT_DOSE"),
         }
     )
+
+
+@router.get("/clinical/comorbidities_treemap")
+def comorbidities_treemap(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> ComorbiditiesTreemapResponse:
+    """Calcula a distribuição de comorbidades com letalidade (CFR) para treemap."""
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        years=filters.years,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_comorbidities_treemap(df)
+    return sanitize_data(res)

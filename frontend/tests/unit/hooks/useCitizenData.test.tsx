@@ -55,6 +55,8 @@ describe('useCitizenData', () => {
       ['Influenza'],
       [],
       [],
+      undefined,
+      undefined,
     );
   });
 });

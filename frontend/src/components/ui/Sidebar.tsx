@@ -46,6 +46,48 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems: MenuItem[] = [
     {
+      key: 'vigilancia',
+      label: 'Vigilância',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      ),
+    },
+    {
+      key: 'laboratorio',
+      label: 'Laboratório',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M8 2v4l4 4v12h8V10l4-4V2H8z" />
+          <line x1="4" y1="2" x2="20" y2="2" />
+          <line x1="12" y1="10" x2="16" y2="10" />
+          <line x1="10" y1="16" x2="14" y2="16" />
+          <line x1="11" y1="19" x2="13" y2="19" />
+        </svg>
+      ),
+    },
+    {
       key: 'territorio',
       label: 'Território',
       icon: (
@@ -102,25 +144,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
-        </svg>
-      ),
-    },
-    {
-      key: 'vigilancia',
-      label: 'Vigilância',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
       ),
     },

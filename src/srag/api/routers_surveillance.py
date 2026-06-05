@@ -11,6 +11,14 @@ from fastapi import APIRouter, Depends, Query
 
 logger = logging.getLogger(__name__)
 
+from srag.api.types import (
+    SeverityKpisResponse,
+    SeasonalTrendsResponse,
+    SeverityPyramidResponse,
+    GravityCascadeResponse,
+    EpidemicHeatmapResponse,
+    VentilatorySupportResponse,
+)
 from srag.api.dependencies import CommonFilters, get_common_filters
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import (
@@ -34,12 +42,23 @@ from srag.data.analytics import (
     compute_notification_delay_series,
     compute_positivity_trend,
     compute_sample_type_distribution,
+    compute_seasonal_trends,
+    compute_heatmap_se_age,
     compute_serology_profile,
+    compute_severity_kpis,
+    compute_severity_pyramid,
+    compute_gravity_cascade,
     compute_testing_coverage,
+    compute_ventilatory_support,
     compute_time_series,
     compute_time_series_by_virus,
     compute_vaccine_survival,
     compute_virus_distribution,
+    compute_closure_by_agent,
+    compute_imaging_by_severity,
+    compute_delay_by_unit,
+    compute_positivity_by_sample_type,
+    compute_diagnostic_latency_phases,
 )
 from srag.models.forecasting import predict_next_weeks
 
@@ -120,6 +139,11 @@ def laboratory_network(
             "serology_profile": compute_serology_profile(df),
             "antiviral_types": compute_antiviral_types(df),
             "virus_ranking": compute_virus_distribution(df).to_dict(orient="records"),
+            "closure_by_agent": compute_closure_by_agent(df),
+            "imaging_by_severity": compute_imaging_by_severity(df),
+            "delay_by_unit": compute_delay_by_unit(df),
+            "positivity_by_sample_type": compute_positivity_by_sample_type(df),
+            "diagnostic_latency_phases": compute_diagnostic_latency_phases(df),
         }
     )
 
@@ -250,3 +274,142 @@ def icu_bottleneck(
     except Exception:
         logger.exception("ICU bottleneck calculation failed")
         return []
+
+
+@router.get("/severity_kpis")
+def get_severity_kpis(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> SeverityKpisResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_severity_kpis(df)
+    return sanitize_data(res)
+
+
+@router.get("/trends/seasonal")
+def get_seasonal_trends(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> SeasonalTrendsResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_seasonal_trends(df)
+    return sanitize_data(res)
+
+
+@router.get("/severity_pyramid")
+def get_severity_pyramid(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> SeverityPyramidResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_severity_pyramid(df)
+    return sanitize_data(res)
+
+
+@router.get("/gravity_cascade")
+def get_gravity_cascade(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> GravityCascadeResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_gravity_cascade(df)
+    return sanitize_data(res)
+
+
+@router.get("/trends/heatmap_se_age")
+def get_heatmap_se_age(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> EpidemicHeatmapResponse:
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_heatmap_se_age(df)
+    return sanitize_data(res)
+
+
+@router.get("/trends/ventilatory_support")
+def get_ventilatory_support(
+    filters: CommonFilters = Depends(get_common_filters),
+) -> VentilatorySupportResponse:
+    """Retorna a evolução semanal do suporte ventilatório por tipo."""
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+    res = compute_ventilatory_support(df)
+    return sanitize_data(res)

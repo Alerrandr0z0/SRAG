@@ -19,6 +19,7 @@ from srag.data.analytics.surveillance import (
     compute_closure_criteria,
     compute_codetection_matrix,
     compute_genomic_variants,
+    compute_heatmap_se_age,
     compute_imaging_profile,
     compute_influenza_subtypes,
     compute_laboratory_network_summary,
@@ -26,12 +27,14 @@ from srag.data.analytics.surveillance import (
     compute_mortality_by_treatment_agent,
     compute_notification_delay_series,
     compute_positivity_trend,
+    compute_seasonal_trends,
     compute_serology_profile,
     compute_time_series,
     compute_time_series_by_virus,
     compute_vaccination_and_treatment_profile,
     compute_vaccine_manufacturer_distribution,
     compute_vaccine_survival,
+    compute_ventilatory_support,
     compute_virus_detailed_distribution,
     compute_virus_distribution,
     infer_etiologic_agent,
@@ -769,3 +772,97 @@ class TestAggregatedTimeline:
         assert completo is not None
         assert completo["taxa_cura"] == 0.0
         assert completo["taxa_obito"] == 0.5
+
+
+# ==============================================================
+# compute_seasonal_trends
+# ==============================================================
+
+
+class TestSeasonalTrends:
+    def test_empty_df(self) -> None:
+        res = compute_seasonal_trends(pd.DataFrame())
+        assert res == {"years": [], "weeks": [], "series": {}}
+
+    def test_with_valid_dates(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": [
+                    "2023-01-01",
+                    "2023-01-02",
+                    "2024-01-07",
+                ]
+            }
+        )
+        res = compute_seasonal_trends(df)
+        assert "2023" in res["years"]
+        assert "2024" in res["years"]
+        assert len(res["weeks"]) == 53
+        assert res["series"]["2023"][0] == 2
+        assert res["series"]["2024"][1] == 1
+        assert res["series"]["2023"][1] == 0
+
+
+# ==============================================================
+# compute_heatmap_se_age
+# ==============================================================
+
+
+class TestComputeHeatmapSeAge:
+    def test_empty_df(self) -> None:
+        res = compute_heatmap_se_age(pd.DataFrame())
+        assert res == {"weeks": [], "age_groups": [], "data": []}
+
+    def test_all_nan_dates(self) -> None:
+        df = pd.DataFrame({"DT_SIN_PRI": [np.nan], "NU_IDADE_N": [10], "TP_IDADE": [3]})
+        res = compute_heatmap_se_age(df)
+        assert res == {"weeks": [], "age_groups": [], "data": []}
+
+    def test_all_out_of_bounds_ages(self) -> None:
+        df = pd.DataFrame({"DT_SIN_PRI": ["2023-01-01"], "IDADE_ANOS": [-1.0]})
+        res = compute_heatmap_se_age(df)
+        assert res == {"weeks": [], "age_groups": [], "data": []}
+
+    def test_valid_heatmap_cases(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-02", "2023-01-08"],
+                "NU_IDADE_N": [3, 25, 80],
+                "TP_IDADE": [3, 3, 3],
+            }
+        )
+        res = compute_heatmap_se_age(df)
+        assert len(res["weeks"]) == 2  # '2023-01' and '2023-02'
+        assert "2023-01" in res["weeks"]
+        assert "2023-02" in res["weeks"]
+        assert "0-4 anos" in res["age_groups"]
+        assert "15-29 anos" in res["age_groups"]
+        assert "75+ anos" in res["age_groups"]
+        assert len(res["data"]) == 3
+
+
+class TestComputeVentilatorySupport:
+    def test_empty_df(self) -> None:
+        assert compute_ventilatory_support(pd.DataFrame()) == []
+
+    def test_exact_ventilatory_support(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-02", "2023-01-08"],
+                "SUPORT_VEN": [1, 2, 9],
+            }
+        )
+        res = compute_ventilatory_support(df)
+        assert len(res) == 2
+
+        w1 = next(r for r in res if r["epi_week"] == "2023-01")
+        assert w1["invasive"] == 1
+        assert w1["non_invasive"] == 1
+        assert w1["no_support"] == 0
+        assert w1["ignored"] == 0
+
+        w2 = next(r for r in res if r["epi_week"] == "2023-02")
+        assert w2["invasive"] == 0
+        assert w2["non_invasive"] == 0
+        assert w2["no_support"] == 0
+        assert w2["ignored"] == 1

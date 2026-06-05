@@ -1625,6 +1625,16 @@ select {
 .vigilance-metric--red {
   --vigilance-accent: #dc2626;
 }
+.vigilance-metric--pink {
+  --vigilance-accent: #be185d;
+}
+
+.vigilance-clean-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
 .vigilance-filter-card {
   display: grid;

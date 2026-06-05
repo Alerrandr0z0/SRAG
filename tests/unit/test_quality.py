@@ -5,10 +5,15 @@ import pandas as pd
 import pytest
 
 from srag.data.analytics.quality import (
+    compute_closure_by_agent,
     compute_completeness_trend,
     compute_data_completeness,
+    compute_delay_by_unit,
     compute_diagnostic_latency,
+    compute_diagnostic_latency_phases,
+    compute_imaging_by_severity,
     compute_logical_inconsistencies,
+    compute_positivity_by_sample_type,
     compute_quality_by_unit,
     compute_sample_type_distribution,
     compute_testing_coverage,
@@ -298,3 +303,117 @@ class TestLogicalInconsistencies:
         assert inconsistencies["R6"] == 1
         assert inconsistencies["R7"] == 1
         assert inconsistencies["R8"] == 1
+
+
+class TestClosureByAgent:
+    def test_empty_df(self) -> None:
+        assert compute_closure_by_agent(pd.DataFrame()) == []
+
+    def test_exact_crosstab(self) -> None:
+        df = pd.DataFrame(
+            {
+                "CLASSI_FIN": [5, 5, 1, 4],
+                "CRITERIO": [1, 2, 1, 9],
+            }
+        )
+        res = compute_closure_by_agent(df)
+        assert len(res) == 3
+        # Agents: COVID-19, Influenza, Não Especificada
+        covid_row = next(r for r in res if r["agent"] == "COVID-19")
+        assert covid_row["total"] == 2
+        assert covid_row["Laboratorial"] == 1
+        assert covid_row["Vínculo Epidemiológico"] == 1
+        assert covid_row["Clínico / Imagem"] == 0
+
+
+class TestImagingBySeverity:
+    def test_empty_df(self) -> None:
+        res = compute_imaging_by_severity(pd.DataFrame())
+        assert res == {"raiox": [], "tomo": []}
+
+    def test_exact_rates(self) -> None:
+        df = pd.DataFrame(
+            {
+                "RAIOX_RES": [1, 1, 2, 2],
+                "TOMO_RES": [1, 1, 5, 9],
+                "UTI": [1, 2, 1, np.nan],
+                "EVOLUCAO": [1, 2, 1, 9],
+            }
+        )
+        res = compute_imaging_by_severity(df)
+        assert "raiox" in res
+        assert "tomo" in res
+        rx_normal = next(r for r in res["raiox"] if r["finding"] == "Normal")
+        assert rx_normal["total"] == 2
+        assert rx_normal["uti_count"] == 1
+        assert rx_normal["uti_rate"] == 50.0
+        assert rx_normal["death_count"] == 1
+        assert rx_normal["death_rate"] == 50.0
+
+
+class TestDelayByUnit:
+    def test_empty_df(self) -> None:
+        assert compute_delay_by_unit(pd.DataFrame()) == []
+
+    def test_exact_delay(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-03", "2023-01-05"],
+                "ID_UNIDADE": ["U1", "U1"],
+            }
+        )
+        res = compute_delay_by_unit(df)
+        assert len(res) == 1
+        assert res[0]["id_unidade"] == "U1"
+        assert res[0]["total"] == 2
+        assert res[0]["median_delay"] == 3.0
+        assert res[0]["avg_delay"] == 3.0
+
+
+class TestPositivityBySampleType:
+    def test_empty_df(self) -> None:
+        assert compute_positivity_by_sample_type(pd.DataFrame()) == []
+
+    def test_exact_positivity(self) -> None:
+        df = pd.DataFrame(
+            {
+                "TP_AMOSTRA": [1, 1, 2],
+                "AMOSTRA": [1, 1, 1],
+                "PCR_RESUL": [1, 2, 2],
+                "RES_AN": [2, 2, 2],
+            }
+        )
+        res = compute_positivity_by_sample_type(df)
+        naso = next(r for r in res if r["sample_type"] == "Secreção Naso/Orofaringe")
+        assert naso["tested"] == 2
+        assert naso["positive"] == 1
+        assert naso["positivity_rate"] == 50.0
+
+
+class TestDiagnosticLatencyPhases:
+    def test_empty_df(self) -> None:
+        res = compute_diagnostic_latency_phases(pd.DataFrame())
+        assert res == {
+            "symptom_to_notification": 0.0,
+            "notification_to_collection": 0.0,
+            "collection_to_result": 0.0,
+            "symptom_to_treatment": 0.0,
+        }
+
+    def test_exact_latencies(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-03", "2023-01-03"],
+                "DT_COLETA": ["2023-01-05", "2023-01-05"],
+                "DT_PCR": ["2023-01-08", "2023-01-10"],
+                "ANTIVIRAL": [1, 2],
+                "DT_ANTIVIR": ["2023-01-02", "2023-01-02"],
+            }
+        )
+        res = compute_diagnostic_latency_phases(df)
+        assert res["symptom_to_notification"] == 2.0
+        assert res["notification_to_collection"] == 2.0
+        assert res["collection_to_result"] == 4.0
+        assert res["symptom_to_treatment"] == 1.0

@@ -42,6 +42,7 @@ interface LeafletMapProps {
   ruralSectorsGeo: FeatureCollection;
   mapZoneMode: string;
   selectedSectors?: string[];
+  showUnits?: boolean;
   onSectorSelect?: (sectors: string[]) => void;
 }
 
@@ -59,6 +60,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   ruralSectorsGeo,
   mapZoneMode,
   selectedSectors = [],
+  showUnits = false,
   onSectorSelect,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -181,7 +183,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         const urbPts = ruralData?.urban_points?.filter(
           (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
         );
-        if (urbPts?.length) {
+        if (showUnits && urbPts?.length) {
           urbPts.forEach((pt) => {
             const marker = L.circleMarker([pt.latitude as number, pt.longitude as number], {
               radius: Math.max(5, Math.min(12, 5 + (pt.count || 0) / 4)),
@@ -206,7 +208,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           (s) => typeof s.latitude === 'number' && typeof s.longitude === 'number',
         );
 
-        if (unitPoints?.length) {
+        if (showUnits && unitPoints?.length) {
           unitPoints.forEach((unit) => {
             const marker = L.circleMarker([unit.latitude as number, unit.longitude as number], {
               radius: Math.max(5, Math.min(14, 5 + (unit.count || 0) / 4)),
@@ -285,6 +287,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     rangeMax,
     hoverValue,
     hoveringBar,
+    showUnits,
   ]);
 
   useEffect(() => {

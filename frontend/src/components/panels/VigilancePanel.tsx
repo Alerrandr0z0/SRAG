@@ -1,41 +1,27 @@
 import React, { useState } from 'react';
 import * as Epi from '../../types/epi';
-import BarChart from '../charts/BarChart';
 
-import HeatmapChart from '../charts/HeatmapChart';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
 import QualidadePerformance, {
   BoxStats,
   QualidadePerformanceData,
 } from '../charts/QualidadePerformance';
-import KpiCard from '../ui/KpiCard';
 
 interface VigilancePanelProps {
   loading: boolean;
   laboratoryNetwork: Epi.LaboratoryNetwork | undefined;
-  etiologicAgentFilter?: string[];
 }
 
-const VigilancePanel: React.FC<VigilancePanelProps> = ({
-  loading,
-  laboratoryNetwork,
-  etiologicAgentFilter = [],
-}) => {
+const VigilancePanel: React.FC<VigilancePanelProps> = ({ loading, laboratoryNetwork }) => {
   const [delayWeeks, setDelayWeeks] = useState('0');
 
   if (loading) return <p className="meta">Carregando inteligência de vigilância...</p>;
 
-  const overall = laboratoryNetwork?.overall;
   const quality = laboratoryNetwork?.quality_metrics;
   const treatment = laboratoryNetwork?.treatment_metrics;
   const delaySeries = laboratoryNetwork?.notification_delay || [];
-  const _virusTrends = laboratoryNetwork?.virus_trends || [];
   const antiviralTypes = laboratoryNetwork?.antiviral_types || [];
-  const _positivityTrend = laboratoryNetwork?.positivity_trend || [];
-  const selectedAgent = etiologicAgentFilter[0] || '';
-  const isAgentFiltered = selectedAgent === 'COVID-19' || selectedAgent === 'Influenza';
-  const lethality = laboratoryNetwork?.agent_lethality_heatmap;
 
   // Data mapping for QualidadePerformance (D3)
   const mapBoxPlot = (data: number[] | undefined, label: string): BoxStats => {
@@ -75,90 +61,8 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
     distribuicaoAmostra: quality?.sample_type_distribution || [],
   };
 
-  const metricCards = [
-    {
-      label: 'Positividade Geral',
-      value: `${overall?.positive_rate || 0}%`,
-      className: 'vigilance-metric vigilance-metric--green',
-    },
-    {
-      label: 'Testados',
-      value: `${overall?.tested_cases || 0}`,
-      className: 'vigilance-metric vigilance-metric--slate',
-    },
-    {
-      label: 'Co-detecção',
-      value: `${overall?.codetection_cases || 0}`,
-      className: 'vigilance-metric vigilance-metric--red',
-    },
-    {
-      label: 'Reinfecções',
-      value: `${overall?.reinfection_total || 0}`,
-      className: 'vigilance-metric vigilance-metric--pink',
-    },
-    {
-      label: 'Adesão Antiviral (48h)',
-      value: `${overall?.protocol_48h_adherence_rate || 0}%`,
-      className: 'vigilance-metric vigilance-metric--teal',
-    },
-    {
-      label: 'Latência (PCR+Ag)',
-      value: `${overall?.median_turnaround_days || 0}d`,
-      className: 'vigilance-metric vigilance-metric--amber',
-    },
-  ];
-
   return (
     <div className="stack vigilance-shell" style={{ gap: '2rem' }}>
-      <header className="vigilance-clean-header">
-        <div>
-          <p className="eyebrow">Inteligência Epidemiológica</p>
-          <h2 style={{ margin: '0.25rem 0' }}>Monitoramento de Processos e Patógenos</h2>
-        </div>
-      </header>
-
-      <div className="vigilance-metric-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
-        {metricCards.map((card) => (
-          <KpiCard
-            key={card.label}
-            label={card.label}
-            value={card.value}
-            className={card.className}
-          />
-        ))}
-      </div>
-
-      {/* BLOCO 2: SEVERIDADE VIRAL */}
-      <section className="vigilance-block">
-        <article className="panel">
-          <div className="section-header">
-            <div className="stack" style={{ gap: 4 }}>
-              <h3 style={{ margin: 0 }}>Letalidade por Agente e Idade</h3>
-            </div>
-          </div>
-          <div className="chart-wrap chart-wrap--tall">
-            {isAgentFiltered && lethality ? (
-              <BarChart
-                labels={lethality.age_bands || []}
-                data={(lethality.matrix?.[selectedAgent === 'Influenza' ? 1 : 2] || []).map((v) =>
-                  Number(v || 0),
-                )}
-                horizontal={true}
-                color={selectedAgent === 'Influenza' ? '#1d4ed8' : '#0f766e'}
-              />
-            ) : (
-              <HeatmapChart
-                xLabels={laboratoryNetwork?.agent_lethality_heatmap?.age_bands || []}
-                yLabels={laboratoryNetwork?.agent_lethality_heatmap?.agents || []}
-                matrix={laboratoryNetwork?.agent_lethality_heatmap?.matrix || []}
-                valueName="Letalidade (%)"
-                colors={['#fff1f2', '#f43f5e', '#9f1239']}
-              />
-            )}
-          </div>
-        </article>
-      </section>
-
       {/* ATRASO DE NOTIFICAÇÃO */}
       <section className="vigilance-block">
         <div className="vigilance-insight-grid" style={{ gridTemplateColumns: '1fr' }}>
@@ -210,7 +114,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
         </div>
       </section>
 
-      {/* BLOCO 3: QUALIDADE E PERFORMANCE ASSISTENCIAL */}
+      {/* QUALIDADE E PERFORMANCE ASSISTENCIAL */}
       <section className="vigilance-block">
         <article className="panel">
           <div className="section-header">
@@ -224,7 +128,7 @@ const VigilancePanel: React.FC<VigilancePanelProps> = ({
         </article>
       </section>
 
-      {/* BLOCO 4: EFETIVIDADE VACINAL */}
+      {/* EFETIVIDADE VACINAL */}
       <section className="vigilance-block">
         <article className="panel">
           <div className="section-header">

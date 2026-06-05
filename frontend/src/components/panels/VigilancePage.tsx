@@ -1,0 +1,949 @@
+import React, { useEffect, useState } from 'react';
+import { api } from '../../services/api';
+import * as Epi from '../../types/epi';
+
+import EpidemicCurveChart from '../charts/EpidemicCurveChart';
+import ImagingProfileChart from '../charts/ImagingProfileChart';
+import KaplanMeierChart from '../charts/KaplanMeierChart';
+import TrendChart from '../charts/TrendChart';
+import VirusProfileChart from '../charts/VirusProfileChart';
+import HeatmapChart from '../charts/HeatmapChart';
+import SeasonalTrendChart from '../charts/SeasonalTrendChart';
+import SeverityPyramidChart from '../charts/SeverityPyramidChart';
+import GravityCascadeChart from '../charts/GravityCascadeChart';
+import EpidemicHeatmapChart from '../charts/EpidemicHeatmapChart';
+import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
+import VentilatorySupportChart from '../charts/VentilatorySupportChart';
+
+/* ─────── Props ─────── */
+
+interface VigilancePageProps {
+  data: Epi.DashboardData | null;
+  agentFilter: string[];
+  citizenTab: string[];
+  raceFilter: string[];
+  genderFilter: string[];
+  zoneFilter: string[];
+  bairroFilter: string[];
+  unitFilter: string[];
+  dashboardYear: number[];
+  maternalFilter: string[];
+  occupationFilter: string[];
+  dashboardMonth: number[];
+  dashboardDay: number[];
+}
+
+/* ─────── Sub-componentes memoizados ─────── */
+
+interface HistorySectionProps {
+  data: Epi.DashboardData | null;
+  currentTrends: Epi.TrendsData | null;
+  casosMode: 'notificados' | 'confirmados';
+  weeksWindow: string;
+  seriesMode: string;
+  curveMode: 'composicao' | 'positividade' | 'acumulado';
+  curveWeeks: string;
+  onCasosMode: (v: 'notificados' | 'confirmados') => void;
+  onWeeksWindow: (v: string) => void;
+  onSeriesMode: (v: string) => void;
+  onCurveMode: (v: 'composicao' | 'positividade' | 'acumulado') => void;
+  onCurveWeeks: (v: string) => void;
+}
+const VigilanceHistorySection = React.memo<HistorySectionProps>(
+  ({
+    data,
+    currentTrends,
+    casosMode,
+    weeksWindow,
+    seriesMode,
+    curveMode,
+    curveWeeks,
+    onCasosMode,
+    onWeeksWindow,
+    onSeriesMode,
+    onCurveMode,
+    onCurveWeeks,
+  }) => (
+    <section className="main-grid">
+      <article className="panel">
+        <div className="section-header">
+          <div className="stack vigilance-history-summary" style={{ gap: 4 }}>
+            <h3 style={{ margin: 0 }}>Histórico de casos</h3>
+            {casosMode === 'notificados' && currentTrends && (
+              <div className="vigilance-history-stats">
+                <span>
+                  Total: <b>{currentTrends.history.reduce((s, h) => s + h.total, 0)}</b>
+                </span>
+              </div>
+            )}
+            {casosMode === 'confirmados' && data?.laboratoryNetwork?.virus_trends && (
+              <div className="vigilance-history-stats">
+                <span>
+                  Total Positivos:{' '}
+                  <b>
+                    {data.laboratoryNetwork.virus_trends.reduce(
+                      (s: number, h: { epi_week: string; virus: string; count: number }) =>
+                        s + h.count,
+                      0,
+                    )}
+                  </b>
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="filters vigilance-history-controls">
+            <div className="pill-group">
+              <button
+                type="button"
+                className={`pill-btn ${casosMode === 'notificados' ? 'active' : ''}`}
+                onClick={() => onCasosMode('notificados')}
+              >
+                Notificados
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${casosMode === 'confirmados' ? 'active' : ''}`}
+                onClick={() => onCasosMode('confirmados')}
+              >
+                Confirmados
+              </button>
+            </div>
+            {casosMode === 'notificados' && (
+              <>
+                <div className="pill-group">
+                  {[
+                    { v: '0', l: 'Tudo' },
+                    { v: '52', l: '52s' },
+                    { v: '26', l: '26s' },
+                    { v: '12', l: '12s' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      className={`pill-btn ${weeksWindow === opt.v ? 'active' : ''}`}
+                      onClick={() => onWeeksWindow(opt.v)}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+                <select value={seriesMode} onChange={(e) => onSeriesMode(e.target.value)}>
+                  <option value="weekly">Semanal</option>
+                  <option value="cumulative">Acumulada</option>
+                  <option value="composition">Composição</option>
+                </select>
+              </>
+            )}
+            {casosMode === 'confirmados' && (
+              <>
+                <div className="pill-group">
+                  {[
+                    { v: '0', l: 'Tudo' },
+                    { v: '52', l: '52s' },
+                    { v: '26', l: '26s' },
+                    { v: '12', l: '12s' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      className={`pill-btn ${curveWeeks === opt.v ? 'active' : ''}`}
+                      onClick={() => onCurveWeeks(opt.v)}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+                <select
+                  value={curveMode}
+                  onChange={(e) =>
+                    onCurveMode(e.target.value as 'composicao' | 'positividade' | 'acumulado')
+                  }
+                >
+                  <option value="positividade">Taxa de Positividade</option>
+                  <option value="acumulado">Acumulado</option>
+                  <option value="composicao">Composição</option>
+                </select>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="chart-wrap chart-wrap--tall">
+          {casosMode === 'notificados' && currentTrends && (
+            <TrendChart
+              history={currentTrends.history}
+              forecast={currentTrends.forecast}
+              thresholds={currentTrends.thresholds}
+              composition={currentTrends.composition}
+              baseCumulative={currentTrends.base_cumulative}
+              seriesMode={seriesMode}
+              weeksWindow={weeksWindow}
+              showForecast={false}
+            />
+          )}
+          {casosMode === 'confirmados' && data?.laboratoryNetwork && (
+            <EpidemicCurveChart
+              virusTrends={data.laboratoryNetwork.virus_trends || []}
+              positivityTrend={data.laboratoryNetwork.positivity_trend || []}
+              forcedMode={curveMode as 'composicao' | 'positividade' | 'acumulado'}
+              forcedWeeks={curveWeeks}
+            />
+          )}
+        </div>
+      </article>
+    </section>
+  ),
+);
+
+interface ViralSectionProps {
+  virus: Epi.VirusData[] | null;
+  virusDetail: string;
+  agentFilter: string[];
+  onVirusDetail: (v: string) => void;
+}
+const VigilanceViralProfile = React.memo<ViralSectionProps>(
+  ({ virus, virusDetail, agentFilter, onVirusDetail }) => (
+    <article className="panel viral-profile-panel">
+      <div className="section-header">
+        <h3>Perfil viral</h3>
+        <select
+          value={virusDetail}
+          onChange={(e) => onVirusDetail(e.target.value)}
+          onFocus={() => {
+            if (agentFilter[0] && virusDetail === 'summary') {
+              onVirusDetail(
+                agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed',
+              );
+            }
+          }}
+        >
+          {!agentFilter[0] && <option value="summary">Resumido</option>}
+          {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
+          {agentFilter[0] !== 'Influenza' && (
+            <option value="covid_detailed">Detalhado COVID-19</option>
+          )}
+          {agentFilter[0] !== 'COVID-19' && (
+            <option value="influenza_detailed">Detalhado Influenza</option>
+          )}
+        </select>
+      </div>
+      <div className="chart-wrap">{virus && <VirusProfileChart data={virus} />}</div>
+    </article>
+  ),
+);
+
+const VigilanceImagingProfile = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3>Perfil de Imagem</h3>
+    </div>
+    <div className="chart-wrap">
+      {data?.laboratoryNetwork?.imaging_profile && (
+        <ImagingProfileChart data={data.laboratoryNetwork.imaging_profile} />
+      )}
+    </div>
+  </article>
+));
+
+const VigilanceKmSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <div className="stack" style={{ gap: 4 }}>
+        <h3 style={{ margin: 0 }}>Tempo até Infecção Pós-Vacina</h3>
+      </div>
+    </div>
+    <div className="chart-wrap chart-wrap--tall">
+      {data?.laboratoryNetwork?.vaccine_survival && (
+        <KaplanMeierChart survivalData={data.laboratoryNetwork.vaccine_survival} />
+      )}
+    </div>
+  </article>
+));
+
+const VigilanceCfrHeatmapSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => {
+  const heatmap = data?.laboratoryNetwork?.agent_lethality_heatmap;
+  return (
+    <article className="panel">
+      <div className="section-header">
+        <h3 style={{ margin: 0 }}>Letalidade (CFR) por Vírus × Faixa Etária</h3>
+      </div>
+      <div className="chart-wrap chart-wrap--tall">
+        {heatmap ? (
+          <HeatmapChart
+            xLabels={heatmap.age_bands}
+            yLabels={heatmap.agents}
+            matrix={heatmap.matrix}
+            valueName="Letalidade (CFR %)"
+            colors={['#fff5f5', '#feb2b2', '#de3434']}
+          />
+        ) : (
+          <p className="meta">Aguardando dados de letalidade...</p>
+        )}
+      </div>
+    </article>
+  );
+});
+
+const VigilanceSeasonalSection = React.memo<{ data: Epi.SeasonalTrendsResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Sazonalidade Interanual (Casos por SE)</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall">
+      <SeasonalTrendChart data={data} />
+    </div>
+  </article>
+));
+
+const VigilanceSeverityPyramidSection = React.memo<{ data: Epi.SeverityPyramidResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Pirâmide de Gravidade por Faixa Etária</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall">
+      <SeverityPyramidChart data={data} />
+    </div>
+  </article>
+));
+
+const VigilanceGravityCascadeSection = React.memo<{ data: Epi.GravityCascadeResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Cascata de Gravidade ao Longo do Tempo</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall">
+      <GravityCascadeChart data={data} />
+    </div>
+  </article>
+));
+
+const VigilanceEpidemicHeatmapSection = React.memo<{ data: Epi.EpidemicHeatmapResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Distribuição de Casos (SE × Faixa Etária)</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall">
+      <EpidemicHeatmapChart data={data} />
+    </div>
+  </article>
+));
+
+const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
+      <ComorbiditiesTreemapChart data={data} />
+    </div>
+  </article>
+));
+
+const VigilanceVentilatorySupportSection = React.memo<{ data: Epi.VentilatorySupportResponse | null }>(({ data }) => (
+  <article className="panel">
+    <div className="section-header">
+      <h3 style={{ margin: 0 }}>Suporte Ventilatório por Período</h3>
+    </div>
+    <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
+      <VentilatorySupportChart data={data} />
+    </div>
+  </article>
+));
+
+interface SparklineProps {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+}
+
+const Sparkline: React.FC<SparklineProps> = ({ data, width = 120, height = 30, color = 'var(--primary)' }) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+
+  const points = data
+    .map((val, idx) => {
+      const x = (idx / (data.length - 1)) * width;
+      const y = height - ((val - min) / range) * height;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg width={width} height={height} style={{ overflow: 'visible' }}>
+      <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
+    </svg>
+  );
+};
+
+const VigilanceSeverityKpiSection = React.memo<{ kpis: Epi.SeverityKpisResponse | null }>(({ kpis }) => {
+  if (!kpis) return <p className="meta">Carregando indicadores de gravidade...</p>;
+  const { current, trend } = kpis;
+
+  const getTrendData = (key: keyof Epi.SeverityKpiPoint) => {
+    return trend.map((t) => t[key] as number);
+  };
+
+  const cards = [
+    {
+      label: 'Taxa de Hospitalização',
+      value: `${current.hospitalization_rate}%`,
+      trendKey: 'hospitalization_rate' as const,
+      color: '#0f766e',
+      desc: 'Pacientes internados sobre total de notificados',
+    },
+    {
+      label: 'Taxa de UTI',
+      value: `${current.uti_rate}%`,
+      trendKey: 'uti_rate' as const,
+      color: '#1d4ed8',
+      desc: 'Internados em UTI sobre total hospitalizados',
+    },
+    {
+      label: 'Suporte Ventilatório',
+      value: `${current.ventilatory_support_rate}%`,
+      trendKey: 'ventilatory_support_rate' as const,
+      color: '#ca8a04',
+      desc: 'Uso de ventilador mecânico (inv/não-inv) na UTI',
+    },
+    {
+      label: 'Letalidade Geral (CFR)',
+      value: `${current.death_rate}%`,
+      trendKey: 'death_rate' as const,
+      color: '#b91c1c',
+      desc: 'Óbitos sobre total de casos encerrados (alta/óbito)',
+    },
+    {
+      label: 'Permanência Hospitalar',
+      value: `${current.median_hospitalization_days}d`,
+      trendKey: 'median_hospitalization_days' as const,
+      color: '#7c3aed',
+      desc: 'Tempo mediano entre internação e desfecho',
+    },
+    {
+      label: 'Permanência UTI',
+      value: `${current.median_uti_days}d`,
+      trendKey: 'median_uti_days' as const,
+      color: '#0891b2',
+      desc: 'Tempo mediano de internação em UTI (entrada a saída)',
+    },
+  ];
+
+  return (
+    <div
+      className="vigilance-metric-grid"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '1.5rem',
+        marginBottom: '2rem',
+        marginTop: '1.5rem',
+      }}
+    >
+      {cards.map((card) => {
+        const trendData = getTrendData(card.trendKey);
+        return (
+          <article
+            key={card.label}
+            className="panel"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '1.25rem',
+            }}
+          >
+            <div>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{card.label}</p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '1rem',
+                  marginTop: '0.5rem',
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: '1.75rem',
+                    fontWeight: 600,
+                    color: 'var(--text-color)',
+                  }}
+                >
+                  {card.value}
+                </h2>
+                {trendData.length > 1 && (
+                  <div style={{ marginLeft: 'auto', alignSelf: 'center' }} title="Tendência das últimas semanas">
+                    <Sparkline data={trendData} color={card.color} />
+                  </div>
+                )}
+              </div>
+            </div>
+            <p
+              style={{
+                margin: '0.75rem 0 0 0',
+                fontSize: '0.75rem',
+                color: '#94a3b8',
+                lineHeight: 1.3,
+              }}
+            >
+              {card.desc}
+            </p>
+          </article>
+        );
+      })}
+    </div>
+  );
+});
+
+/* ─────── Root ─────── */
+
+const VigilancePage: React.FC<VigilancePageProps> = ({
+  data,
+  agentFilter,
+  citizenTab,
+  raceFilter,
+  genderFilter,
+  zoneFilter,
+  bairroFilter,
+  unitFilter,
+  dashboardYear,
+  maternalFilter,
+  occupationFilter,
+  dashboardMonth,
+  dashboardDay,
+}) => {
+  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados'>('notificados');
+  const [weeksWindow, setWeeksWindow] = useState('0');
+  const [seriesMode, setSeriesMode] = useState('weekly');
+  const [curveMode, setCurveMode] = useState<'composicao' | 'positividade' | 'acumulado'>(
+    'positividade',
+  );
+  const [curveWeeks, setCurveWeeks] = useState('0');
+  const [virusDetail, setVirusDetail] = useState('summary');
+  const [trends, setTrends] = useState<Epi.TrendsData | null>(null);
+  const [virus, setVirus] = useState<Epi.VirusData[] | null>(null);
+  const [severityKpis, setSeverityKpis] = useState<Epi.SeverityKpisResponse | null>(null);
+  const [seasonalTrends, setSeasonalTrends] = useState<Epi.SeasonalTrendsResponse | null>(null);
+  const [severityPyramid, setSeverityPyramid] = useState<Epi.SeverityPyramidResponse | null>(null);
+  const [gravityCascade, setGravityCascade] = useState<Epi.GravityCascadeResponse | null>(null);
+  const [heatmapSeAge, setHeatmapSeAge] = useState<Epi.EpidemicHeatmapResponse | null>(null);
+  const [comorbidities, setComorbidities] = useState<Epi.ComorbiditiesTreemapResponse | null>(null);
+  const [ventilatorySupport, setVentilatorySupport] = useState<Epi.VentilatorySupportResponse | null>(null);
+  const lookback = '0';
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchVirus(
+        virusDetail,
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setVirus(res);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    virusDetail,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchTrends(
+        weeksWindow,
+        lookback,
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setTrends(res);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    weeksWindow,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    const selectedAgent = agentFilter[0];
+    if (selectedAgent === 'Influenza' && virusDetail !== 'influenza_detailed')
+      setVirusDetail('influenza_detailed');
+    if (selectedAgent === 'COVID-19' && virusDetail !== 'covid_detailed')
+      setVirusDetail('covid_detailed');
+  }, [agentFilter, virusDetail]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchSeverityKpis(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setSeverityKpis(res);
+      })
+      .catch((err) => console.error('Failed to fetch severity KPIs', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchSeasonalTrends(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setSeasonalTrends(res);
+      })
+      .catch((err) => console.error('Failed to fetch seasonal trends', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchSeverityPyramid(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setSeverityPyramid(res);
+      })
+      .catch((err) => console.error('Failed to fetch severity pyramid', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchGravityCascade(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setGravityCascade(res);
+      })
+      .catch((err) => console.error('Failed to fetch gravity cascade', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchHeatmapSeAge(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setHeatmapSeAge(res);
+      })
+      .catch((err) => console.error('Failed to fetch epidemic heatmap', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchComorbiditiesTreemap(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setComorbidities(res);
+      })
+      .catch((err) => console.error('Failed to fetch comorbidities treemap', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchVentilatorySupport(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setVentilatorySupport(res);
+      })
+      .catch((err) => console.error('Failed to fetch ventilatory support', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  const currentTrends = trends ?? data?.trends ?? null;
+
+  return (
+    <>
+      <VigilanceHistorySection
+        data={data}
+        currentTrends={currentTrends}
+        casosMode={casosMode}
+        weeksWindow={weeksWindow}
+        seriesMode={seriesMode}
+        curveMode={curveMode}
+        curveWeeks={curveWeeks}
+        onCasosMode={setCasosMode}
+        onWeeksWindow={setWeeksWindow}
+        onSeriesMode={setSeriesMode}
+        onCurveMode={setCurveMode}
+        onCurveWeeks={setCurveWeeks}
+      />
+      <VigilanceSeverityKpiSection kpis={severityKpis} />
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <VigilanceViralProfile
+          virus={virus}
+          virusDetail={virusDetail}
+          agentFilter={agentFilter}
+          onVirusDetail={setVirusDetail}
+        />
+        <VigilanceImagingProfile data={data} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+        <VigilanceCfrHeatmapSection data={data} />
+        <VigilanceSeasonalSection data={seasonalTrends} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+        <VigilanceSeverityPyramidSection data={severityPyramid} />
+        <VigilanceGravityCascadeSection data={gravityCascade} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+        <VigilanceKmSection data={data} />
+        <VigilanceEpidemicHeatmapSection data={heatmapSeAge} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
+        <VigilanceVentilatorySupportSection data={ventilatorySupport} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
+        <VigilanceComorbiditiesSection data={comorbidities} />
+      </section>
+    </>
+  );
+};
+
+export default VigilancePage;

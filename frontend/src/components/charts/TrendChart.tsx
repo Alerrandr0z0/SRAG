@@ -123,7 +123,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       silent: true,
     }));
     const yearMark = {
-      markArea: { silent: true, data: yearMarkAreaData as any },
+      markArea: { silent: true, data: yearMarkAreaData as unknown as unknown[][] },
       markLine: {
         silent: true,
         symbol: 'none',

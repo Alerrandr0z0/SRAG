@@ -54,6 +54,22 @@ class ClinicalFlowResponse(TypedDict):
     links: list[ClinicalFlowLink]
 
 
+class HospitalizationDurationResponse(TypedDict):
+    """Hospitalization duration distribution by outcome with KDE curves."""
+
+    cure: list[float]
+    death: list[float]
+    kde_x: list[float]
+    kde_cure: list[float]
+    kde_death: list[float]
+    median_cure: float
+    median_death: float
+    difference: float
+    ratio: float
+    cure_count: int
+    death_count: int
+
+
 class TerritoryBootstrapResponse(TypedDict):
     """Territory bootstrap response."""
 
@@ -115,6 +131,11 @@ class LaboratoryNetworkResponse(TypedDict):
     imaging_profile: dict[str, Any]
     serology_profile: dict[str, Any]
     antiviral_types: list[dict[str, Any]]
+    closure_by_agent: list[dict[str, Any]]
+    imaging_by_severity: dict[str, Any]
+    delay_by_unit: list[dict[str, Any]]
+    positivity_by_sample_type: list[dict[str, Any]]
+    diagnostic_latency_phases: dict[str, float]
 
 
 class VaccinationProfileResponse(TypedDict):
@@ -161,3 +182,100 @@ class AuditBootstrapResponse(TypedDict):
     quality_by_bairro: list[dict[str, Any]]
     quality_by_laboratory: list[dict[str, Any]]
     inconsistencies: list[dict[str, Any]]
+
+
+class LaboratoryQualityRow(TypedDict):
+    """Per-laboratory quality metrics."""
+
+    laboratory: str
+    score: float
+    total: int
+    diagnostico_score: float
+    resultado_pct: float
+    median_turnaround_days: float
+
+
+class SeverityKpiPoint(TypedDict):
+    """A single data point representing severity KPIs for a specific week or overall."""
+
+    hospitalization_rate: float
+    uti_rate: float
+    ventilatory_support_rate: float
+    death_rate: float
+    median_hospitalization_days: float
+    median_uti_days: float
+    epi_week: str | None
+
+
+class SeverityKpisResponse(TypedDict):
+    """Severity KPIs response with current status and trend over time."""
+
+    current: SeverityKpiPoint
+    trend: list[SeverityKpiPoint]
+
+
+class SeasonalTrendsResponse(TypedDict):
+    """Seasonal trends response with case counts by year and week."""
+
+    years: list[str]
+    weeks: list[int]
+    series: dict[str, list[int]]
+
+
+class SeverityPyramidPoint(TypedDict):
+    """A single age group's severity rates."""
+
+    age_group: str
+    total_cases: int
+    uti_rate: float
+    support_rate: float
+    death_rate: float
+
+
+SeverityPyramidResponse = list[SeverityPyramidPoint]
+
+
+class GravityCascadePoint(TypedDict):
+    """Weekly count of cases in each severity layer."""
+
+    epi_week: str
+    notified: int
+    hospitalized: int
+    uti: int
+    death: int
+
+
+GravityCascadeResponse = list[GravityCascadePoint]
+
+
+class EpidemicHeatmapResponse(TypedDict):
+    """2D Heatmap response containing weeks, age groups, and counts matrix."""
+
+    weeks: list[str]
+    age_groups: list[str]
+    data: list[list[int]]
+
+
+class ComorbiditiesTreemapItem(TypedDict):
+    """A comorbidity item for treemap visualization."""
+
+    name: str
+    value: int
+    deaths: int
+    lethality: float
+
+
+ComorbiditiesTreemapResponse = list[ComorbiditiesTreemapItem]
+
+
+class VentilatorySupportPoint(TypedDict):
+    """Weekly count of cases for each ventilatory support type."""
+
+    epi_week: str
+    invasive: int
+    non_invasive: int
+    no_support: int
+    ignored: int
+
+
+VentilatorySupportResponse = list[VentilatorySupportPoint]

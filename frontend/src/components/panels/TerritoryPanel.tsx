@@ -57,6 +57,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
 
   const [mapZoneMode, setMapZoneMode] = useState('Urbana');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [showUnits, setShowUnits] = useState(false);
 
   useEffect(() => {
     if (availableModes.length === 1) {
@@ -121,14 +122,25 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
 
       <article className="panel">
         <div className="section-header">
-          <div>
-            <h3>Mapa territorial</h3>
-            <p className="meta">
-              Cada bairro recebe uma cor na escala amarelo→vermelho conforme sua posição entre 0 e o
-              bairro com mais casos — proporção linear direta
-            </p>
-          </div>
+          <h3>Mapa territorial</h3>
           <div className="filters">
+            <button
+              type="button"
+              onClick={() => setShowUnits((v) => !v)}
+              aria-pressed={showUnits}
+              style={{
+                fontSize: 11,
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: '1px solid var(--border-subtle)',
+                background: showUnits ? 'var(--bg-status)' : 'var(--bg-panel)',
+                color: showUnits ? '#0f766e' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontWeight: showUnits ? 600 : 500,
+              }}
+            >
+              {showUnits ? 'Ocultar unidades' : 'Mostrar unidades'}
+            </button>
             <label>
               Zona
               <select
@@ -156,6 +168,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
             ruralSectorsGeo={ruralSectorsGeo}
             mapZoneMode={mapZoneMode}
             selectedSectors={selectedSectors}
+            showUnits={showUnits}
             onSectorSelect={(sectors: string[]) => setSelectedSectors(sectors)}
           />
         </div>

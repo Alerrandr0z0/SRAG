@@ -7,10 +7,13 @@ from srag.data.analytics.clinical import (
     compute_antiviral_latency,
     compute_antiviral_outcome_impact,
     compute_clinical_timing_metrics,
+    compute_comorbidities_treemap,
+    compute_gravity_cascade,
     compute_maternal_profile,
     compute_risk_factor_profile,
     compute_risk_factors_full_profile,
     compute_severity_metrics,
+    compute_severity_pyramid,
     compute_symptoms_heatmap,
     compute_symptoms_profile,
     compute_symptoms_signature,
@@ -392,3 +395,143 @@ class TestSymptomsSignature:
     def test_empty_df(self) -> None:
         res = compute_symptoms_signature(pd.DataFrame())
         assert res == {"labels": [], "bands": [], "matrices": {}}
+
+
+class TestSeverityKpis:
+    def test_severity_kpis_exact(self) -> None:
+        from srag.data.analytics.clinical import compute_severity_kpis
+
+        df = pd.DataFrame(
+            {
+                "HOSPITAL": [1, 1, 1, 2],
+                "UTI": [1, 1, 2, 2],
+                "SUPORT_VEN": [1, 3, np.nan, np.nan],
+                "EVOLUCAO": [1, 2, 9, 3],
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04"],
+                "DT_INTERNA": ["2023-01-05", "2023-01-06", "2023-01-07", np.nan],
+                "DT_EVOLUCA": ["2023-01-10", "2023-01-16", np.nan, np.nan],
+                "DT_ENTUTI": ["2023-01-05", "2023-01-06", np.nan, np.nan],
+                "DT_SAIDUTI": ["2023-01-09", "2023-01-12", np.nan, np.nan],
+            }
+        )
+        res = compute_severity_kpis(df)
+        current = res["current"]
+        assert current["hospitalization_rate"] == 75.0  # 3/4
+        assert current["uti_rate"] == 66.7  # 2/3
+        assert current["ventilatory_support_rate"] == 50.0  # 1/2
+        assert current["death_rate"] == 50.0  # 1/2 closed (1 and 2)
+        assert current["median_hospitalization_days"] == 7.5
+        assert current["median_uti_days"] == 5.0
+        assert len(res["trend"]) == 1
+        assert res["trend"][0]["hospitalization_rate"] == 75.0
+
+    def test_empty_df_zeros(self) -> None:
+        from srag.data.analytics.clinical import compute_severity_kpis
+
+        res = compute_severity_kpis(pd.DataFrame())
+        assert res["current"]["hospitalization_rate"] == 0.0
+        assert res["trend"] == []
+
+
+# ==============================================================
+# compute_severity_pyramid
+# ==============================================================
+
+
+class TestSeverityPyramid:
+    def test_empty_df(self) -> None:
+        assert compute_severity_pyramid(pd.DataFrame()) == []
+
+    def test_exact_rates(self) -> None:
+        df = pd.DataFrame(
+            {
+                "NU_IDADE_N": [2, 3, 10, 80],
+                "TP_IDADE": [3, 3, 3, 3],
+                "UTI": [1, 2, 1, 9],
+                "SUPORT_VEN": [1, 3, 2, 9],
+                "EVOLUCAO": [1, 2, 1, 9],
+            }
+        )
+        res = compute_severity_pyramid(df)
+        assert len(res) == 7
+
+        # 0-4 group: 2 patients (ages 2 and 3)
+        g0_4 = next(g for g in res if g["age_group"] == "0-4 anos")
+        assert g0_4["total_cases"] == 2
+        # one went to UTI (50%)
+        assert g0_4["uti_rate"] == 50.0
+        # one had support (50%)
+        assert g0_4["support_rate"] == 50.0
+        # one died (50%)
+        assert g0_4["death_rate"] == 50.0
+
+        # 5-14 group: 1 patient (age 10)
+        g5_14 = next(g for g in res if g["age_group"] == "5-14 anos")
+        assert g5_14["total_cases"] == 1
+        assert g5_14["uti_rate"] == 100.0
+        assert g5_14["support_rate"] == 100.0
+        assert g5_14["death_rate"] == 0.0
+
+
+# ==============================================================
+# compute_gravity_cascade
+# ==============================================================
+
+
+class TestGravityCascade:
+    def test_empty_df(self) -> None:
+        assert compute_gravity_cascade(pd.DataFrame()) == []
+
+    def test_exact_cascade(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": [
+                    "2023-01-01",
+                    "2023-01-02",
+                    "2023-01-08",
+                ],
+                "HOSPITAL": [1, 2, 1],
+                "UTI": [1, 9, 2],
+                "EVOLUCAO": [1, 2, 9],
+            }
+        )
+        res = compute_gravity_cascade(df)
+        assert len(res) == 2
+
+        w1 = next(r for r in res if r["epi_week"] == "2023-01")
+        assert w1["notified"] == 2
+        assert w1["hospitalized"] == 1
+        assert w1["uti"] == 1
+        assert w1["death"] == 1
+
+        w2 = next(r for r in res if r["epi_week"] == "2023-02")
+        assert w2["notified"] == 1
+        assert w2["hospitalized"] == 1
+        assert w2["uti"] == 0
+        assert w2["death"] == 0
+
+
+class TestComorbiditiesTreemap:
+    def test_empty_df(self) -> None:
+        assert compute_comorbidities_treemap(pd.DataFrame()) == []
+
+    def test_exact_treemap(self) -> None:
+        df = pd.DataFrame(
+            {
+                "OBESIDADE": [1, 2, 1],
+                "DIABETES": [1, 1, 9],
+                "EVOLUCAO": [2, 1, 1],
+            }
+        )
+        res = compute_comorbidities_treemap(df)
+        assert len(res) == 14
+
+        obesidade = next(r for r in res if r["name"] == "Obesidade")
+        assert obesidade["value"] == 2
+        assert obesidade["deaths"] == 1
+        assert obesidade["lethality"] == 50.0
+
+        diabetes = next(r for r in res if r["name"] == "Diabetes")
+        assert diabetes["value"] == 2
+        assert diabetes["deaths"] == 1
+        assert diabetes["lethality"] == 50.0

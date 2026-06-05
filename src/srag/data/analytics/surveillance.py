@@ -1189,3 +1189,158 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
         results.append(_compute_profile_metrics(subset, virus, perfil, friendly_names))
 
     return results
+
+
+def compute_seasonal_trends(df: pd.DataFrame) -> dict[str, Any]:
+    """Group SARI cases by year and epidemiological week (1 to 53) for Mossoró."""
+    from srag.utils.epi_weeks import get_epi_week
+
+    if df.empty:
+        return {"years": [], "weeks": [], "series": {}}
+
+    out = df.copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out = out.dropna(subset=["DT_SIN_PRI"])
+
+    if out.empty:
+        return {"years": [], "weeks": [], "series": {}}
+
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["year"] = out["se_year_week"].apply(lambda x: x[0])
+    out["week"] = out["se_year_week"].apply(lambda x: x[1])
+
+    # Group by year and week to count cases
+    counts = out.groupby(["year", "week"]).size().reset_index(name="count")
+
+    years = sorted(counts["year"].unique())
+
+    series = {}
+    for y in years:
+        y_counts = [0] * 53
+        y_data = counts[counts["year"] == y]
+        for _, row in y_data.iterrows():
+            w = int(row["week"])
+            if 1 <= w <= 53:
+                y_counts[w - 1] = int(row["count"])
+        series[str(y)] = y_counts
+
+    return {
+        "years": [str(y) for y in years],
+        "weeks": list(range(1, 54)),
+        "series": series,
+    }
+
+
+def compute_heatmap_se_age(df: pd.DataFrame) -> dict[str, Any]:
+    """Group cases by epidemiological week and age group for a 2D density Heatmap."""
+    from srag.data.analytics.filters import _age_years
+    from srag.utils.epi_weeks import format_epi_week, get_epi_week
+
+    if df.empty:
+        return {"weeks": [], "age_groups": [], "data": []}
+
+    out = df.copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out = out.dropna(subset=["DT_SIN_PRI"])
+    if out.empty:
+        return {"weeks": [], "age_groups": [], "data": []}
+
+    # Normalize age
+    age = _age_years(out)
+    if age.empty or age.isna().all():
+        return {"weeks": [], "age_groups": [], "data": []}
+
+    out["IDADE_ANOS"] = age
+
+    bins = [0.0, 5.0, 15.0, 30.0, 45.0, 60.0, 75.0, 150.0]
+    labels = [
+        "0-4 anos",
+        "5-14 anos",
+        "15-29 anos",
+        "30-44 anos",
+        "45-59 anos",
+        "60-74 anos",
+        "75+ anos",
+    ]
+    out["age_group"] = pd.cut(out["IDADE_ANOS"], bins=bins, labels=labels, right=False)
+
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+
+    # Drop cases without a valid age group or week
+    out = out.dropna(subset=["age_group", "epi_week"])
+    if out.empty:
+        return {"weeks": [], "age_groups": [], "data": []}
+
+    # Group by week and age group
+    grouped = (
+        out.groupby(["epi_week", "age_group"], observed=False).size().reset_index(name="count")
+    )
+
+    weeks = sorted(out["epi_week"].unique())
+    age_groups = labels
+
+    week_to_idx = {w: i for i, w in enumerate(weeks)}
+    age_to_idx = {g: i for i, g in enumerate(age_groups)}
+
+    data_points = []
+    for _, row in grouped.iterrows():
+        w = str(row["epi_week"])
+        g = str(row["age_group"])
+        count = int(row["count"])
+        if w in week_to_idx and g in age_to_idx and count > 0:
+            # Format: [x_index, y_index, value]
+            data_points.append([week_to_idx[w], age_to_idx[g], count])
+
+    return {
+        "weeks": weeks,
+        "age_groups": age_groups,
+        "data": data_points,
+    }
+
+
+def compute_ventilatory_support(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Compute weekly breakdown of ventilatory support types over time."""
+    from srag.utils.epi_weeks import format_epi_week, get_epi_week
+
+    if df.empty:
+        return []
+
+    out = df.copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out = out.dropna(subset=["DT_SIN_PRI"])
+    if out.empty:
+        return []
+
+    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
+    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+
+    s = pd.to_numeric(out["SUPORT_VEN"], errors="coerce").fillna(9)
+    out["support_type"] = "ignorado"
+    out.loc[s == 1, "support_type"] = "invasivo"
+    out.loc[s == 2, "support_type"] = "nao_invasivo"
+    out.loc[s == 3, "support_type"] = "sem_suporte"
+
+    grouped = (
+        out.groupby(["epi_week", "support_type"], observed=False).size().unstack(fill_value=0)
+    )
+
+    for col in ["invasivo", "nao_invasivo", "sem_suporte", "ignorado"]:
+        if col not in grouped.columns:
+            grouped[col] = 0
+
+    grouped = grouped.sort_index()
+
+    result = []
+    for week, row in grouped.iterrows():
+        result.append(
+            {
+                "epi_week": str(week),
+                "invasive": int(row["invasivo"]),
+                "non_invasive": int(row["nao_invasivo"]),
+                "no_support": int(row["sem_suporte"]),
+                "ignored": int(row["ignorado"]),
+            }
+        )
+
+    return result

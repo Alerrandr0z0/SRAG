@@ -6,10 +6,38 @@ import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
 import SankeyChart from '../charts/SankeyChart';
 import RankTable from '../ui/RankTable';
 
+const formatDays = (value: number) => `${value.toFixed(1)}d`;
+const formatSigned = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)}d`;
+const formatRatio = (value: number) => `${value.toFixed(1)}x`;
+
+interface KpiTileProps {
+  label: string;
+  value: string;
+  accent: string;
+  sub?: string;
+}
+
+const KpiTile: React.FC<KpiTileProps> = ({ label, value, accent, sub }) => (
+  <div
+    style={{
+      background: 'var(--bg-status)',
+      borderRadius: 6,
+      padding: '10px 12px',
+      textAlign: 'center',
+    }}
+  >
+    <div style={{ fontSize: 18, fontWeight: 500, color: accent }}>{value}</div>
+    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+    {sub && (
+      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>
+    )}
+  </div>
+);
+
 interface UnitsPanelProps {
   loading: boolean;
   units: Epi.UnitStats[];
-  hospitalization: number[];
+  hospitalization: Epi.HospitalizationDurationData | null;
   clinicalFlow: Epi.ClinicalFlow;
   timelineData: Epi.AggregatedTimeline[];
   icuBottleneck: Epi.IcuBottleneckRecord[];
@@ -310,8 +338,49 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
         <div className="section-header">
           <h3>Tempo de Internação</h3>
         </div>
+        {hospitalization && (hospitalization.cure_count > 0 || hospitalization.death_count > 0) && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            <KpiTile
+              label="Mediana cura"
+              value={hospitalization.cure_count > 0 ? formatDays(hospitalization.median_cure) : '—'}
+              accent="#0f6e56"
+              sub={hospitalization.cure_count > 0 ? `${hospitalization.cure_count} casos` : undefined}
+            />
+            <KpiTile
+              label="Mediana óbito"
+              value={hospitalization.death_count > 0 ? formatDays(hospitalization.median_death) : '—'}
+              accent="#a32d2d"
+              sub={hospitalization.death_count > 0 ? `${hospitalization.death_count} casos` : undefined}
+            />
+            <KpiTile
+              label="Diferença"
+              value={
+                hospitalization.cure_count > 0 && hospitalization.death_count > 0
+                  ? formatSigned(hospitalization.difference)
+                  : '—'
+              }
+              accent="var(--text-main)"
+            />
+            <KpiTile
+              label="Razão cura/óbito"
+              value={
+                hospitalization.cure_count > 0 && hospitalization.death_count > 0 && hospitalization.ratio > 0
+                  ? formatRatio(hospitalization.ratio)
+                  : '—'
+              }
+              accent="#d97706"
+            />
+          </div>
+        )}
         <div className="chart-wrap">
-          <HospitalizationHistogram data={hospitalization || []} />
+          <HospitalizationHistogram data={hospitalization} />
         </div>
       </article>
 

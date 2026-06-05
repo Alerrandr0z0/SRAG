@@ -171,7 +171,12 @@ export interface LaboratoryNetwork {
   antiviral_usage: { adherence_rate: number; total_indicated: number; treated: number };
   closure_criteria: Array<{ label: string; count: number }>;
   notification_delay: Array<{ epi_week: string; median_delay: number; record_count: number }>;
-  mortality_by_treatment: Array<{ treatment: string; agent: string; deaths: number }>;
+  mortality_by_treatment?: Array<{ treatment: string; agent: string; deaths: number }>;
+  mortality_by_treatment_agent?: Array<{ treatment: string; agent: string; deaths: number }>;
+  imaging_profile?: {
+    raiox: Array<{ label: string; count: number }>;
+    tomo: Array<{ label: string; count: number }>;
+  };
   genomic_variants: {
     weeks: string[];
     variants: Record<string, number[]>;
@@ -179,6 +184,52 @@ export interface LaboratoryNetwork {
   antiviral_types?: Array<{ label: string; count: number }>;
   virus_ranking?: Array<{ virus: string; count: number }>;
   virus_trends?: Array<{ epi_week: string; virus: string; count: number }>;
+  closure_by_agent?: Array<{
+    agent: string;
+    total: number;
+    Laboratorial: number;
+    'Vínculo Epidemiológico': number;
+    'Clínico / Imagem': number;
+    'Óbito': number;
+    'Ignorado/Em Aberto': number;
+  }>;
+  imaging_by_severity?: {
+    raiox: Array<{
+      finding: string;
+      total: number;
+      uti_count: number;
+      uti_rate: number;
+      death_count: number;
+      death_rate: number;
+    }>;
+    tomo: Array<{
+      finding: string;
+      total: number;
+      uti_count: number;
+      uti_rate: number;
+      death_count: number;
+      death_rate: number;
+    }>;
+  };
+  delay_by_unit?: Array<{
+    id_unidade: string;
+    nome_fantasia: string;
+    total: number;
+    median_delay: number;
+    avg_delay: number;
+  }>;
+  positivity_by_sample_type?: Array<{
+    sample_type: string;
+    tested: number;
+    positive: number;
+    positivity_rate: number;
+  }>;
+  diagnostic_latency_phases?: {
+    symptom_to_notification: number;
+    notification_to_collection: number;
+    collection_to_result: number;
+    symptom_to_treatment: number;
+  };
 }
 
 export interface PyramidRow {
@@ -268,6 +319,20 @@ export interface AggregatedTimeline {
   count: number;
 }
 
+export interface HospitalizationDurationData {
+  cure: number[];
+  death: number[];
+  kde_x: number[];
+  kde_cure: number[];
+  kde_death: number[];
+  median_cure: number;
+  median_death: number;
+  difference: number;
+  ratio: number;
+  cure_count: number;
+  death_count: number;
+}
+
 export interface DataCompletenessGroup {
   group: string;
   overall_score: number;
@@ -306,6 +371,7 @@ export interface LaboratorioQualityScore {
   total: number;
   diagnostico_score: number;
   resultado_pct: number;
+  median_turnaround_days?: number;
 }
 
 export interface LogicalInconsistency {
@@ -326,3 +392,76 @@ export interface AuditBootstrap {
 }
 
 export type TemporalGrouping = 'year' | 'month' | 'week';
+
+export interface DashboardData {
+  summary: SummaryData | null;
+  trends: TrendsData | null;
+  virus: VirusData[] | null;
+  laboratoryNetwork?: LaboratoryNetwork;
+}
+
+export interface SeverityKpiPoint {
+  hospitalization_rate: number;
+  uti_rate: number;
+  ventilatory_support_rate: number;
+  death_rate: number;
+  median_hospitalization_days: number;
+  median_uti_days: number;
+  epi_week?: string | null;
+}
+
+export interface SeverityKpisResponse {
+  current: SeverityKpiPoint;
+  trend: SeverityKpiPoint[];
+}
+
+export interface SeasonalTrendsResponse {
+  years: string[];
+  weeks: number[];
+  series: Record<string, number[]>;
+}
+
+export interface SeverityPyramidPoint {
+  age_group: string;
+  total_cases: number;
+  uti_rate: number;
+  support_rate: number;
+  death_rate: number;
+}
+
+export type SeverityPyramidResponse = SeverityPyramidPoint[];
+
+export interface GravityCascadePoint {
+  epi_week: string;
+  notified: number;
+  hospitalized: number;
+  uti: number;
+  death: number;
+}
+
+export type GravityCascadeResponse = GravityCascadePoint[];
+
+export interface EpidemicHeatmapResponse {
+  weeks: string[];
+  age_groups: string[];
+  data: [number, number, number][];
+}
+
+export interface ComorbiditiesTreemapItem {
+  name: string;
+  value: number;
+  deaths: number;
+  lethality: number;
+}
+
+export type ComorbiditiesTreemapResponse = ComorbiditiesTreemapItem[];
+
+export interface VentilatorySupportPoint {
+  epi_week: string;
+  invasive: number;
+  non_invasive: number;
+  no_support: number;
+  ignored: number;
+}
+
+export type VentilatorySupportResponse = VentilatorySupportPoint[];

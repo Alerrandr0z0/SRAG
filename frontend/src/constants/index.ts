@@ -26,6 +26,13 @@ export const API_ENDPOINTS = {
   LABORATORY_NETWORK: '/laboratory_network',
   CONTEXT_TRENDS: '/context_trends',
   MACROSECTOR_HEATPOINTS: '/geo/macrosector_heatpoints',
+  SEVERITY_KPIS: '/severity_kpis',
+  SEASONAL_TRENDS: '/trends/seasonal',
+  SEVERITY_PYRAMID: '/severity_pyramid',
+  GRAVITY_CASCADE: '/gravity_cascade',
+  HEATMAP_SE_AGE: '/trends/heatmap_se_age',
+  COMORBIDITIES_TREEMAP: '/clinical/comorbidities_treemap',
+  VENTILATORY_SUPPORT: '/trends/ventilatory_support',
 };
 
 export const CHART_DEFAULTS = {

@@ -9,6 +9,207 @@ from srag.data.cnes_lookup import lookup_unit_name
 from srag.utils.epi_weeks import format_epi_week, get_epi_week
 
 
+def _empty_datetime_series(index: pd.Index) -> pd.Series:
+    return pd.Series(index=index, dtype="datetime64[ns]")
+
+
+def _prepare_laboratory_quality_frame(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["LAB_AN"] = out["LAB_AN"].fillna("Sem laboratório").astype(str).str.strip().str.upper()
+
+    dt_coleta = _empty_datetime_series(out.index)
+    if "DT_COLETA" in out:
+        dt_coleta = pd.to_datetime(out["DT_COLETA"], errors="coerce")
+
+    dt_pcr = _empty_datetime_series(out.index)
+    if "DT_PCR" in out:
+        dt_pcr = pd.to_datetime(out["DT_PCR"], errors="coerce")
+
+    dt_res_an = _empty_datetime_series(out.index)
+    if "DT_RES_AN" in out:
+        dt_res_an = pd.to_datetime(out["DT_RES_AN"], errors="coerce")
+
+    turnaround_candidates = pd.DataFrame(
+        {
+            "pcr": (dt_pcr - dt_coleta).dt.days,
+            "an": (dt_res_an - dt_coleta).dt.days,
+        }
+    )
+    out["turnaround_days"] = turnaround_candidates.min(axis=1)
+    out.loc[(out["turnaround_days"] < 0) | (out["turnaround_days"] > 30), "turnaround_days"] = (
+        np.nan
+    )
+    return out
+
+
+def _mark_validity_columns(out: pd.DataFrame) -> pd.DataFrame:
+    fields_to_audit = [
+        ("Data da Notificação", "DT_NOTIFIC", []),
+        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+        ("Sexo", "CS_SEXO", ["I"]),
+        ("Idade Normalizada", "NU_IDADE_N", []),
+        ("Tipo de Idade", "TP_IDADE", []),
+        ("Município de Notificação", "ID_MUNICIP", []),
+        ("Unidade Notificadora", "ID_UNIDADE", []),
+        ("Raça/Cor", "CS_RACA", [9]),
+        ("Escolaridade", "CS_ESCOL_N", [9]),
+        ("Ocupação", "PAC_DSCBO", [9, "9"]),
+        ("Zona", "CS_ZONA", [9]),
+        ("Bairro", "NM_BAIRRO", []),
+        ("Município de Residência", "ID_MN_RESI", []),
+        ("Internação Hospitalar", "HOSPITAL", [9]),
+        ("Data de Internação", "DT_INTERNA", []),
+        ("UTI", "UTI", [9]),
+        ("Entrada em UTI", "DT_ENTUTI", []),
+        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+        ("Evolução", "EVOLUCAO", [9]),
+        ("Data de Evolução", "DT_EVOLUCA", []),
+        ("Classificação Final", "CLASSI_FIN", [9]),
+        ("Critério de Confirmação", "CRITERIO", [9]),
+        ("Amostra Coletada", "AMOSTRA", [9]),
+        ("Data de Coleta", "DT_COLETA", []),
+        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+        ("Resultado Antígeno", "RES_AN", [9]),
+        ("Data do PCR", "DT_PCR", []),
+        ("Laboratório", "LAB_AN", []),
+        ("Vacina COVID-19", "VACINA_COV", [9]),
+        ("Dose 1 COVID", "DOSE_1_COV", [9]),
+        ("Dose 2 COVID", "DOSE_2_COV", [9]),
+        ("Reforço COVID", "DOSE_REF", [9]),
+        ("Vacina Influenza", "VACINA", [9]),
+        ("Data da Última Dose", "DT_UT_DOSE", []),
+        ("Gestante", "CS_GESTANT", [9]),
+        ("Puérpera", "PUERPERA", [9]),
+    ]
+
+    for _, col, ignore_vals in fields_to_audit:
+        valid_col = f"valid_{col}"
+        if col in out.columns:
+            series = out[col]
+            is_valid = series.notna() & (series.astype(str).str.strip() != "")
+            if ignore_vals:
+                ignores = ignore_vals + [str(v) for v in ignore_vals]
+                is_valid = is_valid & ~series.isin(ignores)
+            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
+                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
+                is_valid = is_valid | ~is_female
+            out[valid_col] = is_valid
+        else:
+            out[valid_col] = False
+
+    return out
+
+
+def _add_block_scores(out: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    blocks = {
+        "Identificação": [
+            "DT_NOTIFIC",
+            "DT_SIN_PRI",
+            "CS_SEXO",
+            "NU_IDADE_N",
+            "TP_IDADE",
+            "ID_MUNICIP",
+            "ID_UNIDADE",
+        ],
+        "Demografia": [
+            "CS_RACA",
+            "CS_ESCOL_N",
+            "PAC_DSCBO",
+            "CS_ZONA",
+            "NM_BAIRRO",
+            "ID_MN_RESI",
+        ],
+        "Cuidado": [
+            "HOSPITAL",
+            "DT_INTERNA",
+            "UTI",
+            "DT_ENTUTI",
+            "SUPORT_VEN",
+            "EVOLUCAO",
+            "DT_EVOLUCA",
+            "CLASSI_FIN",
+            "CRITERIO",
+        ],
+        "Diagnóstico": [
+            "AMOSTRA",
+            "DT_COLETA",
+            "TP_AMOSTRA",
+            "PCR_RESUL",
+            "RES_AN",
+            "DT_PCR",
+            "LAB_AN",
+        ],
+        "Vacinação": [
+            "VACINA_COV",
+            "DOSE_1_COV",
+            "DOSE_2_COV",
+            "DOSE_REF",
+            "VACINA",
+            "DT_UT_DOSE",
+            "CS_GESTANT",
+            "PUERPERA",
+        ],
+    }
+
+    block_cols: list[str] = []
+    for block_name, cols in blocks.items():
+        block_col = f"block_score_{block_name}"
+        block_cols.append(block_col)
+        valid_cols = [f"valid_{col}" for col in cols]
+        out[block_col] = out[valid_cols].mean(axis=1) * 100
+
+    out["row_score"] = out[block_cols].mean(axis=1)
+    return out, block_cols
+
+
+def _build_laboratory_quality_rows(out: pd.DataFrame) -> list[dict[str, Any]]:
+    has_pcr = out.get("valid_PCR_RESUL", pd.Series(False, index=out.index))
+    has_an = out.get("valid_RES_AN", pd.Series(False, index=out.index))
+    out["has_resultado"] = has_pcr | has_an
+
+    valid_cols = [col for col in out.columns if col.startswith("valid_")]
+    agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
+    agg_dict["row_score"] = "mean"
+    agg_dict["block_score_Diagnóstico"] = "mean"
+    agg_dict["has_resultado"] = "mean"
+    agg_dict["turnaround_days"] = "median"
+
+    lab_grouped = out.groupby("LAB_AN").agg(agg_dict).reset_index()
+    lab_grouped = lab_grouped.rename(columns={"LAB_AN": "laboratorio", "row_score": "score"})
+
+    lab_counts = out["LAB_AN"].value_counts().reset_index(name="total")
+    lab_grouped = lab_grouped.merge(lab_counts, left_on="laboratorio", right_on="LAB_AN").drop(
+        columns=["LAB_AN"]
+    )
+
+    lab_grouped["score"] = lab_grouped["score"].round(1)
+    lab_grouped["diagnostico_score"] = lab_grouped["block_score_Diagnóstico"].round(1)
+    lab_grouped["resultado_pct"] = (lab_grouped["has_resultado"] * 100).round(1)
+    lab_grouped["median_turnaround_days"] = lab_grouped["turnaround_days"].round(1)
+    lab_grouped = lab_grouped.sort_values("score", ascending=True)
+
+    result_cols = [
+        "laboratorio",
+        "score",
+        "total",
+        "diagnostico_score",
+        "resultado_pct",
+        "median_turnaround_days",
+    ]
+    return [
+        {
+            "laboratorio": str(r.get("laboratorio", "")),
+            "score": float(r.get("score", 0.0)),
+            "total": int(r.get("total", 0)),
+            "diagnostico_score": float(r.get("diagnostico_score", 0.0)),
+            "resultado_pct": float(r.get("resultado_pct", 0.0)),
+            "median_turnaround_days": float(r.get("median_turnaround_days", 0.0)),
+        }
+        for r in lab_grouped[result_cols].to_dict(orient="records")
+    ]
+
+
 def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     """Calculate quartiles for time between sample collection and PCR result for Box Plot."""
     if df.empty:
@@ -832,155 +1033,314 @@ def compute_quality_by_laboratory(df: pd.DataFrame) -> list[dict[str, Any]]:
     if df.empty or "LAB_AN" not in df.columns:
         return []
 
+    out = _prepare_laboratory_quality_frame(df)
+    out = _mark_validity_columns(out)
+    out, _block_cols = _add_block_scores(out)
+    return _build_laboratory_quality_rows(out)
+
+
+def compute_closure_by_agent(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Cross-tabulate closure criteria (CRITERIO) by etiologic agent."""
+    if df.empty:
+        return []
+
+    from srag.data.analytics.surveillance import infer_etiologic_agent
+
     out = df.copy()
-    out["LAB_AN"] = out["LAB_AN"].fillna("Sem laboratório").astype(str).str.strip().str.upper()
+    out["virus"] = infer_etiologic_agent(out)
 
-    fields_to_audit = [
-        ("Data da Notificação", "DT_NOTIFIC", []),
-        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
-        ("Sexo", "CS_SEXO", ["I"]),
-        ("Idade Normalizada", "NU_IDADE_N", []),
-        ("Tipo de Idade", "TP_IDADE", []),
-        ("Município de Notificação", "ID_MUNICIP", []),
-        ("Unidade Notificadora", "ID_UNIDADE", []),
-        ("Raça/Cor", "CS_RACA", [9]),
-        ("Escolaridade", "CS_ESCOL_N", [9]),
-        ("Ocupação", "PAC_DSCBO", [9, "9"]),
-        ("Zona", "CS_ZONA", [9]),
-        ("Bairro", "NM_BAIRRO", []),
-        ("Município de Residência", "ID_MN_RESI", []),
-        ("Internação Hospitalar", "HOSPITAL", [9]),
-        ("Data de Internação", "DT_INTERNA", []),
-        ("UTI", "UTI", [9]),
-        ("Entrada em UTI", "DT_ENTUTI", []),
-        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
-        ("Evolução", "EVOLUCAO", [9]),
-        ("Data de Evolução", "DT_EVOLUCA", []),
-        ("Classificação Final", "CLASSI_FIN", [9]),
-        ("Critério de Confirmação", "CRITERIO", [9]),
-        ("Amostra Coletada", "AMOSTRA", [9]),
-        ("Data de Coleta", "DT_COLETA", []),
-        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
-        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
-        ("Resultado Antígeno", "RES_AN", [9]),
-        ("Data do PCR", "DT_PCR", []),
-        ("Laboratório", "LAB_AN", []),
-        ("Vacina COVID-19", "VACINA_COV", [9]),
-        ("Dose 1 COVID", "DOSE_1_COV", [9]),
-        ("Dose 2 COVID", "DOSE_2_COV", [9]),
-        ("Reforço COVID", "DOSE_REF", [9]),
-        ("Vacina Influenza", "VACINA", [9]),
-        ("Data da Última Dose", "DT_UT_DOSE", []),
-        ("Gestante", "CS_GESTANT", [9]),
-        ("Puérpera", "PUERPERA", [9]),
-    ]
-
-    blocks = {
-        "Identificação": [
-            "DT_NOTIFIC",
-            "DT_SIN_PRI",
-            "CS_SEXO",
-            "NU_IDADE_N",
-            "TP_IDADE",
-            "ID_MUNICIP",
-            "ID_UNIDADE",
-        ],
-        "Demografia": [
-            "CS_RACA",
-            "CS_ESCOL_N",
-            "PAC_DSCBO",
-            "CS_ZONA",
-            "NM_BAIRRO",
-            "ID_MN_RESI",
-        ],
-        "Cuidado": [
-            "HOSPITAL",
-            "DT_INTERNA",
-            "UTI",
-            "DT_ENTUTI",
-            "SUPORT_VEN",
-            "EVOLUCAO",
-            "DT_EVOLUCA",
-            "CLASSI_FIN",
-            "CRITERIO",
-        ],
-        "Diagnóstico": [
-            "AMOSTRA",
-            "DT_COLETA",
-            "TP_AMOSTRA",
-            "PCR_RESUL",
-            "RES_AN",
-            "DT_PCR",
-            "LAB_AN",
-        ],
-        "Vacinação": [
-            "VACINA_COV",
-            "DOSE_1_COV",
-            "DOSE_2_COV",
-            "DOSE_REF",
-            "VACINA",
-            "DT_UT_DOSE",
-            "CS_GESTANT",
-            "PUERPERA",
-        ],
+    criteria_map = {
+        1: "Laboratorial",
+        2: "Vínculo Epidemiológico",
+        3: "Clínico / Imagem",
+        4: "Óbito",
     }
-
-    for _, col, ignore_vals in fields_to_audit:
-        valid_col = f"valid_{col}"
-        if col in out.columns:
-            series = out[col]
-            is_valid = series.notna() & (series.astype(str).str.strip() != "")
-            if ignore_vals:
-                ignores = ignore_vals + [str(v) for v in ignore_vals]
-                is_valid = is_valid & ~series.isin(ignores)
-            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
-                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
-                is_valid = is_valid | ~is_female
-            out[valid_col] = is_valid
-        else:
-            out[valid_col] = False
-
-    block_cols = []
-    for block_name, cols in blocks.items():
-        block_col = f"block_score_{block_name}"
-        block_cols.append(block_col)
-        valid_cols = [f"valid_{col}" for col in cols]
-        out[block_col] = out[valid_cols].mean(axis=1) * 100
-
-    out["row_score"] = out[block_cols].mean(axis=1)
-
-    has_pcr = out.get("valid_PCR_RESUL", pd.Series(False, index=out.index))
-    has_an = out.get("valid_RES_AN", pd.Series(False, index=out.index))
-    out["has_resultado"] = has_pcr | has_an
-
-    valid_cols = [f"valid_{col}" for _, col, _ in fields_to_audit]
-    agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
-    agg_dict["row_score"] = "mean"
-    agg_dict["block_score_Diagnóstico"] = "mean"
-    agg_dict["has_resultado"] = "mean"
-
-    lab_grouped = out.groupby("LAB_AN").agg(agg_dict).reset_index()
-    lab_grouped = lab_grouped.rename(columns={"LAB_AN": "laboratorio", "row_score": "score"})
-
-    lab_counts = out["LAB_AN"].value_counts().reset_index(name="total")
-    lab_grouped = lab_grouped.merge(lab_counts, left_on="laboratorio", right_on="LAB_AN").drop(
-        columns=["LAB_AN"]
+    out["criterio_label"] = (
+        pd.to_numeric(out["CRITERIO"], errors="coerce")
+        .map(criteria_map)
+        .fillna("Ignorado/Em Aberto")
     )
 
-    lab_grouped["score"] = lab_grouped["score"].round(1)
-    lab_grouped["diagnostico_score"] = lab_grouped["block_score_Diagnóstico"].round(1)
-    lab_grouped["resultado_pct"] = (lab_grouped["has_resultado"] * 100).round(1)
+    ct = pd.crosstab(out["virus"], out["criterio_label"])
 
-    lab_grouped = lab_grouped.sort_values("score", ascending=True)
+    all_criteria = [
+        "Laboratorial",
+        "Vínculo Epidemiológico",
+        "Clínico / Imagem",
+        "Óbito",
+        "Ignorado/Em Aberto",
+    ]
 
-    result_cols = ["laboratorio", "score", "total", "diagnostico_score", "resultado_pct"]
+    results = []
+    for agent in ct.index:
+        row = ct.loc[agent]
+        total = int(row.sum())
+        item = {
+            "agent": str(agent),
+            "total": total,
+        }
+        for criterion in all_criteria:
+            item[criterion] = int(row.get(criterion, 0))
+        results.append(item)
+
+    return results
+
+
+def compute_imaging_by_severity(df: pd.DataFrame) -> dict[str, Any]:
+    """Analyze X-Ray and CT findings by clinical severity (UTI admission and lethality)."""
+    if df.empty:
+        return {"raiox": [], "tomo": []}
+
+    out = df.copy()
+
+    # closed cases mask for CFR denominator
+    out["closed_case"] = out["EVOLUCAO"].isin([1, 2])
+    out["is_death"] = out["EVOLUCAO"] == 2
+    out["is_uti"] = out["UTI"] == 1
+
+    raiox_map = {1: "Normal", 2: "Infiltrado", 3: "Consolidação", 4: "Misto", 5: "Outro"}
+    tomo_map = {1: "Típico", 2: "Indeterminado", 3: "Atípico", 4: "Negativo", 5: "Outro"}
+
+    def analyze_finding(col_name: str, mapping: dict[int, str]) -> list[dict[str, Any]]:
+        col = out.get(col_name)
+        if col is None:
+            return []
+
+        # Map findings and dropna to keep only defined findings
+        temp = out.copy()
+        temp["finding"] = pd.to_numeric(col, errors="coerce").map(mapping)
+        temp = temp.dropna(subset=["finding"])
+        if temp.empty:
+            return []
+
+        grouped = (
+            temp.groupby("finding")
+            .agg(
+                total=("finding", "size"),
+                uti_count=("is_uti", "sum"),
+                death_count=("is_death", "sum"),
+                closed_count=("closed_case", "sum"),
+            )
+            .reset_index()
+        )
+
+        results = []
+        for _, r in grouped.iterrows():
+            total = int(r["total"])
+            uti_count = int(r["uti_count"])
+            death_count = int(r["death_count"])
+            closed_count = int(r["closed_count"])
+
+            results.append(
+                {
+                    "finding": str(r["finding"]),
+                    "total": total,
+                    "uti_count": uti_count,
+                    "uti_rate": round(uti_count / total * 100, 1) if total > 0 else 0.0,
+                    "death_count": death_count,
+                    "death_rate": (
+                        round(death_count / closed_count * 100, 1) if closed_count > 0 else 0.0
+                    ),
+                }
+            )
+        return results
+
+    return {
+        "raiox": analyze_finding("RAIOX_RES", raiox_map),
+        "tomo": analyze_finding("TOMO_RES", tomo_map),
+    }
+
+
+def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, Any]]:
+    """Compute median notification delay by notifying health unit (CNES)."""
+    if df.empty:
+        return []
+
+    from srag.data.cnes_lookup import lookup_unit_name
+
+    out = df.copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out["DT_NOTIFIC"] = pd.to_datetime(out["DT_NOTIFIC"], errors="coerce")
+
+    valid = out.dropna(subset=["DT_SIN_PRI", "DT_NOTIFIC"])
+    valid = valid[valid["DT_NOTIFIC"] >= valid["DT_SIN_PRI"]]
+
+    if valid.empty:
+        return []
+
+    valid["delay"] = (valid["DT_NOTIFIC"] - valid["DT_SIN_PRI"]).dt.days
+    valid = valid[valid["delay"] <= 60]
+
+    if "ID_UNIDADE" not in valid.columns:
+        return []
+
+    valid["id_unidade"] = valid["ID_UNIDADE"].fillna("Não informado").astype(str).str.strip()
+    valid = valid[valid["id_unidade"] != ""]
+
+    if valid.empty:
+        return []
+
+    grouped = (
+        valid.groupby("id_unidade")
+        .agg(
+            median_delay=("delay", "median"), avg_delay=("delay", "mean"), total=("delay", "size")
+        )
+        .reset_index()
+    )
+
+    grouped["nome_fantasia"] = grouped["id_unidade"].apply(lookup_unit_name)
+    grouped["median_delay"] = grouped["median_delay"].round(1)
+    grouped["avg_delay"] = grouped["avg_delay"].round(1)
+
+    # Sort by total cases descending, and limit
+    grouped = grouped.sort_values(by="total", ascending=False).head(limit)
+
     return [
         {
-            "laboratorio": str(r.get("laboratorio", "")),
-            "score": float(r.get("score", 0.0)),
-            "total": int(r.get("total", 0)),
-            "diagnostico_score": float(r.get("diagnostico_score", 0.0)),
-            "resultado_pct": float(r.get("resultado_pct", 0.0)),
+            "id_unidade": str(r["id_unidade"]),
+            "nome_fantasia": str(r["nome_fantasia"]),
+            "total": int(r["total"]),
+            "median_delay": float(r["median_delay"]),
+            "avg_delay": float(r["avg_delay"]),
         }
-        for r in lab_grouped[result_cols].to_dict(orient="records")
+        for _, r in grouped.iterrows()
     ]
+
+
+def compute_positivity_by_sample_type(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Compute tested cases, positive cases, and positivity rate by sample type (TP_AMOSTRA)."""
+    if df.empty:
+        return []
+
+    out = df.copy()
+    pcr_col = out.get("PCR_RESUL")
+    an_col = out.get("RES_AN")
+    pcr_res = (
+        pd.to_numeric(pcr_col, errors="coerce")
+        if pcr_col is not None
+        else pd.Series(np.nan, index=out.index)
+    )
+    an_res = (
+        pd.to_numeric(an_col, errors="coerce")
+        if an_col is not None
+        else pd.Series(np.nan, index=out.index)
+    )
+
+    amostra_col = out.get("AMOSTRA")
+    if amostra_col is None:
+        out["is_tested"] = True
+    else:
+        out["is_tested"] = pd.to_numeric(amostra_col, errors="coerce") == 1
+
+    out["is_positive"] = (pcr_res == 1) | (an_res == 1)
+
+    tp_amostra_col = out.get("TP_AMOSTRA")
+    if tp_amostra_col is None:
+        return []
+
+    sample_map = {
+        1: "Secreção Naso/Orofaringe",
+        2: "Lavado Bronco-alveolar",
+        3: "Tecido post-mortem",
+        4: "Outra",
+        5: "LCR",
+        9: "Ignorado",
+    }
+
+    out["sample_type"] = (
+        pd.to_numeric(tp_amostra_col, errors="coerce")
+        .map(sample_map)
+        .fillna("Ignorado/Não Informado")
+    )
+
+    # We want to group by sample_type
+    grouped = (
+        out.groupby("sample_type")
+        .agg(
+            tested=("is_tested", "sum"),
+            positive=("is_positive", "sum"),
+        )
+        .reset_index()
+    )
+
+    results = []
+    for _, r in grouped.iterrows():
+        tested = int(r["tested"])
+        positive = int(r["positive"])
+        rate = round((positive / tested * 100), 1) if tested > 0 else 0.0
+        results.append(
+            {
+                "sample_type": str(r["sample_type"]),
+                "tested": tested,
+                "positive": positive,
+                "positivity_rate": rate,
+            }
+        )
+
+    return results
+
+
+def _compute_phase_delay(df: pd.DataFrame, start_col: str, end_col: str, max_val: int) -> float:
+    if start_col not in df.columns or end_col not in df.columns:
+        return 0.0
+
+    start_date = pd.to_datetime(df[start_col], errors="coerce")
+    end_date = pd.to_datetime(df[end_col], errors="coerce")
+
+    delta = (end_date - start_date).dt.days
+    valid_delta = delta.dropna()
+    valid_delta = valid_delta[(valid_delta >= 0) & (valid_delta <= max_val)]
+    if valid_delta.empty:
+        return 0.0
+    return float(round(valid_delta.median(), 1))
+
+
+def compute_diagnostic_latency_phases(df: pd.DataFrame) -> dict[str, float]:
+    """Compute median days for Symptoms->Notif->Collection->Result->Treatment phases."""
+    if df.empty:
+        return {
+            "symptom_to_notification": 0.0,
+            "notification_to_collection": 0.0,
+            "collection_to_result": 0.0,
+            "symptom_to_treatment": 0.0,
+        }
+
+    out = df.copy()
+
+    symptom_to_notification = _compute_phase_delay(out, "DT_SIN_PRI", "DT_NOTIFIC", 60)
+    notification_to_collection = _compute_phase_delay(out, "DT_NOTIFIC", "DT_COLETA", 30)
+
+    collection_to_result = 0.0
+    if "DT_COLETA" in out.columns:
+        dt_coleta = pd.to_datetime(out["DT_COLETA"], errors="coerce")
+        dt_pcr = pd.to_datetime(
+            out["DT_PCR"] if "DT_PCR" in out.columns else pd.Series(np.nan, index=out.index),
+            errors="coerce",
+        )
+        dt_res_an = pd.to_datetime(
+            out["DT_RES_AN"] if "DT_RES_AN" in out.columns else pd.Series(np.nan, index=out.index),
+            errors="coerce",
+        )
+
+        pcr_delta = (dt_pcr - dt_coleta).dt.days
+        an_delta = (dt_res_an - dt_coleta).dt.days
+
+        combined_deltas = pd.DataFrame({"pcr": pcr_delta, "an": an_delta})
+        combined_deltas[(combined_deltas < 0) | (combined_deltas > 30)] = np.nan
+        min_delta = combined_deltas.min(axis=1).dropna()
+        if not min_delta.empty:
+            collection_to_result = float(round(min_delta.median(), 1))
+
+    symptom_to_treatment = 0.0
+    antiviral_col = out.get("ANTIVIRAL")
+    if antiviral_col is not None and "DT_SIN_PRI" in out.columns and "DT_ANTIVIR" in out.columns:
+        antiviral_mask = pd.to_numeric(antiviral_col, errors="coerce") == 1
+        treated = out[antiviral_mask]
+        symptom_to_treatment = _compute_phase_delay(treated, "DT_SIN_PRI", "DT_ANTIVIR", 14)
+
+    return {
+        "symptom_to_notification": symptom_to_notification,
+        "notification_to_collection": notification_to_collection,
+        "collection_to_result": collection_to_result,
+        "symptom_to_treatment": symptom_to_treatment,
+    }
