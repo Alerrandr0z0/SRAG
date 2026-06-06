@@ -45,6 +45,7 @@ GEMINI.md
 .gemini/
 frontend/GEMINI.md
 AGENTS.md
+.opencode/
 
 # Agent Skills & Knowledge Graph (external assets & artifacts)
 .agents/

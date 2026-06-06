@@ -369,6 +369,35 @@ class TestDelayByUnit:
         assert res[0]["total"] == 2
         assert res[0]["median_delay"] == 3.0
         assert res[0]["avg_delay"] == 3.0
+        assert res[0]["delay_samples"] == [2, 4]
+
+    def test_delay_samples_capped(self) -> None:
+        delays = list(range(1, 121))
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01"] * 120,
+                "DT_NOTIFIC": [pd.Timestamp("2023-01-01") + pd.Timedelta(days=d) for d in delays],
+                "ID_UNIDADE": ["U1"] * 120,
+            }
+        )
+        res = compute_delay_by_unit(df)
+        # Filter caps at 60 days; sample cap is 100 but only 60 fit
+        assert len(res[0]["delay_samples"]) == 60
+        assert res[0]["delay_samples"][0] == 1
+        assert res[0]["delay_samples"][-1] == 60
+
+    def test_delay_samples_within_max(self) -> None:
+        # Verify sort + slicing in the aggregation lambda
+        delays = [10, 3, 7, 1, 5, 9, 2, 8, 4, 6]
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01"] * 10,
+                "DT_NOTIFIC": [pd.Timestamp("2023-01-01") + pd.Timedelta(days=d) for d in delays],
+                "ID_UNIDADE": ["U1"] * 10,
+            }
+        )
+        res = compute_delay_by_unit(df)
+        assert res[0]["delay_samples"] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 class TestPositivityBySampleType:

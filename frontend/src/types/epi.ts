@@ -217,6 +217,7 @@ export interface LaboratoryNetwork {
     total: number;
     median_delay: number;
     avg_delay: number;
+    delay_samples: number[];
   }>;
   positivity_by_sample_type?: Array<{
     sample_type: string;

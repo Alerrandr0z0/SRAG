@@ -372,7 +372,7 @@ function App() {
                 hospitalization={unitsData.hospitalization}
                 clinicalFlow={unitsData.clinicalFlow}
                 timelineData={unitsData.timelineData}
-                icuBottleneck={unitsData.icuBottleneck}
+                delayByUnit={data?.laboratoryNetwork?.delay_by_unit ?? null}
                 swimmerVirus={swimmerVirus}
                 setSwimmerVirus={setSwimmerVirus}
                 etiologicAgentFilter={agentFilter}

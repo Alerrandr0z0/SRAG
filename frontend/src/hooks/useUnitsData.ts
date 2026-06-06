@@ -24,7 +24,6 @@ export function useUnitsData(
     null,
   );
   const [timelineData, setTimelineData] = useState<Epi.AggregatedTimeline[]>([]);
-  const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export function useUnitsData(
       setLoading(true);
       try {
         if (active) {
-          const [unitsData, flowData, hospData, timeline, bottleneck] = await Promise.all([
+          const [unitsData, flowData, hospData, timeline] = await Promise.all([
             api.fetchUnits(
               profile,
               raceFilter,
@@ -83,18 +82,6 @@ export function useUnitsData(
               maternal,
               occupations,
             ),
-            api.fetchIcuBottleneck(
-              profile,
-              raceFilter,
-              genderFilter,
-              zoneFilter,
-              bairroFilter,
-              unitFilter,
-              years,
-              agents,
-              maternal,
-              occupations,
-            ),
           ]);
 
           if (isMounted) {
@@ -102,7 +89,6 @@ export function useUnitsData(
             setClinicalFlow(flowData);
             setHospitalization(hospData);
             setTimelineData(timeline);
-            setIcuBottleneck(bottleneck);
           }
         } else {
           const unitsData = await api.fetchUnits(
@@ -146,5 +132,5 @@ export function useUnitsData(
     occupations,
   ]);
 
-  return { units, clinicalFlow, hospitalization, timelineData, icuBottleneck, loading };
+  return { units, clinicalFlow, hospitalization, timelineData, loading };
 }

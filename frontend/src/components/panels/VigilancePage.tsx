@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../services/api';
 import * as Epi from '../../types/epi';
 import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
 import EpidemicCurveChart from '../charts/EpidemicCurveChart';
 import GravityCascadeChart from '../charts/GravityCascadeChart';
+import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
 import LethalityGroupedBarChart from '../charts/LethalityGroupedBarChart';
 import SeasonalTrendChart from '../charts/SeasonalTrendChart';
@@ -299,44 +300,334 @@ const VigilanceSeverityPyramidSection = React.memo<{ data: Epi.SeverityPyramidRe
   ),
 );
 
-const VigilanceGravityCascadeSection = React.memo<{ data: Epi.GravityCascadeResponse | null }>(
-  ({ data }) => (
-    <article className="panel">
-      <div className="section-header">
-        <h3 style={{ margin: 0 }}>Cascata de Gravidade ao Longo do Tempo</h3>
-      </div>
-      <div className="chart-wrap chart-wrap--tall">
-        <GravityCascadeChart data={data} />
-      </div>
-    </article>
-  ),
-);
+const VigilanceTemporalSection = React.memo<{
+  cascade: Epi.GravityCascadeResponse | null;
+  ventilatory: Epi.VentilatorySupportResponse | null;
+}>(({ cascade, ventilatory }) => {
+  const [temporalMode, setTemporalMode] = useState<'cascade' | 'ventilatory'>('cascade');
+  const [axisMode, setAxisMode] = useState<'volume' | 'rate' | 'percentage'>('volume');
 
-const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(
-  ({ data }) => (
+  return (
     <article className="panel">
       <div className="section-header">
-        <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
+        <div className="stack" style={{ gap: 4 }}>
+          <h3 style={{ margin: 0 }}>Dinâmica Temporal</h3>
+          <div className="vigilance-history-stats">
+            <span>
+              {temporalMode === 'cascade'
+                ? 'Notificados → Hospitalizados → UTI → Óbitos'
+                : 'Invasivo · Não-Invasivo · Sem Suporte · Ignorado'}
+            </span>
+          </div>
+        </div>
+        <div className="filters vigilance-history-controls">
+          <div className="pill-group">
+            <button
+              type="button"
+              className={`pill-btn ${temporalMode === 'cascade' ? 'active' : ''}`}
+              onClick={() => {
+                setTemporalMode('cascade');
+                setAxisMode('volume');
+              }}
+            >
+              Cascata de Gravidade
+            </button>
+            <button
+              type="button"
+              className={`pill-btn ${temporalMode === 'ventilatory' ? 'active' : ''}`}
+              onClick={() => {
+                setTemporalMode('ventilatory');
+                setAxisMode('volume');
+              }}
+            >
+              Suporte Ventilatório
+            </button>
+          </div>
+          {temporalMode === 'cascade' && (
+            <div className="pill-group">
+              <button
+                type="button"
+                className={`pill-btn ${axisMode === 'volume' ? 'active' : ''}`}
+                onClick={() => setAxisMode('volume')}
+              >
+                Volumes
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${axisMode === 'rate' ? 'active' : ''}`}
+                onClick={() => setAxisMode('rate')}
+              >
+                Taxas Clínicas
+              </button>
+            </div>
+          )}
+          {temporalMode === 'ventilatory' && (
+            <div className="pill-group">
+              <button
+                type="button"
+                className={`pill-btn ${axisMode === 'volume' ? 'active' : ''}`}
+                onClick={() => setAxisMode('volume')}
+              >
+                Absoluto
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${axisMode === 'percentage' ? 'active' : ''}`}
+                onClick={() => setAxisMode('percentage')}
+              >
+                Proporção (%)
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
-        <ComorbiditiesTreemapChart data={data} />
+        {temporalMode === 'cascade' && (
+          <GravityCascadeChart
+            data={cascade}
+            mode={axisMode === 'rate' ? 'rate' : 'volume'}
+          />
+        )}
+        {temporalMode === 'ventilatory' && (
+          <VentilatorySupportChart
+            data={ventilatory}
+            mode={axisMode === 'percentage' ? 'percentage' : 'volume'}
+          />
+        )}
       </div>
     </article>
-  ),
-);
+  );
+});
 
-const VigilanceVentilatorySupportSection = React.memo<{
-  data: Epi.VentilatorySupportResponse | null;
-}>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Suporte Ventilatório por Período</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
-      <VentilatorySupportChart data={data} />
-    </div>
-  </article>
-));
+const VigilanceIcuBottleneckSection = React.memo<{
+  data: Epi.IcuBottleneckRecord[];
+  dashboardYear: number[];
+}>(({ data, dashboardYear }) => {
+  const isYearSelected = dashboardYear.length > 0;
+  const [groupBy, setGroupBy] = useState<Epi.TemporalGrouping>('year');
+
+  React.useEffect(() => {
+    if (isYearSelected && groupBy === 'year') {
+      setGroupBy('month');
+    }
+  }, [isYearSelected, groupBy]);
+
+  const summary = useMemo(() => {
+    if (!data?.length) return null;
+    const total = data.length;
+    const sameDay = data.filter((d) => d.wait_days === 0).length;
+    const waitMore = total - sameDay;
+    return {
+      total,
+      sameDay,
+      sameDayRate: ((sameDay / total) * 100).toFixed(1),
+      waitMore,
+      waitMoreRate: ((waitMore / total) * 100).toFixed(1),
+    };
+  }, [data]);
+
+  return (
+    <article className="panel">
+      <div className="section-header">
+        <div className="stack" style={{ gap: 4 }}>
+          <h3 style={{ margin: 0 }}>Gargalo de Acesso à UTI</h3>
+          <p className="meta">Análise de eficiência na admissão crítica</p>
+        </div>
+        <div className="filters vigilance-history-controls">
+          <div className="pill-group">
+            {(['year', 'month', 'week'] as const)
+              .filter((mode) => !(isYearSelected && mode === 'year'))
+              .map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`pill-btn ${groupBy === mode ? 'active' : ''}`}
+                  onClick={() => setGroupBy(mode)}
+                >
+                  {mode === 'year' ? 'Ano' : mode === 'month' ? 'Mês' : 'Semana'}
+                </button>
+              ))}
+          </div>
+        </div>
+      </div>
+
+      {summary && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'var(--bg-status)',
+            padding: '16px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '10px',
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Perfil de Admissão
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '4px',
+                  height: '8px',
+                  marginTop: '6px',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  background: 'var(--bg-pill)',
+                }}
+              >
+                <div style={{ width: `${summary.sameDayRate}%`, background: '#0f766e' }}></div>
+                <div style={{ width: `${summary.waitMoreRate}%`, background: '#d97706' }}></div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '30px' }}>
+            <div>
+              <span style={{ fontSize: '11px', color: '#0f766e', fontWeight: 'bold' }}>
+                ● Admissão no Mesmo Dia
+              </span>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                {summary.sameDayRate}%{' '}
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  ({summary.sameDay} casos)
+                </span>
+              </div>
+            </div>
+            <div>
+              <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 'bold' }}>
+                ● Tempo de Espera {'>'} 0d
+              </span>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                {summary.waitMoreRate}%{' '}
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  ({summary.waitMore} casos)
+                </span>
+              </div>
+            </div>
+          </div>
+          <p
+            style={{
+              margin: '10px 0 0 0',
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic',
+            }}
+          >
+            O gráfico abaixo detalha apenas os {summary.waitMoreRate}% de pacientes que não foram
+            admitidos imediatamente.
+          </p>
+        </div>
+      )}
+
+      <div style={{ marginTop: '25px' }}>
+        <IcuRidgelinePlot data={data} groupBy={groupBy} />
+      </div>
+
+      <p
+        className="meta"
+        style={{
+          marginTop: '10px',
+          fontSize: '11px',
+          fontStyle: 'italic',
+          lineHeight: '1.4',
+        }}
+      >
+        * Exibidos apenas períodos com ≥{' '}
+        {groupBy === 'year' ? 50 : groupBy === 'month' ? 20 : 10} admissões.
+      </p>
+    </article>
+  );
+});
+
+const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(
+  ({ data }) => {
+    const [metric, setMetric] = useState<'cases' | 'lethality' | 'deaths'>('cases');
+    const [topN, setTopN] = useState(14);
+    const total = data?.length ?? 0;
+
+    return (
+      <article className="panel">
+        <div className="section-header">
+          <div className="stack" style={{ gap: 4 }}>
+            <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
+            <div className="vigilance-history-stats">
+              <span>
+                Tamanho: <b>{metric === 'lethality' ? 'Letalidade (CFR)' : metric === 'deaths' ? 'Óbitos' : 'Casos'}</b> · Cor: Letalidade (clara→escura)
+              </span>
+            </div>
+          </div>
+          <div className="filters vigilance-history-controls">
+            <div className="pill-group">
+              <button
+                type="button"
+                className={`pill-btn ${metric === 'cases' ? 'active' : ''}`}
+                onClick={() => setMetric('cases')}
+              >
+                Casos
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${metric === 'lethality' ? 'active' : ''}`}
+                onClick={() => setMetric('lethality')}
+              >
+                Letalidade
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${metric === 'deaths' ? 'active' : ''}`}
+                onClick={() => setMetric('deaths')}
+              >
+                Óbitos
+              </button>
+            </div>
+            <select
+              value={topN}
+              onChange={(e) => setTopN(Number(e.target.value))}
+              title="Limitar ao top N comorbidades pela métrica selecionada"
+            >
+              {[5, 8, 12, total].filter((n, i, arr) => n > 0 && arr.indexOf(n) === i).map((n) => (
+                <option key={n} value={n}>
+                  Top {n}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
+          <ComorbiditiesTreemapChart data={data} metric={metric} topN={topN} />
+        </div>
+      </article>
+    );
+  },
+);
 
 interface SparklineProps {
   data: number[];
@@ -531,6 +822,7 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [comorbidities, setComorbidities] = useState<Epi.ComorbiditiesTreemapResponse | null>(null);
   const [ventilatorySupport, setVentilatorySupport] =
     useState<Epi.VentilatorySupportResponse | null>(null);
+  const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
   const lookback = '0';
 
   useEffect(() => {
@@ -781,6 +1073,45 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   useEffect(() => {
     let active = true;
     api
+      .fetchIcuBottleneck(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        dashboardDay,
+      )
+      .then((res) => {
+        if (active) setIcuBottleneck(res);
+      })
+      .catch((err) => console.error('Failed to fetch icu bottleneck', err));
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+    dashboardDay,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    api
       .fetchComorbiditiesTreemap(
         citizenTab,
         raceFilter,
@@ -891,13 +1222,13 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         <VigilanceSeverityPyramidSection data={severityPyramid} />
       </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceGravityCascadeSection data={gravityCascade} />
+        <VigilanceIcuBottleneckSection data={icuBottleneck} dashboardYear={dashboardYear} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
+        <VigilanceTemporalSection cascade={gravityCascade} ventilatory={ventilatorySupport} />
       </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceKmSection data={data} />
-      </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceVentilatorySupportSection data={ventilatorySupport} />
       </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceComorbiditiesSection data={comorbidities} />

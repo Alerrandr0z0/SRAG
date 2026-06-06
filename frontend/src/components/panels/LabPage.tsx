@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import * as Epi from '../../types/epi';
 import AntiviralOutcomeChart from '../charts/AntiviralOutcomeChart';
 import ClosureCriteriaAgentChart from '../charts/ClosureCriteriaAgentChart';
-import DelayByUnitChart from '../charts/DelayByUnitChart';
 import DiagnosticLatencyTimeline from '../charts/DiagnosticLatencyTimeline';
-import ImagingProfileChart from '../charts/ImagingProfileChart';
-import ImagingSeverityChart from '../charts/ImagingSeverityChart';
+import ImagingVolcanoChart from '../charts/ImagingVolcanoChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
 import PositivitySampleTypeChart from '../charts/PositivitySampleTypeChart';
 import QualidadePerformance, {
@@ -85,19 +83,10 @@ const LabSpecimenClassificationSection = React.memo<{
   </section>
 ));
 
-const LabOperationalEfficiencySection = React.memo<{
-  delayData: Epi.LaboratoryNetwork['delay_by_unit'];
+const LabDiagnosticLatencySection = React.memo<{
   latencyData: Epi.LaboratoryNetwork['diagnostic_latency_phases'];
-}>(({ delayData, latencyData }) => (
-  <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
-    <article className="panel">
-      <div className="section-header">
-        <h3 style={{ margin: 0 }}>Atraso de Notificação por Unidade</h3>
-      </div>
-      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '420px' }}>
-        <DelayByUnitChart data={delayData ?? null} />
-      </div>
-    </article>
+}>(({ latencyData }) => (
+  <section className="vigilance-block">
     <article className="panel">
       <div className="section-header">
         <h3 style={{ margin: 0 }}>Fluxo de Latência Diagnóstica (Medianas)</h3>
@@ -110,24 +99,24 @@ const LabOperationalEfficiencySection = React.memo<{
 ));
 
 const LabImagingSection = React.memo<{
-  profileData: Epi.LaboratoryNetwork['imaging_profile'] | undefined;
   severityData: Epi.LaboratoryNetwork['imaging_by_severity'];
-}>(({ profileData, severityData }) => (
-  <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+}>(({ severityData }) => (
+  <section className="vigilance-block">
     <article className="panel">
       <div className="section-header">
-        <h3 style={{ margin: 0 }}>Perfil de Achados de Imagem</h3>
+        <div className="stack" style={{ gap: 4 }}>
+          <h3 style={{ margin: 0 }}>Achados de Imagem × Gravidade Clínica</h3>
+          <div className="vigilance-history-stats">
+            <span>
+              Cada achado é uma bolha: posição por <b>UTI% × CFR%</b>, tamanho por volume de casos, cor por modalidade.
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '350px' }}>
-        {profileData ? <ImagingProfileChart data={profileData} /> : <p className="meta">Aguardando dados de perfil de imagem...</p>}
-      </div>
-    </article>
-    <article className="panel">
-      <div className="section-header">
-        <h3 style={{ margin: 0 }}>Gravidade por Achado de Imagem</h3>
-      </div>
-      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '350px' }}>
-        <ImagingSeverityChart data={severityData ?? null} />
+      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '420px' }}>
+        {severityData ? <ImagingVolcanoChart data={severityData} /> : (
+          <p className="meta">Aguardando dados de imagem por gravidade...</p>
+        )}
       </div>
     </article>
   </section>
@@ -364,15 +353,9 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         closureData={lab?.closure_by_agent}
       />
 
-      <LabOperationalEfficiencySection
-        delayData={lab?.delay_by_unit}
-        latencyData={lab?.diagnostic_latency_phases}
-      />
+      <LabDiagnosticLatencySection latencyData={lab?.diagnostic_latency_phases} />
 
-      <LabImagingSection
-        profileData={lab?.imaging_profile}
-        severityData={lab?.imaging_by_severity}
-      />
+      <LabImagingSection severityData={lab?.imaging_by_severity} />
 
       <LabAntiviralImpactSection antiviralData={treatment?.antiviral_outcome_impact} />
     </>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { COLORS } from '../../constants';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
@@ -6,13 +6,11 @@ import { GravityCascadeResponse } from '../../types/epi';
 
 interface GravityCascadeChartProps {
   data: GravityCascadeResponse | null;
+  mode: 'volume' | 'rate';
 }
 
-type Mode = 'volume' | 'rate';
-
-const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data }) => {
+const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data, mode }) => {
   const theme = useThemeMode();
-  const [mode, setMode] = useState<Mode>('volume');
 
   const getOption = () => {
     if (!data || data.length === 0) {
@@ -189,29 +187,7 @@ const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data }) => {
 
   const { chartRef } = useEcharts(getOption(), [data, mode, theme]);
 
-  return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-        <div className="pill-group">
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'volume' ? 'active' : ''}`}
-            onClick={() => setMode('volume')}
-          >
-            Volumes
-          </button>
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'rate' ? 'active' : ''}`}
-            onClick={() => setMode('rate')}
-          >
-            Taxas Clínicas
-          </button>
-        </div>
-      </div>
-      <div ref={chartRef} style={{ flex: 1, minHeight: '320px' }} />
-    </div>
-  );
+  return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default GravityCascadeChart;

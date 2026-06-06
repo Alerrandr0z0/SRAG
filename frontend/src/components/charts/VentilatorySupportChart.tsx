@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import { VentilatorySupportResponse } from '../../types/epi';
 
 interface VentilatorySupportChartProps {
   data: VentilatorySupportResponse | null;
+  mode: 'volume' | 'percentage';
 }
 
-type Mode = 'volume' | 'percentage';
-
-const VentilatorySupportChart: React.FC<VentilatorySupportChartProps> = ({ data }) => {
+const VentilatorySupportChart: React.FC<VentilatorySupportChartProps> = ({ data, mode }) => {
   const theme = useThemeMode();
-  const [mode, setMode] = useState<Mode>('volume');
 
   const getOption = () => {
     if (!data || data.length === 0) {
@@ -155,29 +153,7 @@ const VentilatorySupportChart: React.FC<VentilatorySupportChartProps> = ({ data 
 
   const { chartRef } = useEcharts(getOption(), [data, mode, theme]);
 
-  return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-        <div className="pill-group">
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'volume' ? 'active' : ''}`}
-            onClick={() => setMode('volume')}
-          >
-            Absoluto
-          </button>
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'percentage' ? 'active' : ''}`}
-            onClick={() => setMode('percentage')}
-          >
-            Proporção (%)
-          </button>
-        </div>
-      </div>
-      <div ref={chartRef} style={{ flex: 1, minHeight: '300px' }} />
-    </div>
-  );
+  return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
 };
 
 export default VentilatorySupportChart;

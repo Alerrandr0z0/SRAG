@@ -1183,7 +1183,10 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
     grouped = (
         valid.groupby("id_unidade")
         .agg(
-            median_delay=("delay", "median"), avg_delay=("delay", "mean"), total=("delay", "size")
+            median_delay=("delay", "median"),
+            avg_delay=("delay", "mean"),
+            total=("delay", "size"),
+            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())[:100]),
         )
         .reset_index()
     )
@@ -1195,6 +1198,10 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
     # Sort by total cases descending, and limit
     grouped = grouped.sort_values(by="total", ascending=False).head(limit)
 
+    samples_by_unit: dict[str, list[int]] = {
+        str(r["id_unidade"]): list(r["delay_list"]) for _, r in grouped.iterrows()
+    }
+
     return [
         {
             "id_unidade": str(r["id_unidade"]),
@@ -1202,6 +1209,7 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
             "total": int(r["total"]),
             "median_delay": float(r["median_delay"]),
             "avg_delay": float(r["avg_delay"]),
+            "delay_samples": samples_by_unit[str(r["id_unidade"])],
         }
         for _, r in grouped.iterrows()
     ]
