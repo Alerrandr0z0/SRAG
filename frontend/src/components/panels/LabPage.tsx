@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import * as Epi from '../../types/epi';
-
+import AntiviralOutcomeChart from '../charts/AntiviralOutcomeChart';
+import ClosureCriteriaAgentChart from '../charts/ClosureCriteriaAgentChart';
+import DelayByUnitChart from '../charts/DelayByUnitChart';
+import DiagnosticLatencyTimeline from '../charts/DiagnosticLatencyTimeline';
+import ImagingProfileChart from '../charts/ImagingProfileChart';
+import ImagingSeverityChart from '../charts/ImagingSeverityChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
+import PositivitySampleTypeChart from '../charts/PositivitySampleTypeChart';
 import QualidadePerformance, {
   BoxStats,
   QualidadePerformanceData,
 } from '../charts/QualidadePerformance';
-import RankTable from '../ui/RankTable';
 import KpiCard from '../ui/KpiCard';
-import ClosureCriteriaAgentChart from '../charts/ClosureCriteriaAgentChart';
-import ImagingSeverityChart from '../charts/ImagingSeverityChart';
-import DelayByUnitChart from '../charts/DelayByUnitChart';
-import DiagnosticLatencyTimeline from '../charts/DiagnosticLatencyTimeline';
-import PositivitySampleTypeChart from '../charts/PositivitySampleTypeChart';
-import AntiviralOutcomeChart from '../charts/AntiviralOutcomeChart';
+import RankTable from '../ui/RankTable';
 
 interface LabPageProps {
   data: Epi.DashboardData | null;
@@ -109,19 +109,36 @@ const LabOperationalEfficiencySection = React.memo<{
   </section>
 ));
 
-const LabClinicalSeveritySection = React.memo<{
-  imagingData: Epi.LaboratoryNetwork['imaging_by_severity'];
-  antiviralData: Array<{ group: string; cure_rate: number; death_rate: number; total: number }> | undefined;
-}>(({ imagingData, antiviralData }) => (
+const LabImagingSection = React.memo<{
+  profileData: Epi.LaboratoryNetwork['imaging_profile'] | undefined;
+  severityData: Epi.LaboratoryNetwork['imaging_by_severity'];
+}>(({ profileData, severityData }) => (
   <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+    <article className="panel">
+      <div className="section-header">
+        <h3 style={{ margin: 0 }}>Perfil de Achados de Imagem</h3>
+      </div>
+      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '350px' }}>
+        {profileData ? <ImagingProfileChart data={profileData} /> : <p className="meta">Aguardando dados de perfil de imagem...</p>}
+      </div>
+    </article>
     <article className="panel">
       <div className="section-header">
         <h3 style={{ margin: 0 }}>Gravidade por Achado de Imagem</h3>
       </div>
       <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '350px' }}>
-        <ImagingSeverityChart data={imagingData ?? null} />
+        <ImagingSeverityChart data={severityData ?? null} />
       </div>
     </article>
+  </section>
+));
+
+const LabAntiviralImpactSection = React.memo<{
+  antiviralData:
+    | Array<{ group: string; cure_rate: number; death_rate: number; total: number }>
+    | undefined;
+}>(({ antiviralData }) => (
+  <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
     <article className="panel">
       <div className="section-header">
         <h3 style={{ margin: 0 }}>Impacto Clínico do Tratamento Antiviral</h3>
@@ -132,7 +149,6 @@ const LabClinicalSeveritySection = React.memo<{
     </article>
   </section>
 ));
-
 
 const getAlertLevel = (score: number, turnaround: number, coverage: number) => {
   const penalty = (100 - score) * 0.5 + Math.min(turnaround, 30) * 1.5 + (100 - coverage) * 0.3;
@@ -165,15 +181,18 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
   const criteriaColors = ['#0f766e', '#888780', '#b4b2a9', '#d3d1c7'];
 
   const performanceData: QualidadePerformanceData = {
-    criterios: (lab?.closure_criteria || []).map((c: { label: string; count: number }, i: number) => ({
-      label: c.label,
-      valor: (c.count / closureTotal) * 100,
-      color: criteriaColors[i] || '#94a3b8',
-    })),
+    criterios: (lab?.closure_criteria || []).map(
+      (c: { label: string; count: number }, i: number) => ({
+        label: c.label,
+        valor: (c.count / closureTotal) * 100,
+        color: criteriaColors[i] || '#94a3b8',
+      }),
+    ),
     latencia: mapBoxPlot(quality?.diagnostic_latency?.boxplot_data, 'Latência'),
     antiviral: (() => {
       const types = antiviralTypes || [];
-      const totalTreatments = types.reduce((sum: number, a: { count: number }) => sum + a.count, 0) || 1;
+      const totalTreatments =
+        types.reduce((sum: number, a: { count: number }) => sum + a.count, 0) || 1;
       return types.map((a: { label: string; count: number }) => {
         const pct = (a.count / totalTreatments) * 100;
         let status: 'ok' | 'warn' | 'raro' = 'ok';
@@ -212,7 +231,11 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
       const severityOrder = { critical: 0, warning: 1, info: 2 } as const;
       const sevDiff = severityOrder[aAlert.tone] - severityOrder[bAlert.tone];
       if (sevDiff !== 0) return sevDiff;
-      return (a.score - b.score) || ((Number.isNaN(bTurnaround) ? 0 : bTurnaround) - (Number.isNaN(aTurnaround) ? 0 : aTurnaround));
+      return (
+        a.score - b.score ||
+        (Number.isNaN(bTurnaround) ? 0 : bTurnaround) -
+          (Number.isNaN(aTurnaround) ? 0 : aTurnaround)
+      );
     })
     .map((lab) => {
       const turnaround = lab.median_turnaround_days ?? Number.NaN;
@@ -285,7 +308,10 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                       Média Atraso:{' '}
                       <b>
                         {(
-                          delaySeries.reduce((s: number, d: { median_delay: number }) => s + d.median_delay, 0) / delaySeries.length
+                          delaySeries.reduce(
+                            (s: number, d: { median_delay: number }) => s + d.median_delay,
+                            0,
+                          ) / delaySeries.length
                         ).toFixed(1)}{' '}
                         dias
                       </b>
@@ -343,13 +369,14 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         latencyData={lab?.diagnostic_latency_phases}
       />
 
-      <LabClinicalSeveritySection
-        imagingData={lab?.imaging_by_severity}
-        antiviralData={treatment?.antiviral_outcome_impact}
+      <LabImagingSection
+        profileData={lab?.imaging_profile}
+        severityData={lab?.imaging_by_severity}
       />
+
+      <LabAntiviralImpactSection antiviralData={treatment?.antiviral_outcome_impact} />
     </>
   );
 };
-
 
 export default LabPage;

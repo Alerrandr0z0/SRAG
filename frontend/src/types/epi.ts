@@ -190,7 +190,7 @@ export interface LaboratoryNetwork {
     Laboratorial: number;
     'Vínculo Epidemiológico': number;
     'Clínico / Imagem': number;
-    'Óbito': number;
+    Óbito: number;
     'Ignorado/Em Aberto': number;
   }>;
   imaging_by_severity?: {

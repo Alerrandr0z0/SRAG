@@ -113,9 +113,15 @@ const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data }) => {
       // UTI Rate = uti / hospitalized * 100
       // Death Rate = death / uti * 100 (or death / hospitalized * 100)
       // Let's compute rates out of notified for consistency in cascading, or subset-rates
-      const hospRate = data.map((d) => (d.notified > 0 ? parseFloat(((d.hospitalized / d.notified) * 100).toFixed(1)) : 0));
-      const utiRate = data.map((d) => (d.hospitalized > 0 ? parseFloat(((d.uti / d.hospitalized) * 100).toFixed(1)) : 0));
-      const deathRate = data.map((d) => (d.hospitalized > 0 ? parseFloat(((d.death / d.hospitalized) * 100).toFixed(1)) : 0));
+      const hospRate = data.map((d) =>
+        d.notified > 0 ? parseFloat(((d.hospitalized / d.notified) * 100).toFixed(1)) : 0,
+      );
+      const utiRate = data.map((d) =>
+        d.hospitalized > 0 ? parseFloat(((d.uti / d.hospitalized) * 100).toFixed(1)) : 0,
+      );
+      const deathRate = data.map((d) =>
+        d.hospitalized > 0 ? parseFloat(((d.death / d.hospitalized) * 100).toFixed(1)) : 0,
+      );
 
       return {
         tooltip: {

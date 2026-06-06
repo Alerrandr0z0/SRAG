@@ -28,9 +28,7 @@ const KpiTile: React.FC<KpiTileProps> = ({ label, value, accent, sub }) => (
   >
     <div style={{ fontSize: 18, fontWeight: 500, color: accent }}>{value}</div>
     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
-    {sub && (
-      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>
-    )}
+    {sub && <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
   </div>
 );
 
@@ -351,13 +349,19 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
               label="Mediana cura"
               value={hospitalization.cure_count > 0 ? formatDays(hospitalization.median_cure) : '—'}
               accent="#0f6e56"
-              sub={hospitalization.cure_count > 0 ? `${hospitalization.cure_count} casos` : undefined}
+              sub={
+                hospitalization.cure_count > 0 ? `${hospitalization.cure_count} casos` : undefined
+              }
             />
             <KpiTile
               label="Mediana óbito"
-              value={hospitalization.death_count > 0 ? formatDays(hospitalization.median_death) : '—'}
+              value={
+                hospitalization.death_count > 0 ? formatDays(hospitalization.median_death) : '—'
+              }
               accent="#a32d2d"
-              sub={hospitalization.death_count > 0 ? `${hospitalization.death_count} casos` : undefined}
+              sub={
+                hospitalization.death_count > 0 ? `${hospitalization.death_count} casos` : undefined
+              }
             />
             <KpiTile
               label="Diferença"
@@ -371,7 +375,9 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
             <KpiTile
               label="Razão cura/óbito"
               value={
-                hospitalization.cure_count > 0 && hospitalization.death_count > 0 && hospitalization.ratio > 0
+                hospitalization.cure_count > 0 &&
+                hospitalization.death_count > 0 &&
+                hospitalization.ratio > 0
                   ? formatRatio(hospitalization.ratio)
                   : '—'
               }

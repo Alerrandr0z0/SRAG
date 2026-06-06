@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import * as Epi from '../../types/epi';
-
+import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
 import EpidemicCurveChart from '../charts/EpidemicCurveChart';
-import ImagingProfileChart from '../charts/ImagingProfileChart';
+import GravityCascadeChart from '../charts/GravityCascadeChart';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
-import TrendChart from '../charts/TrendChart';
-import VirusProfileChart from '../charts/VirusProfileChart';
-import HeatmapChart from '../charts/HeatmapChart';
+import LethalityGroupedBarChart from '../charts/LethalityGroupedBarChart';
 import SeasonalTrendChart from '../charts/SeasonalTrendChart';
 import SeverityPyramidChart from '../charts/SeverityPyramidChart';
-import GravityCascadeChart from '../charts/GravityCascadeChart';
-import EpidemicHeatmapChart from '../charts/EpidemicHeatmapChart';
-import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
+import TrendChart from '../charts/TrendChart';
 import VentilatorySupportChart from '../charts/VentilatorySupportChart';
+import VirusProfileChart from '../charts/VirusProfileChart';
 
 /* ─────── Props ─────── */
 
@@ -231,18 +228,27 @@ const VigilanceViralProfile = React.memo<ViralSectionProps>(
   ),
 );
 
-const VigilanceImagingProfile = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3>Perfil de Imagem</h3>
-    </div>
-    <div className="chart-wrap">
-      {data?.laboratoryNetwork?.imaging_profile && (
-        <ImagingProfileChart data={data.laboratoryNetwork.imaging_profile} />
-      )}
-    </div>
-  </article>
-));
+const VigilanceCfrHeatmapSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => {
+  const heatmap = data?.laboratoryNetwork?.agent_lethality_heatmap;
+  return (
+    <article className="panel">
+      <div className="section-header">
+        <h3 style={{ margin: 0 }}>Matriz de Letalidade Específica (Agente × Ciclo de Vida)</h3>
+      </div>
+      <div className="chart-wrap">
+        {heatmap ? (
+          <LethalityGroupedBarChart
+            xLabels={heatmap.age_bands}
+            yLabels={heatmap.agents}
+            matrix={heatmap.matrix}
+          />
+        ) : (
+          <p className="meta">Aguardando dados de letalidade...</p>
+        )}
+      </div>
+    </article>
+  );
+});
 
 const VigilanceKmSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => (
   <article className="panel">
@@ -259,86 +265,69 @@ const VigilanceKmSection = React.memo<{ data: Epi.DashboardData | null }>(({ dat
   </article>
 ));
 
-const VigilanceCfrHeatmapSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => {
-  const heatmap = data?.laboratoryNetwork?.agent_lethality_heatmap;
-  return (
+const VigilanceSeasonalSection = React.memo<{ data: Epi.SeasonalTrendsResponse | null }>(
+  ({ data }) => (
+    <section style={{ marginTop: '1rem' }}>
+      <div className="section-header" style={{ marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>Sazonalidade Interanual (Casos por SE)</h3>
+      </div>
+      <div
+        style={{
+          height: '320px',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <SeasonalTrendChart data={data} />
+      </div>
+    </section>
+  ),
+);
+
+const VigilanceSeverityPyramidSection = React.memo<{ data: Epi.SeverityPyramidResponse | null }>(
+  ({ data }) => (
     <article className="panel">
       <div className="section-header">
-        <h3 style={{ margin: 0 }}>Letalidade (CFR) por Vírus × Faixa Etária</h3>
+        <h3 style={{ margin: 0 }}>Pirâmide de Gravidade por Faixa Etária</h3>
       </div>
       <div className="chart-wrap chart-wrap--tall">
-        {heatmap ? (
-          <HeatmapChart
-            xLabels={heatmap.age_bands}
-            yLabels={heatmap.agents}
-            matrix={heatmap.matrix}
-            valueName="Letalidade (CFR %)"
-            colors={['#fff5f5', '#feb2b2', '#de3434']}
-          />
-        ) : (
-          <p className="meta">Aguardando dados de letalidade...</p>
-        )}
+        <SeverityPyramidChart data={data} />
       </div>
     </article>
-  );
-});
+  ),
+);
 
-const VigilanceSeasonalSection = React.memo<{ data: Epi.SeasonalTrendsResponse | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Sazonalidade Interanual (Casos por SE)</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall">
-      <SeasonalTrendChart data={data} />
-    </div>
-  </article>
-));
+const VigilanceGravityCascadeSection = React.memo<{ data: Epi.GravityCascadeResponse | null }>(
+  ({ data }) => (
+    <article className="panel">
+      <div className="section-header">
+        <h3 style={{ margin: 0 }}>Cascata de Gravidade ao Longo do Tempo</h3>
+      </div>
+      <div className="chart-wrap chart-wrap--tall">
+        <GravityCascadeChart data={data} />
+      </div>
+    </article>
+  ),
+);
 
-const VigilanceSeverityPyramidSection = React.memo<{ data: Epi.SeverityPyramidResponse | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Pirâmide de Gravidade por Faixa Etária</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall">
-      <SeverityPyramidChart data={data} />
-    </div>
-  </article>
-));
+const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(
+  ({ data }) => (
+    <article className="panel">
+      <div className="section-header">
+        <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
+      </div>
+      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
+        <ComorbiditiesTreemapChart data={data} />
+      </div>
+    </article>
+  ),
+);
 
-const VigilanceGravityCascadeSection = React.memo<{ data: Epi.GravityCascadeResponse | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Cascata de Gravidade ao Longo do Tempo</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall">
-      <GravityCascadeChart data={data} />
-    </div>
-  </article>
-));
-
-const VigilanceEpidemicHeatmapSection = React.memo<{ data: Epi.EpidemicHeatmapResponse | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Distribuição de Casos (SE × Faixa Etária)</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall">
-      <EpidemicHeatmapChart data={data} />
-    </div>
-  </article>
-));
-
-const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(({ data }) => (
-  <article className="panel">
-    <div className="section-header">
-      <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
-    </div>
-    <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
-      <ComorbiditiesTreemapChart data={data} />
-    </div>
-  </article>
-));
-
-const VigilanceVentilatorySupportSection = React.memo<{ data: Epi.VentilatorySupportResponse | null }>(({ data }) => (
+const VigilanceVentilatorySupportSection = React.memo<{
+  data: Epi.VentilatorySupportResponse | null;
+}>(({ data }) => (
   <article className="panel">
     <div className="section-header">
       <h3 style={{ margin: 0 }}>Suporte Ventilatório por Período</h3>
@@ -356,7 +345,12 @@ interface SparklineProps {
   color?: string;
 }
 
-const Sparkline: React.FC<SparklineProps> = ({ data, width = 120, height = 30, color = 'var(--primary)' }) => {
+const Sparkline: React.FC<SparklineProps> = ({
+  data,
+  width = 120,
+  height = 30,
+  color = 'var(--primary)',
+}) => {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -377,126 +371,131 @@ const Sparkline: React.FC<SparklineProps> = ({ data, width = 120, height = 30, c
   );
 };
 
-const VigilanceSeverityKpiSection = React.memo<{ kpis: Epi.SeverityKpisResponse | null }>(({ kpis }) => {
-  if (!kpis) return <p className="meta">Carregando indicadores de gravidade...</p>;
-  const { current, trend } = kpis;
+const VigilanceSeverityKpiSection = React.memo<{ kpis: Epi.SeverityKpisResponse | null }>(
+  ({ kpis }) => {
+    if (!kpis) return <p className="meta">Carregando indicadores de gravidade...</p>;
+    const { current, trend } = kpis;
 
-  const getTrendData = (key: keyof Epi.SeverityKpiPoint) => {
-    return trend.map((t) => t[key] as number);
-  };
+    const getTrendData = (key: keyof Epi.SeverityKpiPoint) => {
+      return trend.map((t) => t[key] as number);
+    };
 
-  const cards = [
-    {
-      label: 'Taxa de Hospitalização',
-      value: `${current.hospitalization_rate}%`,
-      trendKey: 'hospitalization_rate' as const,
-      color: '#0f766e',
-      desc: 'Pacientes internados sobre total de notificados',
-    },
-    {
-      label: 'Taxa de UTI',
-      value: `${current.uti_rate}%`,
-      trendKey: 'uti_rate' as const,
-      color: '#1d4ed8',
-      desc: 'Internados em UTI sobre total hospitalizados',
-    },
-    {
-      label: 'Suporte Ventilatório',
-      value: `${current.ventilatory_support_rate}%`,
-      trendKey: 'ventilatory_support_rate' as const,
-      color: '#ca8a04',
-      desc: 'Uso de ventilador mecânico (inv/não-inv) na UTI',
-    },
-    {
-      label: 'Letalidade Geral (CFR)',
-      value: `${current.death_rate}%`,
-      trendKey: 'death_rate' as const,
-      color: '#b91c1c',
-      desc: 'Óbitos sobre total de casos encerrados (alta/óbito)',
-    },
-    {
-      label: 'Permanência Hospitalar',
-      value: `${current.median_hospitalization_days}d`,
-      trendKey: 'median_hospitalization_days' as const,
-      color: '#7c3aed',
-      desc: 'Tempo mediano entre internação e desfecho',
-    },
-    {
-      label: 'Permanência UTI',
-      value: `${current.median_uti_days}d`,
-      trendKey: 'median_uti_days' as const,
-      color: '#0891b2',
-      desc: 'Tempo mediano de internação em UTI (entrada a saída)',
-    },
-  ];
+    const cards = [
+      {
+        label: 'Taxa de Hospitalização',
+        value: `${current.hospitalization_rate}%`,
+        trendKey: 'hospitalization_rate' as const,
+        color: '#0f766e',
+        desc: 'Pacientes internados sobre total de notificados',
+      },
+      {
+        label: 'Taxa de UTI',
+        value: `${current.uti_rate}%`,
+        trendKey: 'uti_rate' as const,
+        color: '#1d4ed8',
+        desc: 'Internados em UTI sobre total hospitalizados',
+      },
+      {
+        label: 'Suporte Ventilatório',
+        value: `${current.ventilatory_support_rate}%`,
+        trendKey: 'ventilatory_support_rate' as const,
+        color: '#ca8a04',
+        desc: 'Uso de ventilador mecânico (inv/não-inv) na UTI',
+      },
+      {
+        label: 'Letalidade Geral (CFR)',
+        value: `${current.death_rate}%`,
+        trendKey: 'death_rate' as const,
+        color: '#b91c1c',
+        desc: 'Óbitos sobre total de casos encerrados (alta/óbito)',
+      },
+      {
+        label: 'Permanência Hospitalar',
+        value: `${current.median_hospitalization_days}d`,
+        trendKey: 'median_hospitalization_days' as const,
+        color: '#7c3aed',
+        desc: 'Tempo mediano entre internação e desfecho',
+      },
+      {
+        label: 'Permanência UTI',
+        value: `${current.median_uti_days}d`,
+        trendKey: 'median_uti_days' as const,
+        color: '#0891b2',
+        desc: 'Tempo mediano de internação em UTI (entrada a saída)',
+      },
+    ];
 
-  return (
-    <div
-      className="vigilance-metric-grid"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '1.5rem',
-        marginBottom: '2rem',
-        marginTop: '1.5rem',
-      }}
-    >
-      {cards.map((card) => {
-        const trendData = getTrendData(card.trendKey);
-        return (
-          <article
-            key={card.label}
-            className="panel"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '1.25rem',
-            }}
-          >
-            <div>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{card.label}</p>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: '1rem',
-                  marginTop: '0.5rem',
-                }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: '1.75rem',
-                    fontWeight: 600,
-                    color: 'var(--text-color)',
-                  }}
-                >
-                  {card.value}
-                </h2>
-                {trendData.length > 1 && (
-                  <div style={{ marginLeft: 'auto', alignSelf: 'center' }} title="Tendência das últimas semanas">
-                    <Sparkline data={trendData} color={card.color} />
-                  </div>
-                )}
-              </div>
-            </div>
-            <p
+    return (
+      <div
+        className="vigilance-metric-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '1.5rem',
+          marginBottom: '2rem',
+          marginTop: '1.5rem',
+        }}
+      >
+        {cards.map((card) => {
+          const trendData = getTrendData(card.trendKey);
+          return (
+            <article
+              key={card.label}
+              className="panel"
               style={{
-                margin: '0.75rem 0 0 0',
-                fontSize: '0.75rem',
-                color: '#94a3b8',
-                lineHeight: 1.3,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: '1.25rem',
               }}
             >
-              {card.desc}
-            </p>
-          </article>
-        );
-      })}
-    </div>
-  );
-});
+              <div>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{card.label}</p>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '1rem',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: '1.75rem',
+                      fontWeight: 600,
+                      color: 'var(--text-color)',
+                    }}
+                  >
+                    {card.value}
+                  </h2>
+                  {trendData.length > 1 && (
+                    <div
+                      style={{ marginLeft: 'auto', alignSelf: 'center' }}
+                      title="Tendência das últimas semanas"
+                    >
+                      <Sparkline data={trendData} color={card.color} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p
+                style={{
+                  margin: '0.75rem 0 0 0',
+                  fontSize: '0.75rem',
+                  color: '#94a3b8',
+                  lineHeight: 1.3,
+                }}
+              >
+                {card.desc}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    );
+  },
+);
 
 /* ─────── Root ─────── */
 
@@ -529,9 +528,9 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [seasonalTrends, setSeasonalTrends] = useState<Epi.SeasonalTrendsResponse | null>(null);
   const [severityPyramid, setSeverityPyramid] = useState<Epi.SeverityPyramidResponse | null>(null);
   const [gravityCascade, setGravityCascade] = useState<Epi.GravityCascadeResponse | null>(null);
-  const [heatmapSeAge, setHeatmapSeAge] = useState<Epi.EpidemicHeatmapResponse | null>(null);
   const [comorbidities, setComorbidities] = useState<Epi.ComorbiditiesTreemapResponse | null>(null);
-  const [ventilatorySupport, setVentilatorySupport] = useState<Epi.VentilatorySupportResponse | null>(null);
+  const [ventilatorySupport, setVentilatorySupport] =
+    useState<Epi.VentilatorySupportResponse | null>(null);
   const lookback = '0';
 
   useEffect(() => {
@@ -782,45 +781,6 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   useEffect(() => {
     let active = true;
     api
-      .fetchHeatmapSeAge(
-        citizenTab,
-        raceFilter,
-        genderFilter,
-        zoneFilter,
-        bairroFilter,
-        unitFilter,
-        dashboardYear,
-        agentFilter,
-        maternalFilter,
-        occupationFilter,
-        dashboardMonth,
-        dashboardDay,
-      )
-      .then((res) => {
-        if (active) setHeatmapSeAge(res);
-      })
-      .catch((err) => console.error('Failed to fetch epidemic heatmap', err));
-    return () => {
-      active = false;
-    };
-  }, [
-    citizenTab,
-    raceFilter,
-    genderFilter,
-    zoneFilter,
-    bairroFilter,
-    unitFilter,
-    dashboardYear,
-    agentFilter,
-    maternalFilter,
-    occupationFilter,
-    dashboardMonth,
-    dashboardDay,
-  ]);
-
-  useEffect(() => {
-    let active = true;
-    api
       .fetchComorbiditiesTreemap(
         citizenTab,
         raceFilter,
@@ -922,19 +882,19 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
           agentFilter={agentFilter}
           onVirusDetail={setVirusDetail}
         />
-        <VigilanceImagingProfile data={data} />
-      </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
         <VigilanceCfrHeatmapSection data={data} />
-        <VigilanceSeasonalSection data={seasonalTrends} />
       </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+
+      <VigilanceSeasonalSection data={seasonalTrends} />
+
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceSeverityPyramidSection data={severityPyramid} />
+      </section>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceGravityCascadeSection data={gravityCascade} />
       </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '2rem' }}>
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceKmSection data={data} />
-        <VigilanceEpidemicHeatmapSection data={heatmapSeAge} />
       </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceVentilatorySupportSection data={ventilatorySupport} />

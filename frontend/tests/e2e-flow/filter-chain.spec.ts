@@ -32,7 +32,9 @@ test('year filter changes KPI totals', async ({ page }) => {
   const beforeNumber = Number(before.replace(/[^\d]/g, ''));
   expect(beforeNumber).toBeGreaterThan(0);
 
-  const yearSelect = page.locator('.gfb-group', { has: page.locator('text=Ano') }).locator('select');
+  const yearSelect = page
+    .locator('.gfb-group', { has: page.locator('text=Ano') })
+    .locator('select');
   await yearSelect.selectOption('2020');
 
   const afterNumber = await waitForKpiChange(
@@ -44,12 +46,7 @@ test('year filter changes KPI totals', async ({ page }) => {
   expect(afterNumber).toBeGreaterThan(0);
 
   await yearSelect.selectOption('');
-  await waitForKpiChange(
-    page,
-    'Total Internações',
-    afterNumber,
-    (n) => n === beforeNumber,
-  );
+  await waitForKpiChange(page, 'Total Internações', afterNumber, (n) => n === beforeNumber);
 });
 
 test('all-filters clear restores original KPI', async ({ page }) => {
@@ -59,15 +56,12 @@ test('all-filters clear restores original KPI', async ({ page }) => {
   const initial = Number((await readKpi(page, 'Total Notificações')).replace(/[^\d]/g, ''));
   expect(initial).toBeGreaterThan(0);
 
-  const yearSelect = page.locator('.gfb-group', { has: page.locator('text=Ano') }).locator('select');
+  const yearSelect = page
+    .locator('.gfb-group', { has: page.locator('text=Ano') })
+    .locator('select');
   await yearSelect.selectOption('2024');
 
-  const filtered = await waitForKpiChange(
-    page,
-    'Total Notificações',
-    initial,
-    (n) => n < initial,
-  );
+  const filtered = await waitForKpiChange(page, 'Total Notificações', initial, (n) => n < initial);
   expect(filtered).toBeGreaterThan(0);
 
   await yearSelect.selectOption('');

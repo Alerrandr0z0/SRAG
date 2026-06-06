@@ -20,7 +20,9 @@ export function useUnitsData(
 ) {
   const [units, setUnits] = useState<Epi.UnitStats[]>([]);
   const [clinicalFlow, setClinicalFlow] = useState<Epi.ClinicalFlow>({ nodes: [], links: [] });
-  const [hospitalization, setHospitalization] = useState<Epi.HospitalizationDurationData | null>(null);
+  const [hospitalization, setHospitalization] = useState<Epi.HospitalizationDurationData | null>(
+    null,
+  );
   const [timelineData, setTimelineData] = useState<Epi.AggregatedTimeline[]>([]);
   const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
   const [loading, setLoading] = useState(false);

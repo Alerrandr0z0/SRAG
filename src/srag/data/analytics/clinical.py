@@ -680,16 +680,21 @@ def compute_severity_pyramid(df: pd.DataFrame) -> list[dict[str, Any]]:
 
     out["IDADE_ANOS"] = age
 
-    # Define bins and labels
-    bins = [0.0, 5.0, 15.0, 30.0, 45.0, 60.0, 75.0, 150.0]
+    # Define more granular bins and labels
+    bins = [0.0, 1.0, 5.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 150.0]
     labels = [
-        "0-4 anos",
-        "5-14 anos",
-        "15-29 anos",
-        "30-44 anos",
-        "45-59 anos",
-        "60-74 anos",
-        "75+ anos",
+        "0 anos",
+        "1-4 anos",
+        "5-9 anos",
+        "10-14 anos",
+        "15-19 anos",
+        "20-29 anos",
+        "30-39 anos",
+        "40-49 anos",
+        "50-59 anos",
+        "60-69 anos",
+        "70-79 anos",
+        "80+ anos",
     ]
 
     out["age_bin"] = pd.cut(out["IDADE_ANOS"], bins=bins, labels=labels, right=False)

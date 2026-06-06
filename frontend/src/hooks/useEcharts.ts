@@ -85,7 +85,10 @@ export function useEcharts(
         if (options.replaceOnUpdate) {
           (instance as { clear?: () => void }).clear?.();
         }
-        instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, false);
+        // notMerge: true replaces the entire option so leftover keys from a
+        // previous render (e.g. `title: 'Sem dados disponíveis'` set when data
+        // was null) do not persist after real data arrives.
+        instance.setOption({ ...optRef.current, backgroundColor: 'transparent' }, true);
         instance.resize();
       } catch (err) {
         console.error('ECharts Error:', err);

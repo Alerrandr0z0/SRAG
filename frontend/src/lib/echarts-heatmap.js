@@ -7,6 +7,7 @@ import {
   PieChart,
   SankeyChart,
   ScatterChart,
+  TreemapChart,
 } from 'echarts/charts';
 import {
   AriaComponent,
@@ -53,6 +54,7 @@ echarts.use([
   BoxplotChart,
   ScatterChart,
   EffectScatterChart,
+  TreemapChart,
   CanvasRenderer,
 ]);
 

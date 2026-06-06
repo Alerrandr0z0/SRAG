@@ -13,6 +13,15 @@ interface ComorbiditiesTreemapChartProps {
   data: ComorbiditiesTreemapItem[] | null;
 }
 
+interface EChartsTreemapParams {
+  data: {
+    name: string;
+    value: number;
+    deaths: number;
+    lethality: number;
+  };
+}
+
 const ComorbiditiesTreemapChart: React.FC<ComorbiditiesTreemapChartProps> = ({ data }) => {
   const theme = useThemeMode();
 
@@ -29,54 +38,49 @@ const ComorbiditiesTreemapChart: React.FC<ComorbiditiesTreemapChartProps> = ({ d
     }
 
     const isDark = theme === 'dark';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
 
-    // Format data for treemap: each node value must be an array [count, lethality]
-    // In ECharts treemap, if value is an array, the first element represents the size.
+    // Find max lethality for coloring scaling
+    const maxLethality = Math.max(...data.map((d) => d.lethality), 1);
+
+    // Helper to map lethality to color
+    const getLethalityColor = (lethality: number) => {
+      const ratio = Math.min(lethality / maxLethality, 1);
+      if (ratio < 0.25) return '#fef3c7';
+      if (ratio < 0.5) return '#f59e0b';
+      if (ratio < 0.75) return '#b45309';
+      return '#78350f';
+    };
+
     const treemapData = data
-      .filter((d) => d.value > 0) // Only show comorbidities with cases
+      .filter((d) => d.value > 0)
       .map((d) => ({
         name: d.name,
-        value: [d.value, d.lethality, d.deaths],
+        value: d.value, // Size dimension (number)
+        deaths: d.deaths,
+        lethality: d.lethality,
+        itemStyle: {
+          color: getLethalityColor(d.lethality),
+        },
       }));
-
-    // Find max lethality for visualMap scaling
-    const maxLethality = Math.max(...data.map((d) => d.lethality), 1);
 
     return {
       tooltip: {
-        formatter: (params: { data?: { name: string; value: [number, number, number] } }) => {
-          if (!params.data) return '';
-          const [count, lethality, deaths] = params.data.value;
-          return `Comorbidade: <b>${params.data.name}</b><br/>Casos: <b>${count}</b><br/>Óbitos: <b>${deaths}</b><br/>Letalidade (CFR): <b>${lethality}%</b>`;
+        formatter: (params: EChartsTreemapParams) => {
+          const d = params.data;
+          if (!d) return '';
+          return `Comorbidade: <b>${d.name}</b><br/>Casos: <b>${d.value}</b><br/>Óbitos: <b>${d.deaths}</b><br/>Letalidade (CFR): <b>${d.lethality}%</b>`;
         },
-      },
-      visualMap: {
-        min: 0,
-        max: maxLethality,
-        dimension: 1, // Color by lethality
-        calculable: true,
-        orient: 'horizontal',
-        left: 'center',
-        bottom: 0,
-        itemWidth: 12,
-        itemHeight: 150,
-        text: ['Letalidade (%)', ''],
-        inRange: {
-          color: ['#fef3c7', '#f59e0b', '#b45309', '#78350f'], // Amber/Brown tones
-        },
-        textStyle: { color: textColor, fontSize: 10 },
       },
       series: [
         {
           name: 'Comorbidades',
           type: 'treemap',
-          visibleMin: 300,
           data: treemapData,
-          leafDepth: 1,
+          breadcrumb: { show: false },
           label: {
             show: true,
-            formatter: '{b}\n({c} casos)',
+            formatter: '{b}',
+            fontSize: 10,
           },
           itemStyle: {
             borderColor: isDark ? '#1e293b' : '#fff',
@@ -102,7 +106,9 @@ const ComorbiditiesTreemapChart: React.FC<ComorbiditiesTreemapChartProps> = ({ d
           textAlign: 'center',
         }}
       >
-        ⚠️ Nota: Os fatores de risco e comorbidades são baseados nas fichas de notificação preenchidas. Fichas com valores em branco ou ignorados não são contabilizadas, podendo subestimar as prevalências.
+        ⚠️ Nota: Os fatores de risco e comorbidades são baseados nas fichas de notificação
+        preenchidas. Fichas com valores em branco ou ignorados não são contabilizadas, podendo
+        subestimar as prevalências.
       </p>
     </div>
   );

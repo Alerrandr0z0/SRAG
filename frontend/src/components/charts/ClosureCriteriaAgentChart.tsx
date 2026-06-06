@@ -8,7 +8,7 @@ interface ClosureCriteriaAgentData {
   Laboratorial: number;
   'Vínculo Epidemiológico': number;
   'Clínico / Imagem': number;
-  'Óbito': number;
+  Óbito: number;
   'Ignorado/Em Aberto': number;
 }
 
@@ -49,10 +49,10 @@ const ClosureCriteriaAgentChart: React.FC<ClosureCriteriaAgentChartProps> = ({ d
     ] as const;
 
     const colors = {
-      'Laboratorial': '#0f766e', // Teal 700
+      Laboratorial: '#0f766e', // Teal 700
       'Vínculo Epidemiológico': '#6d28d9', // Violet 700
       'Clínico / Imagem': '#b45309', // Amber 700
-      'Óbito': '#be123c', // Rose 700
+      Óbito: '#be123c', // Rose 700
       'Ignorado/Em Aberto': '#64748b', // Slate 500
     };
 

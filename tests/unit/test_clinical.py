@@ -453,24 +453,28 @@ class TestSeverityPyramid:
             }
         )
         res = compute_severity_pyramid(df)
-        assert len(res) == 7
+        assert len(res) == 12
 
-        # 0-4 group: 2 patients (ages 2 and 3)
-        g0_4 = next(g for g in res if g["age_group"] == "0-4 anos")
-        assert g0_4["total_cases"] == 2
+        # 1-4 group: 2 patients (ages 2 and 3)
+        g1_4 = next(g for g in res if g["age_group"] == "1-4 anos")
+        assert g1_4["total_cases"] == 2
         # one went to UTI (50%)
-        assert g0_4["uti_rate"] == 50.0
+        assert g1_4["uti_rate"] == 50.0
         # one had support (50%)
-        assert g0_4["support_rate"] == 50.0
+        assert g1_4["support_rate"] == 50.0
         # one died (50%)
-        assert g0_4["death_rate"] == 50.0
+        assert g1_4["death_rate"] == 50.0
 
-        # 5-14 group: 1 patient (age 10)
-        g5_14 = next(g for g in res if g["age_group"] == "5-14 anos")
-        assert g5_14["total_cases"] == 1
-        assert g5_14["uti_rate"] == 100.0
-        assert g5_14["support_rate"] == 100.0
-        assert g5_14["death_rate"] == 0.0
+        # 10-14 group: 1 patient (age 10)
+        g10_14 = next(g for g in res if g["age_group"] == "10-14 anos")
+        assert g10_14["total_cases"] == 1
+        assert g10_14["uti_rate"] == 100.0
+        assert g10_14["support_rate"] == 100.0
+        assert g10_14["death_rate"] == 0.0
+
+        # 80+ group: 1 patient (age 80)
+        g80plus = next(g for g in res if g["age_group"] == "80+ anos")
+        assert g80plus["total_cases"] == 1
 
 
 # ==============================================================

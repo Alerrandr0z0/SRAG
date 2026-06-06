@@ -1,14 +1,14 @@
-import React, { useMemo } from 'react';
-import * as echarts from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import {
   GridComponent,
   LegendComponent,
-  TooltipComponent,
-  TitleComponent,
   MarkLineComponent,
+  TitleComponent,
+  TooltipComponent,
 } from 'echarts/components';
+import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
+import React, { useMemo } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import type { HospitalizationDurationData } from '../../types/epi';
@@ -114,9 +114,7 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       series.push({
         name: 'KDE Cura',
         type: 'line',
-        data: data.kde_x
-          .filter((x) => x <= maxKde)
-          .map((x, i) => [x, data.kde_cure[i] ?? 0]),
+        data: data.kde_x.filter((x) => x <= maxKde).map((x, i) => [x, data.kde_cure[i] ?? 0]),
         smooth: 0.5,
         symbol: 'none',
         lineStyle: { color: '#0f6e56', width: 2.5 },
@@ -127,9 +125,7 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       series.push({
         name: 'KDE Obito',
         type: 'line',
-        data: data.kde_x
-          .filter((x) => x <= maxKde)
-          .map((x, i) => [x, data.kde_death[i] ?? 0]),
+        data: data.kde_x.filter((x) => x <= maxKde).map((x, i) => [x, data.kde_death[i] ?? 0]),
         smooth: 0.5,
         symbol: 'none',
         lineStyle: { color: '#a32d2d', width: 2.5 },
@@ -178,7 +174,13 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
         borderColor: axisColor,
         textStyle: { color: isDark ? '#f8fafc' : '#1e293b' },
         formatter: (params: unknown) => {
-          const arr = Array.isArray(params) ? (params as Array<{ axisValueLabel: string; seriesName: string; value: [number, number] }>) : [];
+          const arr = Array.isArray(params)
+            ? (params as Array<{
+                axisValueLabel: string;
+                seriesName: string;
+                value: [number, number];
+              }>)
+            : [];
           if (!arr.length) return '';
           const day = arr[0].axisValueLabel;
           const rows = arr
@@ -267,9 +269,7 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
 
   const { chartRef } = useEcharts(option, [data, theme]);
 
-  return (
-    <div ref={chartRef} className="echart-host" style={{ minHeight: 320 }} />
-  );
+  return <div ref={chartRef} className="echart-host" style={{ minHeight: 320 }} />;
 };
 
 export default HospitalizationHistogram;
