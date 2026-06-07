@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 
 from srag.data.analytics.clinical import (
+    compute_antiviral_age_profile,
     compute_antiviral_latency,
+    compute_antiviral_latency_per_drug,
     compute_antiviral_outcome_impact,
     compute_clinical_timing_metrics,
     compute_comorbidities_treemap,
@@ -244,6 +246,110 @@ class TestAntiviralLatency:
     def test_empty_df(self) -> None:
         res = compute_antiviral_latency(pd.DataFrame())
         assert res == {"boxplot_data": [], "median": 0.0}
+
+
+class TestAntiviralAgeProfile:
+    def test_oseltamivir_age_samples(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1, 1, 2, 1],
+                "TP_ANTIVIR": [1, 1, 1, 1, 1],
+                "IDADE_ANOS": [10.0, 25.5, 60.0, 30.0, 5.0],
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_age_profile(df)}
+        assert "Oseltamivir" in res
+        assert res["Oseltamivir"]["count"] == 4
+        assert sorted(res["Oseltamivir"]["age_samples"]) == [5.0, 10.0, 25.5, 60.0]
+
+    def test_excludes_non_antiviral(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 2, 2],
+                "TP_ANTIVIR": [1, 1, 1],
+                "IDADE_ANOS": [10.0, 20.0, 30.0],
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_age_profile(df)}
+        assert res.get("Oseltamivir", {}).get("count") == 1
+
+    def test_caps_samples(self) -> None:
+        n = 300
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1] * n,
+                "TP_ANTIVIR": [1] * n,
+                "IDADE_ANOS": list(range(n)),
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_age_profile(df)}
+        assert len(res["Oseltamivir"]["age_samples"]) <= 200
+        assert res["Oseltamivir"]["count"] == n
+
+    def test_zanamivir_label(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1],
+                "TP_ANTIVIR": [2, 2],
+                "IDADE_ANOS": [40.0, 50.0],
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_age_profile(df)}
+        assert "Zanamivir" in res
+        assert res["Zanamivir"]["count"] == 2
+
+    def test_empty_df(self) -> None:
+        assert compute_antiviral_age_profile(pd.DataFrame()) == []
+
+
+class TestAntiviralLatencyPerDrug:
+    def test_oseltamivir_latency_samples(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1, 1, 1],
+                "TP_ANTIVIR": [1, 1, 1, 1],
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-01", "2023-01-01", "2023-01-01"],
+                "DT_ANTIVIR": ["2023-01-02", "2023-01-04", "2023-01-06", "2023-01-08"],
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_latency_per_drug(df)}
+        assert "Oseltamivir" in res
+        assert res["Oseltamivir"]["count"] == 4
+        assert res["Oseltamivir"]["median"] == 4.0
+        assert sorted(res["Oseltamivir"]["latency_samples"]) == [1, 3, 5, 7]
+
+    def test_excludes_over_14_days(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1],
+                "TP_ANTIVIR": [1, 1],
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-01"],
+                "DT_ANTIVIR": ["2023-01-05", "2023-01-20"],
+            }
+        )
+        res = {r["drug"]: r for r in compute_antiviral_latency_per_drug(df)}
+        assert res["Oseltamivir"]["count"] == 1
+        assert res["Oseltamivir"]["latency_samples"] == [4]
+
+    def test_caps_samples(self) -> None:
+        n = 300
+        deltas = [i % 15 for i in range(n)]
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1] * n,
+                "TP_ANTIVIR": [1] * n,
+                "DT_SIN_PRI": ["2023-01-01"] * n,
+                "DT_ANTIVIR": pd.to_datetime(["2023-01-01"] * n)
+                + pd.to_timedelta(deltas, unit="D"),
+            }
+        )
+        df["DT_ANTIVIR"] = df["DT_ANTIVIR"].astype(str)
+        res = {r["drug"]: r for r in compute_antiviral_latency_per_drug(df)}
+        assert len(res["Oseltamivir"]["latency_samples"]) <= 200
+        assert res["Oseltamivir"]["count"] == n
+
+    def test_empty_df(self) -> None:
+        assert compute_antiviral_latency_per_drug(pd.DataFrame()) == []
 
 
 class TestAntiviralOutcomeImpact:

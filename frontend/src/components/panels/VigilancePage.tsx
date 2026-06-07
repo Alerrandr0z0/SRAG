@@ -383,10 +383,7 @@ const VigilanceTemporalSection = React.memo<{
       </div>
       <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
         {temporalMode === 'cascade' && (
-          <GravityCascadeChart
-            data={cascade}
-            mode={axisMode === 'rate' ? 'rate' : 'volume'}
-          />
+          <GravityCascadeChart data={cascade} mode={axisMode === 'rate' ? 'rate' : 'volume'} />
         )}
         {temporalMode === 'ventilatory' && (
           <VentilatorySupportChart
@@ -560,8 +557,8 @@ const VigilanceIcuBottleneckSection = React.memo<{
           lineHeight: '1.4',
         }}
       >
-        * Exibidos apenas períodos com ≥{' '}
-        {groupBy === 'year' ? 50 : groupBy === 'month' ? 20 : 10} admissões.
+        * Exibidos apenas períodos com ≥ {groupBy === 'year' ? 50 : groupBy === 'month' ? 20 : 10}{' '}
+        admissões.
       </p>
     </article>
   );
@@ -580,7 +577,15 @@ const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreema
             <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
             <div className="vigilance-history-stats">
               <span>
-                Tamanho: <b>{metric === 'lethality' ? 'Letalidade (CFR)' : metric === 'deaths' ? 'Óbitos' : 'Casos'}</b> · Cor: Letalidade (clara→escura)
+                Tamanho:{' '}
+                <b>
+                  {metric === 'lethality'
+                    ? 'Letalidade (CFR)'
+                    : metric === 'deaths'
+                      ? 'Óbitos'
+                      : 'Casos'}
+                </b>{' '}
+                · Cor: Letalidade (clara→escura)
               </span>
             </div>
           </div>
@@ -613,11 +618,13 @@ const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreema
               onChange={(e) => setTopN(Number(e.target.value))}
               title="Limitar ao top N comorbidades pela métrica selecionada"
             >
-              {[5, 8, 12, total].filter((n, i, arr) => n > 0 && arr.indexOf(n) === i).map((n) => (
-                <option key={n} value={n}>
-                  Top {n}
-                </option>
-              ))}
+              {[5, 8, 12, total]
+                .filter((n, i, arr) => n > 0 && arr.indexOf(n) === i)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    Top {n}
+                  </option>
+                ))}
             </select>
           </div>
         </div>

@@ -1,6 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 
-test('visual: vigilance page shows icu bottleneck + imaging volcano + delay by unit', async ({ page }) => {
+test('visual: vigilance page shows icu bottleneck + imaging volcano + delay by unit', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('networkidle');
@@ -17,7 +19,9 @@ test('visual: vigilance page shows icu bottleneck + imaging volcano + delay by u
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2500);
   // Scroll to imaging section
-  await page.locator('h3:has-text("Achados de Imagem × Gravidade Clínica")').scrollIntoViewIfNeeded();
+  await page
+    .locator('h3:has-text("Desfecho Clínico")')
+    .scrollIntoViewIfNeeded();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: '/tmp/lab_with_volcano.png', fullPage: true });
 

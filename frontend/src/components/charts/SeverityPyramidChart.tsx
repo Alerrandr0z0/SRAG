@@ -39,21 +39,24 @@ const SeverityPyramidChart: React.FC<SeverityPyramidChartProps> = ({ data }) => 
         name: 'Óbito',
         type: 'bar',
         stack: 'right',
-        data: data.map(r => (r.total_cases * (r.death_rate / 100)) / 2),
+        data: data.map((r) => (r.total_cases * (r.death_rate / 100)) / 2),
         itemStyle: { color: COLORS.DANGER },
       },
       {
         name: 'UTI (Sobrevivente)',
         type: 'bar',
         stack: 'right',
-        data: data.map(r => (r.total_cases * (Math.max(0, r.uti_rate - r.death_rate) / 100)) / 2),
+        data: data.map((r) => (r.total_cases * (Math.max(0, r.uti_rate - r.death_rate) / 100)) / 2),
         itemStyle: { color: COLORS.ACCENT },
       },
       {
         name: 'Enfermaria/Não Internado',
         type: 'bar',
         stack: 'right',
-        data: data.map(r => (r.total_cases * (Math.max(0, 100 - Math.max(r.uti_rate, r.death_rate)) / 100)) / 2),
+        data: data.map(
+          (r) =>
+            (r.total_cases * (Math.max(0, 100 - Math.max(r.uti_rate, r.death_rate)) / 100)) / 2,
+        ),
         itemStyle: { color: COLORS.SECONDARY, opacity: 0.7 },
       },
       // Left side (negative) - exact mirror for symmetry
@@ -62,7 +65,7 @@ const SeverityPyramidChart: React.FC<SeverityPyramidChartProps> = ({ data }) => 
         type: 'bar',
         stack: 'left',
         barGap: '-100%',
-        data: data.map(r => -((r.total_cases * (r.death_rate / 100)) / 2)),
+        data: data.map((r) => -((r.total_cases * (r.death_rate / 100)) / 2)),
         itemStyle: { color: COLORS.DANGER },
         silent: true, // Tooltip only needs to trigger once per row
       },
@@ -71,7 +74,9 @@ const SeverityPyramidChart: React.FC<SeverityPyramidChartProps> = ({ data }) => 
         type: 'bar',
         stack: 'left',
         barGap: '-100%',
-        data: data.map(r => -((r.total_cases * (Math.max(0, r.uti_rate - r.death_rate) / 100)) / 2)),
+        data: data.map(
+          (r) => -((r.total_cases * (Math.max(0, r.uti_rate - r.death_rate) / 100)) / 2),
+        ),
         itemStyle: { color: COLORS.ACCENT },
         silent: true,
       },
@@ -80,10 +85,13 @@ const SeverityPyramidChart: React.FC<SeverityPyramidChartProps> = ({ data }) => 
         type: 'bar',
         stack: 'left',
         barGap: '-100%',
-        data: data.map(r => -((r.total_cases * (Math.max(0, 100 - Math.max(r.uti_rate, r.death_rate)) / 100)) / 2)),
+        data: data.map(
+          (r) =>
+            -((r.total_cases * (Math.max(0, 100 - Math.max(r.uti_rate, r.death_rate)) / 100)) / 2),
+        ),
         itemStyle: { color: COLORS.SECONDARY, opacity: 0.7 },
         silent: true,
-      }
+      },
     ];
 
     interface EChartsParam {
@@ -135,7 +143,7 @@ const SeverityPyramidChart: React.FC<SeverityPyramidChartProps> = ({ data }) => 
         nameGap: 30,
         axisLabel: {
           formatter: (v: number) => Math.abs(v) * 2, // Total width is 2 * side width
-          color: textColor
+          color: textColor,
         },
         splitLine: { lineStyle: { color: axisColor, type: 'dashed' } },
       },

@@ -784,38 +784,41 @@ def compute_serology_profile(df: pd.DataFrame) -> dict[str, object]:
     return {"types": types_data, "igg": igg_data, "igm": igm_data}
 
 
+def _count_mapped_column(
+    col: pd.Series | None,
+    label_map: dict[int, str],
+) -> dict[str, int]:
+    """Count occurrences of mapped labels in a single column."""
+    counts: dict[str, int] = {}
+    if col is None:
+        return counts
+    series = col if isinstance(col, pd.Series) else pd.Series(col)
+    mapped = pd.to_numeric(series, errors="coerce").map(label_map)
+    for label, count in mapped.value_counts().items():
+        counts[str(label)] = int(count)
+    return counts
+
+
 def compute_antiviral_types(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Specific types of antiviral drugs used (Oseltamivir, etc.)."""
-    if df.empty:
-        return []
-
-    out = df.copy()
-
     flu_map = {1: "Oseltamivir", 2: "Zanamivir", 3: "Outro (Gripe)"}
     cov_map = {1: "Paxlovid", 2: "Lagevrio", 3: "Olumiant", 4: "Outro (COVID)"}
+    all_labels = list(flu_map.values()) + list(cov_map.values())
 
-    results = []
+    if df.empty:
+        return [{"label": label, "count": 0} for label in all_labels]
 
-    col_tp_antivir = out.get("TP_ANTIVIR")
-    if col_tp_antivir is not None:
-        series_tp = (
-            pd.Series(col_tp_antivir)
-            if not isinstance(col_tp_antivir, pd.Series)
-            else col_tp_antivir
-        )
-        flu_counts = pd.to_numeric(series_tp, errors="coerce").map(flu_map).value_counts()
-        for label, count in flu_counts.items():
-            results.append({"label": str(label), "count": int(count)})
+    counts = {label: 0 for label in all_labels}
 
-    col_tipo_trat = out.get("TIPO_TRAT")
-    if col_tipo_trat is not None:
-        series_trat = (
-            pd.Series(col_tipo_trat) if not isinstance(col_tipo_trat, pd.Series) else col_tipo_trat
-        )
-        cov_counts = pd.to_numeric(series_trat, errors="coerce").map(cov_map).value_counts()
-        for label, count in cov_counts.items():
-            results.append({"label": str(label), "count": int(count)})
+    tp_col = df.get("TP_ANTIVIR")
+    if isinstance(tp_col, pd.Series):
+        counts.update(_count_mapped_column(tp_col, flu_map))
 
+    trat_col = df.get("TIPO_TRAT")
+    if isinstance(trat_col, pd.Series):
+        counts.update(_count_mapped_column(trat_col, cov_map))
+
+    results = [{"label": label, "count": count} for label, count in counts.items()]
     results.sort(key=lambda x: x["count"], reverse=True)
     return results
 
@@ -872,6 +875,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     turnaround = pd.to_numeric(turnaround, errors="coerce")
     turnaround = turnaround[(turnaround >= 0) & (turnaround <= 30)]
     median_turnaround = float(round(turnaround.median(), 1)) if not turnaround.empty else 0.0
+    mean_turnaround = float(round(turnaround.mean(), 1)) if not turnaround.empty else 0.0
 
     codetec_count = int((pd.to_numeric(out["CO_DETEC"], errors="coerce") == 1).sum())
 
@@ -899,6 +903,7 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
             "tested_cases": len(tested),
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
+            "avg_turnaround_days": mean_turnaround,
             "codetection_cases": codetec_count,
             "reinfection_total": reinfection_total,
         },

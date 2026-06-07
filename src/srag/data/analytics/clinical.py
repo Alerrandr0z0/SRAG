@@ -343,6 +343,137 @@ def compute_antiviral_latency(df: pd.DataFrame) -> dict[str, Any]:
     return {"boxplot_data": stats, "median": float(round(deltas.median(), 1)), "count": len(valid)}
 
 
+_ANTIVIRAL_FLU_MAP = {1: "Oseltamivir", 2: "Zanamivir", 3: "Outro (Gripe)"}
+_ANTIVIRAL_COV_MAP = {1: "Paxlovid", 2: "Lagevrio", 3: "Olumiant", 4: "Outro (COVID)"}
+_MAX_ANTIVIRAL_SAMPLES = 200
+
+
+def _resolve_antiviral_drug_label(row: pd.Series) -> str | None:
+    try:
+        tp_antivir = float(row.get("TP_ANTIVIR", float("nan")))
+    except TypeError, ValueError:
+        tp_antivir = float("nan")
+    if not np.isnan(tp_antivir) and int(tp_antivir) in _ANTIVIRAL_FLU_MAP:
+        return _ANTIVIRAL_FLU_MAP[int(tp_antivir)]
+    try:
+        tipo_trat = float(row.get("TIPO_TRAT", float("nan")))
+    except TypeError, ValueError:
+        tipo_trat = float("nan")
+    if not np.isnan(tipo_trat) and int(tipo_trat) in _ANTIVIRAL_COV_MAP:
+        return _ANTIVIRAL_COV_MAP[int(tipo_trat)]
+    return None
+
+
+def compute_antiviral_age_profile(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Age samples per antiviral drug for KDE-based profile visualisation."""
+    if df.empty:
+        return []
+    out = df.copy()
+    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
+    out = out[antiviral_mask]
+    if out.empty:
+        return []
+
+    out["_drug"] = out.apply(_resolve_antiviral_drug_label, axis=1)
+    out = out.dropna(subset=["_drug"])
+    if out.empty:
+        return []
+
+    if "IDADE_ANOS" in out.columns and out["IDADE_ANOS"].notna().any():
+        out["_age"] = pd.to_numeric(out["IDADE_ANOS"], errors="coerce")
+    else:
+        out["_age"] = out.apply(
+            lambda row: _normalize_age_years(
+                row.get("NU_IDADE_N"),
+                row.get("TP_IDADE"),
+            ),
+            axis=1,
+        )
+    out = out.dropna(subset=["_age"])
+
+    results: list[dict[str, Any]] = []
+    for drug, group in out.groupby("_drug", sort=True):
+        ages = [float(a) for a in group["_age"].tolist()]
+        if not ages:
+            continue
+        ages_sorted = sorted(ages)
+        capped = ages_sorted[:_MAX_ANTIVIRAL_SAMPLES]
+        results.append(
+            {
+                "drug": str(drug),
+                "age_samples": capped,
+                "count": len(ages_sorted),
+            }
+        )
+
+    results.sort(key=lambda r: r["count"], reverse=True)
+    return results
+
+
+def _normalize_age_years(
+    nu_idade_n: int | float | str | None,
+    tp_idade: int | float | str | None,
+) -> float | None:
+    nu_raw = pd.to_numeric(pd.Series([nu_idade_n]), errors="coerce").iloc[0]
+    tp_raw = pd.to_numeric(pd.Series([tp_idade]), errors="coerce").iloc[0]
+    if pd.isna(nu_raw):
+        return None
+    nu = int(nu_raw)
+    if nu < 0:
+        return None
+    if pd.isna(tp_raw):
+        return float(nu)
+    tp = int(tp_raw)
+    if tp == 1:
+        return round(nu / 365.25, 4)
+    if tp == 2:
+        return round(nu / 12.0, 4)
+    return float(nu)
+
+
+def compute_antiviral_latency_per_drug(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Latency (days, sintomas→antiviral) samples per drug for KDE-based visualisation."""
+    if df.empty:
+        return []
+    out = df.copy()
+    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
+    if (
+        not antiviral_mask.any()
+        or "DT_SIN_PRI" not in out.columns
+        or "DT_ANTIVIR" not in out.columns
+    ):
+        return []
+
+    out = out[antiviral_mask].copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out["DT_ANTIVIR"] = pd.to_datetime(out["DT_ANTIVIR"], errors="coerce")
+    out["_drug"] = out.apply(_resolve_antiviral_drug_label, axis=1)
+    valid = out.dropna(subset=["_drug", "DT_SIN_PRI", "DT_ANTIVIR"])
+    valid["delta"] = (valid["DT_ANTIVIR"] - valid["DT_SIN_PRI"]).dt.days
+    valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 14)]
+    if valid.empty:
+        return []
+
+    results: list[dict[str, Any]] = []
+    for drug, group in valid.groupby("_drug", sort=True):
+        deltas = [int(d) for d in group["delta"].tolist()]
+        if not deltas:
+            continue
+        deltas_sorted = sorted(deltas)
+        capped = deltas_sorted[:_MAX_ANTIVIRAL_SAMPLES]
+        results.append(
+            {
+                "drug": str(drug),
+                "latency_samples": capped,
+                "median": float(round(pd.Series(deltas).median(), 1)),
+                "count": len(deltas_sorted),
+            }
+        )
+
+    results.sort(key=lambda r: r["count"], reverse=True)
+    return results
+
+
 def compute_antiviral_outcome_impact(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Compare Cure/Death rates between patients who used vs didn't use antivirals."""
     if df.empty:

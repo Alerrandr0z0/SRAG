@@ -213,7 +213,7 @@ def _build_laboratory_quality_rows(out: pd.DataFrame) -> list[dict[str, Any]]:
 def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     """Calculate quartiles for time between sample collection and PCR result for Box Plot."""
     if df.empty:
-        return {"boxplot_data": [], "median": 0.0}
+        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
 
     out = df.copy()
     for col in ["DT_COLETA", "DT_PCR"]:
@@ -222,14 +222,14 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
 
     # Valid range: 0 to 30 days (filter outliers/errors)
     if "DT_PCR" not in out.columns or "DT_COLETA" not in out.columns:
-        return {"boxplot_data": [], "median": 0.0}
+        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
 
     valid = out.dropna(subset=["DT_COLETA", "DT_PCR"]).copy()
     valid["delta"] = (valid["DT_PCR"] - valid["DT_COLETA"]).dt.days
     valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 30)]
 
     if valid.empty:
-        return {"boxplot_data": [], "median": 0.0}
+        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
 
     # Format for ECharts BoxPlot [min, Q1, median, Q3, max]
     deltas = valid["delta"].sort_values()
@@ -241,7 +241,18 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
         float(deltas.max()),
     ]
 
-    return {"boxplot_data": stats, "median": float(round(deltas.median(), 1)), "count": len(valid)}
+    adherent_count = (deltas <= 7).sum()
+    if len(valid) > 0:
+        target_adherence_rate = float(round((adherent_count / len(valid)) * 100, 1))
+    else:
+        target_adherence_rate = 0.0
+
+    return {
+        "boxplot_data": stats,
+        "median": float(round(deltas.median(), 1)),
+        "count": len(valid),
+        "target_adherence_rate": target_adherence_rate,
+    }
 
 
 def compute_sample_type_distribution(df: pd.DataFrame) -> list[dict[str, Any]]:

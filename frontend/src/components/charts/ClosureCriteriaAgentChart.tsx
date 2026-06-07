@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 
@@ -16,11 +16,9 @@ interface ClosureCriteriaAgentChartProps {
   data: ClosureCriteriaAgentData[] | null;
 }
 
-type Mode = 'volume' | 'percentage';
-
 const ClosureCriteriaAgentChart: React.FC<ClosureCriteriaAgentChartProps> = ({ data }) => {
   const theme = useThemeMode();
-  const [mode, setMode] = useState<Mode>('volume');
+  const mode: 'percentage' = 'percentage';
 
   const getOption = () => {
     if (!data || data.length === 0) {
@@ -125,31 +123,9 @@ const ClosureCriteriaAgentChart: React.FC<ClosureCriteriaAgentChartProps> = ({ d
     };
   };
 
-  const { chartRef } = useEcharts(getOption(), [data, mode, theme]);
+  const { chartRef } = useEcharts(getOption(), [data, theme]);
 
-  return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-        <div className="pill-group">
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'volume' ? 'active' : ''}`}
-            onClick={() => setMode('volume')}
-          >
-            Absoluto
-          </button>
-          <button
-            type="button"
-            className={`pill-btn ${mode === 'percentage' ? 'active' : ''}`}
-            onClick={() => setMode('percentage')}
-          >
-            Proporção (%)
-          </button>
-        </div>
-      </div>
-      <div ref={chartRef} style={{ flex: 1, minHeight: '300px' }} />
-    </div>
-  );
+  return <div ref={chartRef} style={{ height: '100%', width: '100%', minHeight: '300px' }} />;
 };
 
 export default ClosureCriteriaAgentChart;

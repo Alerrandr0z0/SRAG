@@ -408,8 +408,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
             lineHeight: '1.4',
           }}
         >
-          * Exibidas apenas unidades com ≥5 casos notificados. Amostra de até 100 casos por
-          unidade.
+          * Exibidas apenas unidades com ≥5 casos notificados. Amostra de até 100 casos por unidade.
         </p>
       </article>
 

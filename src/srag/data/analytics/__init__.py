@@ -1,7 +1,9 @@
 """Core analytics and aggregation for Mossoró SRAG data."""
 
 from srag.data.analytics.clinical import (
+    compute_antiviral_age_profile,
     compute_antiviral_latency,
+    compute_antiviral_latency_per_drug,
     compute_antiviral_outcome_impact,
     compute_clinical_timing_metrics,
     compute_comorbidities_treemap,
@@ -104,7 +106,9 @@ __all__ = [
     "compute_aggregated_timeline",
     "compute_alert_thresholds",
     "compute_animal_contact_distribution",
+    "compute_antiviral_age_profile",
     "compute_antiviral_latency",
+    "compute_antiviral_latency_per_drug",
     "compute_antiviral_outcome_impact",
     "compute_antiviral_types",
     "compute_antiviral_usage",

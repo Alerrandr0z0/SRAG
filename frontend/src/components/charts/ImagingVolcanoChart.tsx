@@ -147,7 +147,13 @@ const ImagingVolcanoChart: React.FC<ImagingVolcanoChartProps> = ({ data }) => {
           emphasis: {
             scale: 1.15,
             itemStyle: { opacity: 1, borderWidth: 2 },
-            label: { show: true, formatter: '{b}', position: 'top', color: textColor, fontSize: 10 },
+            label: {
+              show: true,
+              formatter: '{b}',
+              position: 'top',
+              color: textColor,
+              fontSize: 10,
+            },
           },
           label: { show: false },
           labelLayout: { moveOverlap: 'shiftY' },
@@ -165,7 +171,13 @@ const ImagingVolcanoChart: React.FC<ImagingVolcanoChartProps> = ({ data }) => {
           emphasis: {
             scale: 1.15,
             itemStyle: { opacity: 1, borderWidth: 2 },
-            label: { show: true, formatter: '{b}', position: 'top', color: textColor, fontSize: 10 },
+            label: {
+              show: true,
+              formatter: '{b}',
+              position: 'top',
+              color: textColor,
+              fontSize: 10,
+            },
           },
           label: { show: false },
           labelLayout: { moveOverlap: 'shiftY' },
@@ -221,9 +233,7 @@ const ImagingVolcanoChart: React.FC<ImagingVolcanoChartProps> = ({ data }) => {
         <span>
           <b>Cor</b>: modalidade
         </span>
-        <span style={{ color: '#e11d48' }}>
-          ● Quadrante superior-direito = alto risco
-        </span>
+        <span style={{ color: '#e11d48' }}>● Quadrante superior-direito = alto risco</span>
       </div>
       <div ref={chartRef} style={{ flex: 1, minHeight: 360 }} />
     </div>

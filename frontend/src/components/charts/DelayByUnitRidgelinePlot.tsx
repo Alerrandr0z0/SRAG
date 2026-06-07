@@ -33,7 +33,11 @@ const getStatusLabel = (median: number): string => {
 
 const MIN_CASES = 5;
 
-function kde(values: number[], thresholds: number[], bandwidth: number): { x: number; y: number }[] {
+function kde(
+  values: number[],
+  thresholds: number[],
+  bandwidth: number,
+): { x: number; y: number }[] {
   const n = values.length;
   if (n === 0) return thresholds.map((x) => ({ x, y: 0 }));
   const invN = 1 / n;
@@ -105,9 +109,7 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
 
     try {
       const sortedAll = [...data].sort((a, b) => a.median_delay - b.median_delay);
-      let validUnits = sortedAll.filter(
-        (d) => d.total >= MIN_CASES && d.delay_samples.length >= 2,
-      );
+      let validUnits = sortedAll.filter((d) => d.total >= MIN_CASES && d.delay_samples.length >= 2);
       if (validUnits.length === 0) {
         validUnits = sortedAll.filter((d) => d.delay_samples.length >= 1);
       }
