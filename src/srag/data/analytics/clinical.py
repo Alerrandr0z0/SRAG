@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -431,45 +431,77 @@ def _normalize_age_years(
     return float(nu)
 
 
+def _extract_specs(df: pd.DataFrame, out_col: str, type_col: str, code: int) -> list[str]:
+    if out_col not in df.columns or type_col not in df.columns:
+        return []
+    t_num = pd.to_numeric(df[type_col], errors="coerce")
+    c_vals = df[out_col].fillna("").astype(str).str.strip()
+    mask = (t_num == code) & (c_vals != "")
+    return sorted(df.loc[mask, out_col].dropna().unique().tolist())
+
+
+def _populate_samples(valid: pd.DataFrame, drug_data: dict[str, dict[str, Any]]) -> None:
+    for drug, group in valid.groupby("_drug", sort=True):
+        if drug not in drug_data:
+            continue
+        deltas = [int(d) for d in group["delta"].tolist()]
+        if deltas:
+            drug_data[str(drug)].update(
+                {
+                    "latency_samples": sorted(deltas)[:_MAX_ANTIVIRAL_SAMPLES],
+                    "median": float(round(pd.Series(deltas).median(), 1)),
+                    "count": len(deltas),
+                }
+            )
+
+
 def compute_antiviral_latency_per_drug(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Latency (days, sintomas→antiviral) samples per drug for KDE-based visualisation."""
     if df.empty:
         return []
-    out = df.copy()
-    antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
-    if (
-        not antiviral_mask.any()
-        or "DT_SIN_PRI" not in out.columns
-        or "DT_ANTIVIR" not in out.columns
-    ):
-        return []
+    all_drugs = [
+        "Oseltamivir",
+        "Zanamivir",
+        "Outro (Gripe)",
+        "Paxlovid",
+        "Lagevrio",
+        "Olumiant",
+        "Outro (COVID)",
+    ]
+    drug_data: dict[str, dict[str, Any]] = {
+        d: {
+            "drug": d,
+            "latency_samples": [],
+            "median": 0.0,
+            "count": 0,
+        }
+        for d in all_drugs
+    }
 
-    out = out[antiviral_mask].copy()
-    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
-    out["DT_ANTIVIR"] = pd.to_datetime(out["DT_ANTIVIR"], errors="coerce")
-    out["_drug"] = out.apply(_resolve_antiviral_drug_label, axis=1)
-    valid = out.dropna(subset=["_drug", "DT_SIN_PRI", "DT_ANTIVIR"])
-    valid["delta"] = (valid["DT_ANTIVIR"] - valid["DT_SIN_PRI"]).dt.days
-    valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 14)]
-    if valid.empty:
-        return []
+    # Extract specified others details
+    out_flu_specs = _extract_specs(df, "OUT_ANTIV", "TP_ANTIVIR", 3)
+    out_cov_specs = _extract_specs(df, "OUT_TRAT", "TIPO_TRAT", 4)
 
-    results: list[dict[str, Any]] = []
-    for drug, group in valid.groupby("_drug", sort=True):
-        deltas = [int(d) for d in group["delta"].tolist()]
-        if not deltas:
-            continue
-        deltas_sorted = sorted(deltas)
-        capped = deltas_sorted[:_MAX_ANTIVIRAL_SAMPLES]
-        results.append(
-            {
-                "drug": str(drug),
-                "latency_samples": capped,
-                "median": float(round(pd.Series(deltas).median(), 1)),
-                "count": len(deltas_sorted),
-            }
-        )
+    if out_flu_specs:
+        drug_data["Outro (Gripe)"]["specifications"] = out_flu_specs
+    if out_cov_specs:
+        drug_data["Outro (COVID)"]["specifications"] = out_cov_specs
 
+    if "DT_SIN_PRI" in df.columns and "DT_ANTIVIR" in df.columns and "ANTIVIRAL" in df.columns:
+        out = df.copy()
+        antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
+        if antiviral_mask.any():
+            out = out[antiviral_mask].copy()
+            out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+            out["DT_ANTIVIR"] = pd.to_datetime(out["DT_ANTIVIR"], errors="coerce")
+            out["_drug"] = out.apply(_resolve_antiviral_drug_label, axis=1)
+            valid = out.dropna(subset=["_drug", "DT_SIN_PRI", "DT_ANTIVIR"])
+            if not valid.empty:
+                valid["delta"] = (valid["DT_ANTIVIR"] - valid["DT_SIN_PRI"]).dt.days
+                valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 14)]
+                _populate_samples(valid, drug_data)
+
+    results = [r for r in drug_data.values() if r["count"] > 0]
     results.sort(key=lambda r: r["count"], reverse=True)
     return results
 
@@ -508,6 +540,107 @@ def compute_antiviral_outcome_impact(df: pd.DataFrame) -> list[dict[str, Any]]:
         )
 
     return results
+
+
+_TREATMENT_WINDOW_LABELS = ["≤ 1d", "2d", "3-5d", "> 5d", "s/ antiviral"]
+
+
+def _scalar_int(value: pd.Series | int | float | np.integer) -> int:
+    """Coerce pandas-aware value (Series | int) to a plain Python int."""
+    if isinstance(value, pd.Series):
+        return int(value.iloc[0])
+    return int(value)
+
+
+def _classify_treatment_window(days: float | int | None) -> str | None:
+    if days is None or pd.isna(days):
+        return None
+    if days <= 1:
+        return "≤ 1d"
+    if days <= 2:
+        return "2d"
+    if days <= 5:
+        return "3-5d"
+    return "> 5d"
+
+
+def _classify_treated_windows(out: pd.DataFrame) -> pd.DataFrame:
+    """Tag treated patients with their therapeutic window label."""
+    treated = out[out["used_antivir"]].copy()
+    has_dates = "DT_SIN_PRI" in treated.columns and "DT_ANTIVIR" in treated.columns
+    if not has_dates:
+        treated["window"] = None
+        return treated
+    for col in ("DT_SIN_PRI", "DT_ANTIVIR"):
+        treated[col] = pd.to_datetime(treated[col], errors="coerce")
+    if treated.empty:
+        treated["window"] = None
+        return treated
+    treated["delta"] = (treated["DT_ANTIVIR"] - treated["DT_SIN_PRI"]).dt.days
+    treated = treated[(treated["delta"] >= 0) & (treated["delta"] <= 14)]
+    treated["window"] = treated["delta"].apply(_classify_treatment_window)
+    return treated
+
+
+def _empty_window_results() -> list[dict[str, Any]]:
+    return [
+        {"window": label, "total": 0, "cure_rate": 0.0, "death_rate": 0.0, "margin": 0.0}
+        for label in _TREATMENT_WINDOW_LABELS
+    ]
+
+
+def _row_to_window_stats(
+    row: pd.Series | None,
+    label: str,
+) -> dict[str, Any]:
+    if row is None:
+        return {"window": label, "total": 0, "cure_rate": 0.0, "death_rate": 0.0, "margin": 0.0}
+    total = _scalar_int(row.sum())
+    cure = _scalar_int(row.get("Cura", 0))
+    death = _scalar_int(row.get("Óbito", 0))
+    cure_rate = round(cure / total * 100, 1) if total > 0 else 0.0
+    death_rate = round(death / total * 100, 1) if total > 0 else 0.0
+    return {
+        "window": label,
+        "total": total,
+        "cure_rate": cure_rate,
+        "death_rate": death_rate,
+        "margin": round(cure_rate - death_rate, 1),
+    }
+
+
+def compute_treatment_window_outcomes(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Outcome (cure / death) per treatment window: 1d, 2d, 3-5d, >5d, no antiviral."""
+    if df.empty:
+        return []
+
+    required = {"ANTIVIRAL", "EVOLUCAO"}
+    if not required.issubset(df.columns):
+        return _empty_window_results()
+
+    out = df.copy()
+    out["used_antivir"] = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
+    out["outcome"] = out["EVOLUCAO"].map({1: "Cura", 2: "Óbito"})
+    out = out[out["outcome"].notna()]
+
+    treated = _classify_treated_windows(out)[["outcome", "window"]]
+    no_antiviral = out[~out["used_antivir"]].copy()
+    no_antiviral["window"] = "s/ antiviral"
+    no_antiviral = no_antiviral[["outcome", "window"]]
+
+    combined = pd.concat([treated, no_antiviral], ignore_index=True)
+    combined = combined.dropna(subset=["window"])
+    if combined.empty:
+        return _empty_window_results()
+
+    grouped = combined.groupby(["window", "outcome"]).size().unstack(fill_value=0)
+    return [
+        _row_to_window_stats(
+            cast("pd.Series", grouped.loc[label]) if label in grouped.index else None,
+            label,
+        )
+        for label in _TREATMENT_WINDOW_LABELS
+    ]
 
 
 def compute_symptoms_profile(df: pd.DataFrame) -> list[dict[str, int | str]]:
@@ -753,11 +886,14 @@ def _calculate_kpis(subset: pd.DataFrame) -> dict[str, float]:
     median_hosp = float(round(hosp_days.median(), 1)) if not hosp_days.empty else 0.0
 
     # 6. Median days of UTI: DT_SAIDUTI - DT_ENTUTI
-    dt_entuti = pd.to_datetime(subset["DT_ENTUTI"], errors="coerce")
-    dt_saiduti = pd.to_datetime(subset["DT_SAIDUTI"], errors="coerce")
-    uti_days = (dt_saiduti - dt_entuti).dt.days
-    uti_days = uti_days[(uti_days >= 0) & (uti_days <= 180)]
-    median_uti = float(round(uti_days.median(), 1)) if not uti_days.empty else 0.0
+    if "DT_ENTUTI" in subset.columns and "DT_SAIDUTI" in subset.columns:
+        dt_entuti = pd.to_datetime(subset["DT_ENTUTI"], errors="coerce")
+        dt_saiduti = pd.to_datetime(subset["DT_SAIDUTI"], errors="coerce")
+        uti_days = (dt_saiduti - dt_entuti).dt.days
+        uti_days = uti_days[(uti_days >= 0) & (uti_days <= 180)]
+        median_uti = float(round(uti_days.median(), 1)) if not uti_days.empty else 0.0
+    else:
+        median_uti = 0.0
 
     return {
         "hospitalization_rate": hosp_rate,

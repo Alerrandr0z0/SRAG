@@ -7,6 +7,7 @@ import GravityCascadeChart from '../charts/GravityCascadeChart';
 import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
 import LethalityGroupedBarChart from '../charts/LethalityGroupedBarChart';
+import NotificationDelayChart from '../charts/NotificationDelayChart';
 import SeasonalTrendChart from '../charts/SeasonalTrendChart';
 import SeverityPyramidChart from '../charts/SeverityPyramidChart';
 import TrendChart from '../charts/TrendChart';
@@ -36,16 +37,19 @@ interface VigilancePageProps {
 interface HistorySectionProps {
   data: Epi.DashboardData | null;
   currentTrends: Epi.TrendsData | null;
-  casosMode: 'notificados' | 'confirmados';
+  casosMode: 'notificados' | 'confirmados' | 'atrasados';
   weeksWindow: string;
   seriesMode: string;
   curveMode: 'composicao' | 'positividade' | 'acumulado';
   curveWeeks: string;
-  onCasosMode: (v: 'notificados' | 'confirmados') => void;
+  delayWeeks: string;
+  delaySeries: Array<{ epi_week: string; median_delay: number; record_count: number }>;
+  onCasosMode: (v: 'notificados' | 'confirmados' | 'atrasados') => void;
   onWeeksWindow: (v: string) => void;
   onSeriesMode: (v: string) => void;
   onCurveMode: (v: 'composicao' | 'positividade' | 'acumulado') => void;
   onCurveWeeks: (v: string) => void;
+  onDelayWeeks: (v: string) => void;
 }
 const VigilanceHistorySection = React.memo<HistorySectionProps>(
   ({
@@ -56,11 +60,14 @@ const VigilanceHistorySection = React.memo<HistorySectionProps>(
     seriesMode,
     curveMode,
     curveWeeks,
+    delayWeeks,
+    delaySeries,
     onCasosMode,
     onWeeksWindow,
     onSeriesMode,
     onCurveMode,
     onCurveWeeks,
+    onDelayWeeks,
   }) => (
     <section className="main-grid">
       <article className="panel">
@@ -88,6 +95,22 @@ const VigilanceHistorySection = React.memo<HistorySectionProps>(
                 </span>
               </div>
             )}
+            {casosMode === 'atrasados' && delaySeries.length > 0 && (
+              <div className="vigilance-history-stats">
+                <span>
+                  Média Atraso:{' '}
+                  <b>
+                    {(
+                      delaySeries.reduce(
+                        (s: number, d: { median_delay: number }) => s + d.median_delay,
+                        0,
+                      ) / delaySeries.length
+                    ).toFixed(1)}{' '}
+                    dias
+                  </b>
+                </span>
+              </div>
+            )}
           </div>
           <div className="filters vigilance-history-controls">
             <div className="pill-group">
@@ -104,6 +127,13 @@ const VigilanceHistorySection = React.memo<HistorySectionProps>(
                 onClick={() => onCasosMode('confirmados')}
               >
                 Confirmados
+              </button>
+              <button
+                type="button"
+                className={`pill-btn ${casosMode === 'atrasados' ? 'active' : ''}`}
+                onClick={() => onCasosMode('atrasados')}
+              >
+                Atrasados
               </button>
             </div>
             {casosMode === 'notificados' && (
@@ -163,6 +193,25 @@ const VigilanceHistorySection = React.memo<HistorySectionProps>(
                 </select>
               </>
             )}
+            {casosMode === 'atrasados' && (
+              <div className="pill-group">
+                {[
+                  { v: '0', l: 'Tudo' },
+                  { v: '52', l: '52s' },
+                  { v: '26', l: '26s' },
+                  { v: '12', l: '12s' },
+                ].map((opt) => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    className={`pill-btn ${delayWeeks === opt.v ? 'active' : ''}`}
+                    onClick={() => onDelayWeeks(opt.v)}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="chart-wrap chart-wrap--tall">
@@ -185,6 +234,9 @@ const VigilanceHistorySection = React.memo<HistorySectionProps>(
               forcedMode={curveMode as 'composicao' | 'positividade' | 'acumulado'}
               forcedWeeks={curveWeeks}
             />
+          )}
+          {casosMode === 'atrasados' && (
+            <NotificationDelayChart data={delaySeries} forcedWeeks={delayWeeks} />
           )}
         </div>
       </article>
@@ -812,8 +864,10 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   dashboardMonth,
   dashboardDay,
 }) => {
-  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados'>('notificados');
+  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados' | 'atrasados'>('notificados');
   const [weeksWindow, setWeeksWindow] = useState('0');
+  const [delayWeeks, setDelayWeeks] = useState('0');
+  const delaySeries = data?.laboratoryNetwork?.notification_delay || [];
   const [seriesMode, setSeriesMode] = useState('weekly');
   const [curveMode, setCurveMode] = useState<'composicao' | 'positividade' | 'acumulado'>(
     'positividade',
@@ -1206,11 +1260,14 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         seriesMode={seriesMode}
         curveMode={curveMode}
         curveWeeks={curveWeeks}
+        delayWeeks={delayWeeks}
+        delaySeries={delaySeries}
         onCasosMode={setCasosMode}
         onWeeksWindow={setWeeksWindow}
         onSeriesMode={setSeriesMode}
         onCurveMode={setCurveMode}
         onCurveWeeks={setCurveWeeks}
+        onDelayWeeks={setDelayWeeks}
       />
       <VigilanceSeverityKpiSection kpis={severityKpis} />
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>

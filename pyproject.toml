@@ -7,7 +7,6 @@ requires-python = ">=3.14"
 dependencies = [
     "pandas>=2.2",
     "numpy>=2.0",
-    "scikit-learn>=1.5",
     "matplotlib>=3.9",
     "seaborn>=0.13",
     "requests>=2.33",
@@ -23,6 +22,8 @@ dependencies = [
     "duckdb>=1.5.1",
     "pandera>=0.31.1",
     "openpyxl>=3.1.5",
+    "graphifyy>=0.8.35",
+    "openai>=2.41.0",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,12 @@ dev = [
     "jupyter>=1.0",
     "complexipy>=0.4.0",
     "pyright>=1.1.409",
+]
+planner = [
+    "google-genai>=2.8.0",
+    "groq>=1.4.0",
+    "scikit-learn>=1.0",
+    "sentence-transformers>=5.5.1",
 ]
 
 [tool.ruff]

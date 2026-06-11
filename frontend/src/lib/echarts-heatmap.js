@@ -26,7 +26,7 @@ import {
   VisualMapComponent,
 } from 'echarts/components';
 import * as echarts from 'echarts/core';
-import { LabelLayout, UniversalTransition } from 'echarts/features';
+import { LabelLayout, LegacyGridContainLabel, UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([
@@ -45,6 +45,7 @@ echarts.use([
   GraphicComponent,
   ToolboxComponent,
   LabelLayout,
+  LegacyGridContainLabel,
   UniversalTransition,
   HeatmapChart,
   SankeyChart,

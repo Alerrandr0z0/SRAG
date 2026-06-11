@@ -806,7 +806,7 @@ def compute_antiviral_types(df: pd.DataFrame) -> list[dict[str, Any]]:
     all_labels = list(flu_map.values()) + list(cov_map.values())
 
     if df.empty:
-        return [{"label": label, "count": 0} for label in all_labels]
+        return []
 
     counts = {label: 0 for label in all_labels}
 
@@ -818,7 +818,32 @@ def compute_antiviral_types(df: pd.DataFrame) -> list[dict[str, Any]]:
     if isinstance(trat_col, pd.Series):
         counts.update(_count_mapped_column(trat_col, cov_map))
 
-    results = [{"label": label, "count": count} for label, count in counts.items()]
+    # Extract specified others details
+    out_flu_specs: list[str] = []
+    if "OUT_ANTIV" in df.columns and tp_col is not None:
+        tp_num = pd.to_numeric(tp_col, errors="coerce")
+        out_antiv_clean = df["OUT_ANTIV"].fillna("").astype(str).str.strip()
+        mask = (tp_num == 3) & (out_antiv_clean != "")
+        out_flu_specs = sorted(df.loc[mask, "OUT_ANTIV"].dropna().unique().tolist())
+
+    out_cov_specs: list[str] = []
+    if "OUT_TRAT" in df.columns and trat_col is not None:
+        trat_num = pd.to_numeric(trat_col, errors="coerce")
+        out_trat_clean = df["OUT_TRAT"].fillna("").astype(str).str.strip()
+        mask = (trat_num == 4) & (out_trat_clean != "")
+        out_cov_specs = sorted(df.loc[mask, "OUT_TRAT"].dropna().unique().tolist())
+
+    results = []
+    for label, count in counts.items():
+        if count == 0:
+            continue
+        item: dict[str, Any] = {"label": label, "count": count}
+        if label == "Outro (Gripe)" and out_flu_specs:
+            item["specifications"] = out_flu_specs
+        elif label == "Outro (COVID)" and out_cov_specs:
+            item["specifications"] = out_cov_specs
+        results.append(item)
+
     results.sort(key=lambda x: x["count"], reverse=True)
     return results
 
@@ -840,7 +865,16 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     if tested.empty:
         return {
             "labs": [],
-            "overall": {"tested_cases": 0, "positive_rate": 0.0, "median_turnaround_days": 0.0},
+            "overall": {
+                "tested_cases": 0,
+                "positive_rate": 0.0,
+                "median_turnaround_days": 0.0,
+                "avg_turnaround_days": 0.0,
+                "turnaround_p90": 0.0,
+                "turnaround_p99": 0.0,
+                "turnaround_boxplot": [0, 0, 0, 0, 0],
+                "turnaround_count": 0,
+            },
         }
 
     lab_id = (
@@ -876,6 +910,20 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
     turnaround = turnaround[(turnaround >= 0) & (turnaround <= 30)]
     median_turnaround = float(round(turnaround.median(), 1)) if not turnaround.empty else 0.0
     mean_turnaround = float(round(turnaround.mean(), 1)) if not turnaround.empty else 0.0
+    p90_turnaround = float(round(turnaround.quantile(0.9), 1)) if not turnaround.empty else 0.0
+    p99_turnaround = float(round(turnaround.quantile(0.99), 1)) if not turnaround.empty else 0.0
+    turnaround_boxplot = (
+        [
+            float(round(turnaround.min(), 1)),
+            float(round(turnaround.quantile(0.25), 1)),
+            median_turnaround,
+            float(round(turnaround.quantile(0.75), 1)),
+            float(round(turnaround.max(), 1)),
+        ]
+        if not turnaround.empty
+        else [0, 0, 0, 0, 0]
+    )
+    turnaround_count = int(turnaround.count())
 
     codetec_count = int((pd.to_numeric(out["CO_DETEC"], errors="coerce") == 1).sum())
 
@@ -904,6 +952,10 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
             "positive_rate": overall_positive,
             "median_turnaround_days": median_turnaround,
             "avg_turnaround_days": mean_turnaround,
+            "turnaround_p90": p90_turnaround,
+            "turnaround_p99": p99_turnaround,
+            "turnaround_boxplot": turnaround_boxplot,
+            "turnaround_count": turnaround_count,
             "codetection_cases": codetec_count,
             "reinfection_total": reinfection_total,
         },

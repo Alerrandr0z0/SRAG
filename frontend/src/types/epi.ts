@@ -133,6 +133,10 @@ export interface LaboratoryNetwork {
     positive_rate: number;
     median_turnaround_days: number;
     avg_turnaround_days?: number;
+    turnaround_p90?: number;
+    turnaround_p99?: number;
+    turnaround_boxplot?: number[];
+    turnaround_count?: number;
     codetection_cases?: number;
     protocol_48h_adherence_rate?: number;
     reinfection_total?: number;
@@ -141,7 +145,14 @@ export interface LaboratoryNetwork {
   quality_metrics?: {
     testing_coverage: { collected: number; total: number; rate: number };
     sample_type_distribution: Array<{ label: string; count: number }>;
-    diagnostic_latency: { boxplot_data: number[]; median: number; count: number; target_adherence_rate?: number };
+    diagnostic_latency: {
+      boxplot_data: number[];
+      median: number;
+      count: number;
+      p95?: number;
+      p99?: number;
+      target_adherence_rate?: number;
+    };
   };
   treatment_metrics?: {
     antiviral_latency: { boxplot_data: number[]; median: number; count: number };
@@ -161,6 +172,14 @@ export interface LaboratoryNetwork {
       latency_samples: number[];
       median: number;
       count: number;
+      specifications?: string[];
+    }>;
+    treatment_window_outcomes?: Array<{
+      window: string;
+      total: number;
+      cure_rate: number;
+      death_rate: number;
+      margin: number;
     }>;
   };
   agent_lethality_heatmap?: {

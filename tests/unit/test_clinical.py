@@ -19,6 +19,7 @@ from srag.data.analytics.clinical import (
     compute_symptoms_heatmap,
     compute_symptoms_profile,
     compute_symptoms_signature,
+    compute_treatment_window_outcomes,
 )
 
 
@@ -645,3 +646,112 @@ class TestComorbiditiesTreemap:
         assert diabetes["value"] == 2
         assert diabetes["deaths"] == 1
         assert diabetes["lethality"] == 50.0
+
+
+class TestTreatmentWindowOutcomes:
+    def test_returns_five_windows_in_order(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1, 2, 2],
+                "DT_SIN_PRI": pd.to_datetime(
+                    ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"]
+                ),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-02", "2024-01-04", pd.NaT, pd.NaT]),
+                "EVOLUCAO": [1, 1, 1, 2],
+            }
+        )
+        res = compute_treatment_window_outcomes(df)
+        assert [r["window"] for r in res] == ["≤ 1d", "2d", "3-5d", "> 5d", "s/ antiviral"]
+
+    def test_window_1d_cure_rate(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1, 1, 1],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01"] * 4),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-02"] * 4),
+                "EVOLUCAO": [1, 1, 1, 2],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["≤ 1d"]["total"] == 4
+        assert res["≤ 1d"]["cure_rate"] == 75.0
+        assert res["≤ 1d"]["death_rate"] == 25.0
+        assert res["≤ 1d"]["margin"] == 50.0
+
+    def test_window_2d_separate_from_1d(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01", "2024-01-01"]),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-02", "2024-01-03"]),
+                "EVOLUCAO": [1, 2],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["≤ 1d"]["total"] == 1
+        assert res["≤ 1d"]["cure_rate"] == 100.0
+        assert res["2d"]["total"] == 1
+        assert res["2d"]["death_rate"] == 100.0
+
+    def test_window_3_5d_range(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1, 1],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01"] * 3),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-04", "2024-01-05", "2024-01-06"]),
+                "EVOLUCAO": [1, 1, 2],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["3-5d"]["total"] == 3
+        assert res["3-5d"]["cure_rate"] == round(2 / 3 * 100, 1)
+
+    def test_window_above_5d(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1, 1],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01", "2024-01-01"]),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-08", "2024-01-15"]),
+                "EVOLUCAO": [2, 2],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["> 5d"]["total"] == 2
+        assert res["> 5d"]["death_rate"] == 100.0
+
+    def test_no_antiviral_window(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [2, 2, 2],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01"] * 3),
+                "DT_ANTIVIR": [pd.NaT, pd.NaT, pd.NaT],
+                "EVOLUCAO": [1, 1, 2],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["s/ antiviral"]["total"] == 3
+        assert res["s/ antiviral"]["cure_rate"] == round(2 / 3 * 100, 1)
+        for w in ("≤ 1d", "2d", "3-5d", "> 5d"):
+            assert res[w]["total"] == 0
+
+    def test_evolucao_3_excluded(self) -> None:
+        df = pd.DataFrame(
+            {
+                "ANTIVIRAL": [1],
+                "DT_SIN_PRI": pd.to_datetime(["2024-01-01"]),
+                "DT_ANTIVIR": pd.to_datetime(["2024-01-02"]),
+                "EVOLUCAO": [3],
+            }
+        )
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        assert res["≤ 1d"]["total"] == 0
+
+    def test_missing_columns_returns_zeros(self) -> None:
+        df = pd.DataFrame({"ANTIVIRAL": [1]})
+        res = {r["window"]: r for r in compute_treatment_window_outcomes(df)}
+        for w in ("≤ 1d", "2d", "3-5d", "> 5d", "s/ antiviral"):
+            assert res[w]["total"] == 0
+            assert res[w]["cure_rate"] == 0.0
+
+    def test_empty_df(self) -> None:
+        assert compute_treatment_window_outcomes(pd.DataFrame()) == []

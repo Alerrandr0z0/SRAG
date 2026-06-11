@@ -17,6 +17,7 @@ from srag.data.analytics.clinical import (
     compute_symptoms_heatmap,
     compute_symptoms_profile,
     compute_symptoms_signature,
+    compute_treatment_window_outcomes,
 )
 from srag.data.analytics.demographics import (
     _profile_metrics,
@@ -165,6 +166,7 @@ __all__ = [
     "compute_time_series",
     "compute_time_series_by_virus",
     "compute_traditional_community_distribution",
+    "compute_treatment_window_outcomes",
     "compute_unit_distribution",
     "compute_vaccination_and_treatment_profile",
     "compute_vaccine_manufacturer_distribution",

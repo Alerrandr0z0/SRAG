@@ -2323,3 +2323,11 @@ select {
     justify-content: space-between;
   }
 }
+
+.card-box {
+  background: var(--bg-status);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px;
+  box-sizing: border-box;
+}

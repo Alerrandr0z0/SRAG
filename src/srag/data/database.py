@@ -186,7 +186,9 @@ class SragRecord(Base):
     RES_IGA = Column(Integer)
     TP_ANTIVIR = Column(Integer)
     DT_ANTIVIR = Column(Date)
+    OUT_ANTIV = Column(String(100))
     TIPO_TRAT = Column(Integer)
+    OUT_TRAT = Column(String(100))
     SURTO_SG = Column(Integer)
 
 

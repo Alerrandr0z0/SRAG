@@ -212,8 +212,15 @@ def _build_laboratory_quality_rows(out: pd.DataFrame) -> list[dict[str, Any]]:
 
 def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     """Calculate quartiles for time between sample collection and PCR result for Box Plot."""
+    empty = {
+        "boxplot_data": [],
+        "median": 0.0,
+        "p95": 0.0,
+        "p99": 0.0,
+        "target_adherence_rate": 0.0,
+    }
     if df.empty:
-        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        return empty
 
     out = df.copy()
     for col in ["DT_COLETA", "DT_PCR"]:
@@ -222,14 +229,14 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
 
     # Valid range: 0 to 30 days (filter outliers/errors)
     if "DT_PCR" not in out.columns or "DT_COLETA" not in out.columns:
-        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        return empty
 
     valid = out.dropna(subset=["DT_COLETA", "DT_PCR"]).copy()
     valid["delta"] = (valid["DT_PCR"] - valid["DT_COLETA"]).dt.days
     valid = valid[(valid["delta"] >= 0) & (valid["delta"] <= 30)]
 
     if valid.empty:
-        return {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        return empty
 
     # Format for ECharts BoxPlot [min, Q1, median, Q3, max]
     deltas = valid["delta"].sort_values()
@@ -240,6 +247,8 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
         float(np.percentile(deltas, 75)),
         float(deltas.max()),
     ]
+    p95_latency = float(round(np.percentile(deltas, 95), 1))
+    p99_latency = float(round(np.percentile(deltas, 99), 1))
 
     adherent_count = (deltas <= 7).sum()
     if len(valid) > 0:
@@ -250,6 +259,8 @@ def compute_diagnostic_latency(df: pd.DataFrame) -> dict[str, Any]:
     return {
         "boxplot_data": stats,
         "median": float(round(deltas.median(), 1)),
+        "p95": p95_latency,
+        "p99": p99_latency,
         "count": len(valid),
         "target_adherence_rate": target_adherence_rate,
     }

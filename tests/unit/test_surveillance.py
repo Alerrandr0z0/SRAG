@@ -608,6 +608,58 @@ class TestLabNetwork:
         res = compute_laboratory_network_summary(df)
         assert res["overall"]["positive_rate"] == round(2 / 3 * 100, 2)
 
+    def test_turnaround_boxplot_percentiles(self) -> None:
+        df = pd.DataFrame(
+            {
+                "PCR_RESUL": [1] * 10,
+                "RES_AN": [np.nan] * 10,
+                "CO_LAB_AN": ["L1"] * 10,
+                "LAB_AN": ["Lab1"] * 10,
+                "DT_COLETA": ["2023-01-01"] * 10,
+                "DT_PCR": pd.to_datetime(
+                    [
+                        "2023-01-01",
+                        "2023-01-01",
+                        "2023-01-01",
+                        "2023-01-01",
+                        "2023-01-01",
+                        "2023-01-03",
+                        "2023-01-05",
+                        "2023-01-08",
+                        "2023-01-15",
+                        "2023-01-22",
+                    ]
+                ),
+                "DT_RES_AN": [np.nan] * 10,
+                "CO_DETEC": [np.nan] * 10,
+                "DT_SIN_PRI": ["2023-01-01"] * 10,
+            }
+        )
+        res = compute_laboratory_network_summary(df)
+        overall = res["overall"]
+        assert overall["turnaround_count"] == 10
+        assert overall["median_turnaround_days"] == 1.0
+        assert overall["avg_turnaround_days"] == 4.8
+        assert 14.0 <= overall["turnaround_p90"] <= 15.0
+        assert 20.0 <= overall["turnaround_p99"] <= 21.0
+        assert overall["turnaround_boxplot"][0] == 0.0
+        assert overall["turnaround_boxplot"][4] == 21.0
+        assert len(overall["turnaround_boxplot"]) == 5
+
+    def test_turnaround_empty_returns_zeros(self) -> None:
+        df = pd.DataFrame(
+            {
+                "PCR_RESUL": [9, 9],
+                "RES_AN": [np.nan, np.nan],
+            }
+        )
+        res = compute_laboratory_network_summary(df)
+        overall = res["overall"]
+        assert overall["turnaround_p90"] == 0.0
+        assert overall["turnaround_p99"] == 0.0
+        assert overall["turnaround_boxplot"] == [0, 0, 0, 0, 0]
+        assert overall["turnaround_count"] == 0
+
 
 # ==============================================================
 # compute_vaccine_manufacturer_distribution

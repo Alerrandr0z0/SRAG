@@ -19,9 +19,7 @@ test('visual: vigilance page shows icu bottleneck + imaging volcano + delay by u
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2500);
   // Scroll to imaging section
-  await page
-    .locator('h3:has-text("Desfecho Clínico")')
-    .scrollIntoViewIfNeeded();
+  await page.locator('h3:has-text("Desfecho Clínico")').scrollIntoViewIfNeeded();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: '/tmp/lab_with_volcano.png', fullPage: true });
 

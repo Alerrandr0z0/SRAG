@@ -48,19 +48,52 @@ class TestDiagnosticLatency:
         res = compute_diagnostic_latency(df)
         assert res["median"] == 0.0
 
+    def test_p95_p99_included(self) -> None:
+        deltas = list(range(0, 21))
+        df = pd.DataFrame(
+            {
+                "DT_COLETA": ["2023-01-01"] * len(deltas),
+                "DT_PCR": pd.to_datetime(["2023-01-01"] * len(deltas))
+                + pd.to_timedelta(deltas, unit="D"),
+            }
+        )
+        res = compute_diagnostic_latency(df)
+        assert "p95" in res
+        assert "p99" in res
+        assert res["p95"] >= 18.0
+        assert res["p99"] >= 19.0
+
     def test_delta_over_30_excluded(self) -> None:
         df = pd.DataFrame({"DT_COLETA": ["2023-01-01"], "DT_PCR": ["2023-02-01"]})
         res = compute_diagnostic_latency(df)
-        assert res == {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        assert res == {
+            "boxplot_data": [],
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "target_adherence_rate": 0.0,
+        }
 
     def test_missing_date_columns(self) -> None:
         df = pd.DataFrame({"DT_COLETA": ["2023-01-01"]})
         res = compute_diagnostic_latency(df)
-        assert res == {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        assert res == {
+            "boxplot_data": [],
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "target_adherence_rate": 0.0,
+        }
 
     def test_empty_df(self) -> None:
         res = compute_diagnostic_latency(pd.DataFrame())
-        assert res == {"boxplot_data": [], "median": 0.0, "target_adherence_rate": 0.0}
+        assert res == {
+            "boxplot_data": [],
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "target_adherence_rate": 0.0,
+        }
 
 
 class TestSampleTypeDistribution:

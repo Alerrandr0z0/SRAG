@@ -95,6 +95,7 @@ security-frontend:
 
 hooks:
 	uv run pre-commit run --all-files
+	@$(MAKE) graph-sync
 
 # --- Testing ---
 test: test-back test-front
@@ -136,5 +137,8 @@ bench:
 observability:
 	logfire dashboard
 
-update-graph:
+graph-sync:
 	uv run graphify update .
+
+graph-orchestrate:
+	uv run python scripts/orchestrate_graphify.py

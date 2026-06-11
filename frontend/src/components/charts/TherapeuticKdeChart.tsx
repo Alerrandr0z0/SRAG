@@ -6,6 +6,7 @@ interface DrugSamples {
   drug: string;
   samples: number[];
   count: number;
+  specifications?: string[];
 }
 
 interface TherapeuticKdeChartProps {
@@ -130,18 +131,21 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
     }> = [];
     if (referenceLine != null) {
       const refVal = referenceLine;
-      markLines.push({
-        xAxis: refVal,
-        label: {
-          formatter: referenceLabel ?? `meta ${refVal}${unit}`,
-          color: '#dc2626',
-          fontWeight: 700,
-          fontSize: 10,
-          position: 'insideEndTop' as const,
-        },
-        lineStyle: { color: '#dc2626', width: 1.5, type: 'dashed' as const },
-        silent: true,
-      });
+      const refIndex = xAxisData.findIndex((v) => v >= refVal);
+      if (refIndex !== -1) {
+        markLines.push({
+          xAxis: refIndex,
+          label: {
+            formatter: referenceLabel ?? `meta ${refVal}${unit}`,
+            color: '#dc2626',
+            fontWeight: 700,
+            fontSize: 10,
+            position: 'insideEndTop' as const,
+          },
+          lineStyle: { color: '#dc2626', width: 1.5, type: 'dashed' as const },
+          silent: true,
+        });
+      }
     }
 
     return {
@@ -166,6 +170,9 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
             const med = record ? [...record.samples].sort((a, b) => a - b) : [];
             const median = med.length > 0 ? med[Math.floor(med.length / 2)] : 0;
             html += `${p.marker} <b>${p.seriesName}</b> (n=${cnt}, mediana=${median.toFixed(1)}${unit})<br/>`;
+            if (record?.specifications && record.specifications.length > 0) {
+              html += `<div style="font-size: 10px; color: #cbd5e1; padding-left: 18px; max-width: 280px; white-space: normal;">• ${record.specifications.join(', ')}</div>`;
+            }
           }
           return html;
         },

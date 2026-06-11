@@ -31,6 +31,7 @@ from srag.data.analytics import (
     compute_antiviral_outcome_impact,
     compute_antiviral_types,
     compute_antiviral_usage,
+    compute_treatment_window_outcomes,
     compute_clinical_timing_metrics,
     compute_closure_criteria,
     compute_codetection_matrix,
@@ -108,6 +109,7 @@ def laboratory_network(
         "antiviral_outcome_impact": compute_antiviral_outcome_impact(df),
         "antiviral_age_profile": compute_antiviral_age_profile(df),
         "antiviral_latency_per_drug": compute_antiviral_latency_per_drug(df),
+        "treatment_window_outcomes": compute_treatment_window_outcomes(df),
     }
 
     # Cálculo de Sobrevivência Vacinal (KM)
