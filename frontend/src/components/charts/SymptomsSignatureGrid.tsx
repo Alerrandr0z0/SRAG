@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { COLORS } from '../../constants';
 import { useEcharts } from '../../hooks/useEcharts';
+import { useThemeMode } from '../../hooks/useThemeMode';
 import { SymptomSignature } from '../../types/epi';
 
 interface Props {
@@ -10,19 +11,30 @@ interface Props {
 
 const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' }) => {
   const { labels = [], bands = [], matrices = {} } = signature || {};
+  const theme = useThemeMode();
 
-  const [isNarrow, setIsNarrow] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [isNarrow, setIsNarrow] = useState(typeof window !== 'undefined' ? window.innerWidth < 980 : false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleResize = () => {
-      setIsNarrow(window.innerWidth < 768);
+      setIsNarrow(window.innerWidth < 980);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const option = useMemo(() => {
+    const isDark = theme === 'dark';
+    const titleColor = isDark ? '#f8fafc' : '#334155';
+    const axisColor = isDark ? '#e2e8f0' : '#64748b';
+    const labelColor = isDark ? '#f1f5f9' : '#475569';
+    const splitLineColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
+    const cellBorderColor = isDark ? '#1e293b' : '#fff';
+    const tooltipBg = isDark ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255, 255, 255, 0.98)';
+    const tooltipBorder = isDark ? '#475569' : '#e2e8f0';
+    const tooltipTextColor = isDark ? '#f8fafc' : '#1e293b';
+
     const hasData =
       Array.isArray(labels) &&
       labels.length > 0 &&
@@ -106,17 +118,17 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
         left: isNarrow ? `${left + width / 2}%` : `${left + width / 2}%`,
         textAlign: 'center',
         top: isNarrow ? `${top - 6}%` : '2%',
-        textStyle: { fontSize: 13, fontWeight: 'bold', color: '#334155' },
+        textStyle: { fontSize: 13, fontWeight: 'bold', color: titleColor },
       });
 
       xAxes.push({
         type: 'category',
         data: bands,
         gridIndex: idx,
-        axisLabel: { interval: 0, rotate: 35, fontSize: 9, color: '#64748b' },
+        axisLabel: { interval: 0, rotate: 35, fontSize: 9, color: axisColor },
         splitArea: { show: true },
         axisTick: { show: false },
-        axisLine: { lineStyle: { color: '#e2e8f0' } },
+        axisLine: { lineStyle: { color: splitLineColor } },
       });
 
       yAxes.push({
@@ -127,7 +139,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
         axisLabel: {
           show: isNarrow ? true : idx === 0,
           fontSize: 9,
-          color: '#475569',
+          color: labelColor,
           width: isNarrow ? 90 : 120,
           overflow: 'break',
           interval: 0,
@@ -138,14 +150,30 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       });
 
       const matrixData = matrices[p.key as keyof typeof matrices] as [number, number][][];
-      const plotData: Array<[number, number, number, number]> = [];
+      const plotData: Array<{
+        value: [number, number, number, number];
+        label: {
+          show: boolean;
+          color: string;
+        };
+      }> = [];
 
       if (matrixData && Array.isArray(matrixData)) {
         matrixData.forEach((row, yIdx) => {
           if (Array.isArray(row)) {
             row.forEach((cell, xIdx) => {
               if (Array.isArray(cell) && cell.length >= 2) {
-                plotData.push([xIdx, yIdx, cell[0], cell[1]]);
+                const prevalence = cell[0];
+                const count = cell[1];
+                // Dynamic cell label text contrast
+                const cellTextColor = prevalence > 40 ? '#ffffff' : '#1e293b';
+                plotData.push({
+                  value: [xIdx, yIdx, prevalence, count],
+                  label: {
+                    show: true,
+                    color: cellTextColor,
+                  },
+                });
               }
             });
           }
@@ -161,14 +189,13 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
         label: {
           show: true,
           fontSize: 9,
-          color: '#1e293b',
           formatter: (params: { value: [number, number, number, number] }) => {
             const pr = params.value;
             return pr[2] > 0 ? `${Math.round(pr[2])}%` : '';
           },
         },
         itemStyle: {
-          borderColor: '#fff',
+          borderColor: cellBorderColor,
           borderWidth: 1,
         },
         emphasis: {
@@ -181,10 +208,10 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       tooltip: {
         position: 'top',
         confine: true,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: tooltipBg,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        textStyle: { color: '#1e293b' },
+        borderColor: tooltipBorder,
+        textStyle: { color: tooltipTextColor },
         formatter: (params: { value: [number, number, number, number] }) => {
           const p = params.value;
           const symptomIdx = p[1];
@@ -192,7 +219,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
           const symptom = labels[symptomIdx];
           const band = bands[bandIdx];
 
-          let res = `<div style="font-weight:bold;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${symptom} <span style="font-weight:normal;color:#64748b;">(${band})</span></div>`;
+          let res = `<div style="font-weight:bold;margin-bottom:8px;border-bottom:1px solid ${tooltipBorder};padding-bottom:4px;">${symptom} <span style="font-weight:normal;color:${axisColor};">(${band})</span></div>`;
 
           pathogens.forEach((pa) => {
             const m = matrices[pa.key as keyof typeof matrices] as [number, number][][];
@@ -206,7 +233,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
 
             res += `<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:2px;">
                         <span>${bullet} ${pa.title}</span>
-                        <span><b style="font-size:12px;">${prevalence}%</b> <span style="color:#64748b;font-size:10px;">(${count} casos)</span></span>
+                        <span><b style="font-size:12px;">${prevalence}%</b> <span style="color:${axisColor};font-size:10px;">(${count} casos)</span></span>
                     </div>`;
           });
           return res;
@@ -222,7 +249,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
         inRange: { color: COLORS.HEATMAP },
         precision: 0,
         text: ['+Freq', '-Freq'],
-        textStyle: { fontSize: 10, color: '#64748b' },
+        textStyle: { fontSize: 10, color: axisColor },
         itemWidth: 15,
         itemHeight: 150,
       },
@@ -232,7 +259,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       yAxis: yAxes,
       series: series,
     };
-  }, [labels, bands, matrices, selectedAgent, isNarrow]);
+  }, [labels, bands, matrices, selectedAgent, isNarrow, theme]);
 
   const { chartRef } = useEcharts(option, [signature, selectedAgent], { replaceOnUpdate: true });
 

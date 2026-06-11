@@ -360,7 +360,7 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
             />
           </div>
         )}
-        <div className="chart-wrap">
+        <div className="chart-wrap" style={{ height: 'auto', minHeight: '360px' }}>
           <HospitalizationHistogram data={hospitalization} />
         </div>
       </article>

@@ -61,24 +61,14 @@ const AntiviralDonutChart: React.FC<AntiviralDonutChartProps> = ({ data }) => {
         },
       },
       legend: {
-        orient: 'vertical',
-        right: '8%',
-        top: 'center',
-        textStyle: { color: '#94a3b8', fontSize: 10 },
-        itemWidth: 10,
-        itemHeight: 10,
-        itemGap: 8,
-        formatter: (name: string) => {
-          const item = safeData.find((d) => d.label === name);
-          return `${name} (${item ? item.count : 0})`;
-        },
+        show: false,
       },
       series: [
         {
           name: 'Fármacos',
           type: 'pie',
-          radius: ['45%', '72%'],
-          center: ['35%', '50%'],
+          radius: ['45%', '75%'],
+          center: ['50%', '50%'],
           avoidLabelOverlap: true,
           itemStyle: {
             borderRadius: 4,
@@ -97,7 +87,7 @@ const AntiviralDonutChart: React.FC<AntiviralDonutChartProps> = ({ data }) => {
   const hasData = safeData.length > 0;
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{ width: '100%', height: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {!hasData && (
         <div
           style={{
@@ -115,7 +105,50 @@ const AntiviralDonutChart: React.FC<AntiviralDonutChartProps> = ({ data }) => {
           <p>Sem dados de antiviral.</p>
         </div>
       )}
-      <div ref={chartRef} style={{ width: '100%', height: '100%', opacity: hasData ? 1 : 0 }} />
+      <div ref={chartRef} style={{ flex: 1, minHeight: '130px', opacity: hasData ? 1 : 0 }} />
+      {hasData && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '6px 12px',
+            padding: '8px 4px 4px',
+            marginTop: 'auto',
+          }}
+        >
+          {safeData.map((item) => {
+            const color = DRUG_COLORS[item.label] || '#94a3b8';
+            return (
+              <div
+                key={item.label}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: color,
+                  }}
+                />
+                <span>
+                  {item.label} <b>({item.count})</b>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

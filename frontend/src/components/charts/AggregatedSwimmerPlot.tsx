@@ -604,11 +604,7 @@ const AggregatedSwimmerPlot: React.FC<AggregatedSwimmerPlotProps> = ({
   return (
     <div
       style={{
-        background: themeColors.bg,
-        borderRadius: '12px',
         padding: '8px 0',
-        boxShadow: 'var(--shadow-panel)',
-        border: `1px solid ${themeColors.border}`,
       }}
     >
       {hasData ? (

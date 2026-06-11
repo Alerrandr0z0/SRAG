@@ -31,6 +31,20 @@ test.describe('Responsive Dashboard Checks', () => {
       path: path.join(ARTIFACTS_DIR, 'responsive_lab_mobile.png'),
       fullPage: true,
     });
+
+    // Open mobile sidebar again
+    await page.locator('button.mobile-nav-toggle').click();
+    await page.waitForTimeout(500);
+
+    // Go to Unid. Saúde tab
+    await page.locator('button[aria-label="Unid. Saúde"]').click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    await page.screenshot({
+      path: path.join(ARTIFACTS_DIR, 'responsive_units_mobile.png'),
+      fullPage: true,
+    });
   });
 
   // Tablet Viewport Size
@@ -57,6 +71,19 @@ test.describe('Responsive Dashboard Checks', () => {
       path: path.join(ARTIFACTS_DIR, 'responsive_lab_tablet.png'),
       fullPage: true,
     });
+
+    // Open mobile sidebar again
+    await page.locator('button.mobile-nav-toggle').click();
+    await page.waitForTimeout(500);
+
+    await page.locator('button[aria-label="Unid. Saúde"]').click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    await page.screenshot({
+      path: path.join(ARTIFACTS_DIR, 'responsive_units_tablet.png'),
+      fullPage: true,
+    });
   });
 
   // Desktop Viewport Size (No mobile sidebar toggle exists, sidebar is always visible)
@@ -76,6 +103,14 @@ test.describe('Responsive Dashboard Checks', () => {
     await page.waitForTimeout(2000);
     await page.screenshot({
       path: path.join(ARTIFACTS_DIR, 'responsive_lab_desktop.png'),
+      fullPage: true,
+    });
+
+    await page.locator('button[aria-label="Unid. Saúde"]').click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    await page.screenshot({
+      path: path.join(ARTIFACTS_DIR, 'responsive_units_desktop.png'),
       fullPage: true,
     });
   });

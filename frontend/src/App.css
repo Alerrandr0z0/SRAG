@@ -2397,3 +2397,25 @@ select {
     gap: 0.75rem;
   }
 }
+
+/* Custom wraps for dynamic height charts */
+.imaging-volcano-wrap {
+  position: relative;
+  margin-top: 0.8rem;
+  height: 420px;
+}
+
+.symptoms-signature-wrap {
+  position: relative;
+  margin-top: 0.8rem;
+  height: 600px;
+}
+
+@media (max-width: 980px) {
+  .imaging-volcano-wrap {
+    height: 660px;
+  }
+  .symptoms-signature-wrap {
+    height: 850px;
+  }
+}

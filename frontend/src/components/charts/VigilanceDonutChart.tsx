@@ -45,8 +45,8 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
         {
           name: title || 'Distribuição',
           type: 'pie',
-          radius: ['50%', '80%'],
-          center: safeData.length < 8 ? ['40%', '50%'] : ['50%', '50%'],
+          radius: ['50%', '75%'],
+          center: ['50%', '50%'],
           avoidLabelOverlap: true,
           itemStyle: {
             borderRadius: 4,

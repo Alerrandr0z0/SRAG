@@ -1427,7 +1427,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    height: '160px',
+                    minHeight: '160px',
+                    height: 'auto',
                   }}
                 >
                   <div
@@ -1445,7 +1446,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   </div>
                   <div
                     className="chart-wrap"
-                    style={{ minHeight: '120px', height: '120px', width: '100%' }}
+                    style={{ minHeight: '130px', height: 'auto', width: '100%' }}
                   >
                     <AntiviralDonutChart data={antiviralTypes} />
                   </div>
@@ -1458,7 +1459,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    height: '160px',
+                    minHeight: '160px',
+                    height: 'auto',
                   }}
                 >
                   <div
@@ -1548,7 +1550,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
             </div>
           </div>
           <div style={{ marginTop: '0.5rem' }}>
-            <div className="chart-wrap" style={{ minHeight: '360px' }}>
+            <div className="imaging-volcano-wrap">
               {lab?.imaging_by_severity ? (
                 <ImagingVolcanoChart data={lab.imaging_by_severity} />
               ) : (

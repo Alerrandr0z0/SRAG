@@ -8,7 +8,7 @@ import {
 } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import type { HospitalizationDurationData } from '../../types/epi';
@@ -35,6 +35,18 @@ const formatDays = (value: number) => `${value.toFixed(1)}d`;
 
 const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ data }) => {
   const theme = useThemeMode();
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 980 : false
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsNarrow(window.innerWidth < 980);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const option = useMemo(() => {
     if (!data) return {};
@@ -156,15 +168,15 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       title: {
         text: 'Distribuicao do tempo ate o desfecho clinico',
         left: 'center',
-        top: 8,
-        textStyle: { color: titleColor, fontSize: 13, fontWeight: 500 },
+        top: isNarrow ? 4 : 8,
+        textStyle: { color: titleColor, fontSize: isNarrow ? 11 : 13, fontWeight: 500 },
       },
       legend: {
-        top: 36,
+        top: isNarrow ? 28 : 36,
         icon: 'roundRect',
         itemWidth: 12,
         itemHeight: 10,
-        textStyle: { color: textColor, fontSize: 11 },
+        textStyle: { color: textColor, fontSize: isNarrow ? 9.5 : 11 },
         data: ['Cura', 'Obito', 'KDE', 'Mediana'],
       },
       tooltip: {
@@ -190,8 +202,8 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
           return [`Dia ${day}d`, ...rows].join('<br/>');
         },
       },
-      grid: { top: 80, left: 56, right: 56, bottom: 50, containLabel: true },
-      graphic: [
+      grid: { top: isNarrow ? 70 : 80, left: isNarrow ? 10 : 56, right: isNarrow ? 10 : 56, bottom: 50, containLabel: true },
+      graphic: isNarrow ? [] : [
         ...(hasCure
           ? [
               {
@@ -236,10 +248,10 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       xAxis: {
         type: 'category',
         data: bins,
-        name: 'Dias de internacao ate desfecho',
+        name: isNarrow ? 'Dias' : 'Dias de internacao ate desfecho',
         nameLocation: 'middle',
-        nameGap: 28,
-        nameTextStyle: { color: textColor, fontSize: 11 },
+        nameGap: isNarrow ? 22 : 28,
+        nameTextStyle: { color: textColor, fontSize: isNarrow ? 9.5 : 11 },
         min: 0,
         max: maxDay,
         axisLabel: {
@@ -255,8 +267,8 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       },
       yAxis: {
         type: 'value',
-        name: 'Frequencia de pacientes',
-        nameTextStyle: { color: textColor, fontSize: 11 },
+        name: isNarrow ? 'Casos' : 'Frequencia de pacientes',
+        nameTextStyle: { color: textColor, fontSize: isNarrow ? 9.5 : 11 },
         axisLabel: { color: textColor, fontSize: 10, hideOverlap: true },
         axisLine: { lineStyle: { color: axisColor } },
         splitLine: { lineStyle: { type: 'dashed', color: axisColor } },
@@ -265,11 +277,11 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
       animation: false,
       aria: { enabled: true, description: pattern },
     };
-  }, [data, theme]);
+  }, [data, theme, isNarrow]);
 
-  const { chartRef } = useEcharts(option, [data, theme]);
+  const { chartRef } = useEcharts(option, [data, theme, isNarrow]);
 
-  return <div ref={chartRef} className="echart-host" style={{ minHeight: 320 }} />;
+  return <div ref={chartRef} className="echart-host" style={{ minHeight: 360 }} />;
 };
 
 export default HospitalizationHistogram;

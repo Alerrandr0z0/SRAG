@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 
@@ -7,8 +7,36 @@ interface SankeyChartProps {
   links: { source: string; target: string; value: number; pct?: number }[];
 }
 
+const mobileLabels: Record<string, string> = {
+  Comunitária: 'Comunit.',
+  'Infecção Hospitalar': 'Hospit.',
+  'Origem (Ignorado)': 'Orig. Ign.',
+  'Internado em Enfermaria': 'Enfermaria',
+  'Internado em UTI': 'UTI',
+  'Internação (Ignorado)': 'Int. Ign.',
+  'Sem Suporte': 'Sem Vent.',
+  'Vent. Não Inv.': 'VNI',
+  'Vent. Invasiva': 'VMI',
+  'Suporte (Ignorado)': 'Sup. Ign.',
+  Cura: 'Cura',
+  Óbito: 'Óbito',
+  'Em Aberto': 'Aberto',
+};
+
 const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
   const theme = useThemeMode();
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 980 : false
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsNarrow(window.innerWidth < 980);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const option = useMemo(() => {
     if (!nodes.length || !links.length) return {};
@@ -44,6 +72,8 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       const nodePct = totalCases > 0 ? ((nodeVolume / totalCases) * 100).round(1) : 0;
 
       const isRightmost = ['Cura', 'Óbito', 'Em Aberto'].includes(n.name);
+      const displayName = isNarrow ? (mobileLabels[n.name] || n.name) : n.name;
+      const showLabel = !isNarrow || !isNoise;
 
       return {
         name: n.name,
@@ -51,6 +81,8 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         nodePct,
         label: {
           position: isRightmost ? 'left' : 'right',
+          show: showLabel,
+          formatter: () => displayName,
         },
         itemStyle: {
           color: colorMap[n.name] || '#ccc',
@@ -133,15 +165,15 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
           emphasis: { focus: 'adjacency' },
           data: coloredNodes,
           links: coloredLinks,
-          nodeWidth: 18,
-          nodeGap: 18,
+          nodeWidth: isNarrow ? 12 : 18,
+          nodeGap: isNarrow ? 12 : 18,
           draggable: false,
           label: {
             position: 'right',
-            fontSize: 11,
+            fontSize: isNarrow ? 8.5 : 11,
             color: labelColor,
             fontWeight: 'bold',
-            distance: 10,
+            distance: isNarrow ? 4 : 10,
           },
           lineStyle: {
             curveness: 0.5,
@@ -149,9 +181,9 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         },
       ],
     };
-  }, [nodes, links, theme]);
+  }, [nodes, links, theme, isNarrow]);
 
-  const { chartRef } = useEcharts(option, [nodes, links, theme]);
+  const { chartRef } = useEcharts(option, [nodes, links, theme, isNarrow]);
 
   return <div ref={chartRef} className="echart-host" />;
 };
