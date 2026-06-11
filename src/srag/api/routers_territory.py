@@ -16,6 +16,7 @@ from srag.data.geospatial import (
 )
 from srag.data.analytics import (
     apply_global_filters,
+    compute_delay_by_bairro,
     compute_territory_distribution,
     compute_territory_entities_by_zone,
     compute_unit_distribution,
@@ -58,6 +59,7 @@ def territory_bootstrap(
                 "feature_collection": {"type": "FeatureCollection", "features": []},
             },
             "territory_entities": {"urban_bairros": [], "rural_comunidades": []},
+            "delay_by_bairro": [],
         }
     )
 
@@ -102,6 +104,7 @@ def territory_bootstrap(
             "boundary": boundary,
             "choropleth": choropleth,
             "territory_entities": entities,
+            "delay_by_bairro": compute_delay_by_bairro(df),
         }
     )
 

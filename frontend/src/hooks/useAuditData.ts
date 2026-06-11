@@ -23,6 +23,12 @@ export function useAuditData(
   const [qualityByBairro, setQualityByBairro] = useState<Epi.BairroQualityScore[]>([]);
   const [qualityByLaboratory, setQualityByLaboratory] = useState<Epi.LaboratorioQualityScore[]>([]);
   const [inconsistencies, setInconsistencies] = useState<Epi.LogicalInconsistency[]>([]);
+  const [timelinessFlow, setTimelinessFlow] = useState<Epi.TimelinessFlow>({
+    nodes: [],
+    links: [],
+    kpis: [],
+    total_cases: 0,
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -51,6 +57,9 @@ export function useAuditData(
           setQualityByBairro(data.quality_by_bairro || []);
           setQualityByLaboratory(data.quality_by_laboratory || []);
           setInconsistencies(data.inconsistencies || []);
+          setTimelinessFlow(
+            data.timeliness_flow || { nodes: [], links: [], kpis: [], total_cases: 0 },
+          );
         }
       } catch (error) {
         console.error('Failed to load audit data', error);
@@ -83,6 +92,7 @@ export function useAuditData(
     qualityByBairro,
     qualityByLaboratory,
     inconsistencies,
+    timelinessFlow,
     loading,
   };
 }

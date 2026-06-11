@@ -11,25 +11,6 @@ services:
     environment:
       - PYTHONPATH=/app/src
 
-  jupyter:
-    build:
-      context: .
-      dockerfile: backend.Dockerfile
-    command: >
-      uv run jupyter-lab --no-browser --ip 0.0.0.0 --port 8888
-      --allow-root
-      --NotebookApp.token='' --NotebookApp.password=''
-      --ServerApp.base_url=/lab/
-      --ServerApp.allow_origin='*'
-      --ServerApp.tornado_settings="{\"headers\":{\"Content-Security-Policy\":\"frame-ancestors *\"}}"
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./data/processed:/app/data/processed
-      - ./notebooks:/app/notebooks
-    environment:
-      - PYTHONPATH=/app/src
-
   frontend:
     build:
       context: .
@@ -38,4 +19,3 @@ services:
       - "80:80"
     depends_on:
       - backend
-      - jupyter

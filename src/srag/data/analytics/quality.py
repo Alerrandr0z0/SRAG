@@ -73,12 +73,12 @@ def _mark_validity_columns(out: pd.DataFrame) -> pd.DataFrame:
         ("Resultado Antígeno", "RES_AN", [9]),
         ("Data do PCR", "DT_PCR", []),
         ("Laboratório", "LAB_AN", []),
-        ("Vacina COVID-19", "VACINA_COV", [9]),
-        ("Dose 1 COVID", "DOSE_1_COV", [9]),
-        ("Dose 2 COVID", "DOSE_2_COV", [9]),
-        ("Reforço COVID", "DOSE_REF", [9]),
-        ("Vacina Influenza", "VACINA", [9]),
-        ("Data da Última Dose", "DT_UT_DOSE", []),
+        ("Co-detecção", "CO_DETEC", [9]),
+        ("Cadeia de Surto", "SURTO_SG", [9]),
+        ("Variante (OMS)", "VG_OMS", [9]),
+        ("Linhagem", "VG_LIN", []),
+        ("Método Lab.", "VG_MET", [9]),
+        ("Possível Reinfecção", "VG_REINF", [9]),
         ("Gestante", "CS_GESTANT", [9]),
         ("Puérpera", "PUERPERA", [9]),
     ]
@@ -119,6 +119,8 @@ def _add_block_scores(out: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
             "CS_ZONA",
             "NM_BAIRRO",
             "ID_MN_RESI",
+            "CS_GESTANT",
+            "PUERPERA",
         ],
         "Cuidado": [
             "HOSPITAL",
@@ -140,15 +142,13 @@ def _add_block_scores(out: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
             "DT_PCR",
             "LAB_AN",
         ],
-        "Vacinação": [
-            "VACINA_COV",
-            "DOSE_1_COV",
-            "DOSE_2_COV",
-            "DOSE_REF",
-            "VACINA",
-            "DT_UT_DOSE",
-            "CS_GESTANT",
-            "PUERPERA",
+        "Vigilância Genômica": [
+            "CO_DETEC",
+            "SURTO_SG",
+            "VG_OMS",
+            "VG_LIN",
+            "VG_MET",
+            "VG_REINF",
         ],
     }
 
@@ -176,15 +176,15 @@ def _build_laboratory_quality_rows(out: pd.DataFrame) -> list[dict[str, Any]]:
     agg_dict["turnaround_days"] = "median"
 
     lab_grouped = out.groupby("LAB_AN").agg(agg_dict).reset_index()
-    lab_grouped = lab_grouped.rename(columns={"LAB_AN": "laboratorio", "row_score": "score"})
+    lab_grouped = lab_grouped.rename(columns={"LAB_AN": "laboratorio"})
 
     lab_counts = out["LAB_AN"].value_counts().reset_index(name="total")
     lab_grouped = lab_grouped.merge(lab_counts, left_on="laboratorio", right_on="LAB_AN").drop(
         columns=["LAB_AN"]
     )
 
-    lab_grouped["score"] = lab_grouped["score"].round(1)
-    lab_grouped["diagnostico_score"] = lab_grouped["block_score_Diagnóstico"].round(1)
+    lab_grouped["score"] = lab_grouped["block_score_Diagnóstico"].round(1)
+    lab_grouped["diagnostico_score"] = lab_grouped["score"]
     lab_grouped["resultado_pct"] = (lab_grouped["has_resultado"] * 100).round(1)
     lab_grouped["median_turnaround_days"] = lab_grouped["turnaround_days"].round(1)
     lab_grouped = lab_grouped.sort_values("score", ascending=True)
@@ -360,6 +360,8 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Zona", calc_rate("CS_ZONA", [9])),
             ("Bairro", calc_rate("NM_BAIRRO")),
             ("Município de Residência", calc_rate("ID_MN_RESI")),
+            ("Gestante", calc_rate("CS_GESTANT", [9])),
+            ("Puérpera", calc_rate("PUERPERA", [9])),
         ],
         "Linha do Cuidado": [
             ("Internação Hospitalar", calc_rate("HOSPITAL", [9])),
@@ -381,15 +383,13 @@ def compute_data_completeness(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Data do PCR", calc_rate("DT_PCR")),
             ("Laboratório", calc_rate("LAB_AN")),
         ],
-        "Vacinação e Gestação": [
-            ("Vacina COVID-19", calc_rate("VACINA_COV", [9])),
-            ("Dose 1 COVID", calc_rate("DOSE_1_COV", [9])),
-            ("Dose 2 COVID", calc_rate("DOSE_2_COV", [9])),
-            ("Reforço COVID", calc_rate("DOSE_REF", [9])),
-            ("Vacina Influenza", calc_rate("VACINA", [9])),
-            ("Data da Última Dose", calc_rate("DT_UT_DOSE")),
-            ("Gestante", calc_rate("CS_GESTANT", [9])),
-            ("Puérpera", calc_rate("PUERPERA", [9])),
+        "Vigilância Genômica e Reinfecção": [
+            ("Co-detecção", calc_rate("CO_DETEC", [9])),
+            ("Cadeia de Surto", calc_rate("SURTO_SG", [9])),
+            ("Variante (OMS)", calc_rate("VG_OMS", [9])),
+            ("Linhagem", calc_rate("VG_LIN")),
+            ("Método Lab.", calc_rate("VG_MET", [9])),
+            ("Possível Reinfecção", calc_rate("VG_REINF", [9])),
         ],
     }
 
@@ -437,6 +437,8 @@ def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Zona", "CS_ZONA", [9]),
             ("Bairro", "NM_BAIRRO", []),
             ("Município de Residência", "ID_MN_RESI", []),
+            ("Gestante", "CS_GESTANT", [9]),
+            ("Puérpera", "PUERPERA", [9]),
         ],
         "cuidado": [
             ("Internação Hospitalar", "HOSPITAL", [9]),
@@ -458,15 +460,13 @@ def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
             ("Data do PCR", "DT_PCR", []),
             ("Laboratório", "LAB_AN", []),
         ],
-        "vacinacao": [
-            ("Vacina COVID-19", "VACINA_COV", [9]),
-            ("Dose 1 COVID", "DOSE_1_COV", [9]),
-            ("Dose 2 COVID", "DOSE_2_COV", [9]),
-            ("Reforço COVID", "DOSE_REF", [9]),
-            ("Vacina Influenza", "VACINA", [9]),
-            ("Data da Última Dose", "DT_UT_DOSE", []),
-            ("Gestante", "CS_GESTANT", [9]),
-            ("Puérpera", "PUERPERA", [9]),
+        "genomica": [
+            ("Co-detecção", "CO_DETEC", [9]),
+            ("Cadeia de Surto", "SURTO_SG", [9]),
+            ("Variante (OMS)", "VG_OMS", [9]),
+            ("Linhagem", "VG_LIN", []),
+            ("Método Lab.", "VG_MET", [9]),
+            ("Possível Reinfecção", "VG_REINF", [9]),
         ],
     }
 
@@ -475,7 +475,7 @@ def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
         "demografia": "Demografia e Residência",
         "cuidado": "Linha do Cuidado",
         "diagnostico": "Coleta e Diagnóstico",
-        "vacinacao": "Vacinação e Gestação",
+        "genomica": "Vigilância Genômica e Reinfecção",
     }
 
     all_fields: list[tuple[str, str, list[Any]]] = []
@@ -601,14 +601,12 @@ def compute_quality_by_unit(df: pd.DataFrame) -> list[dict[str, Any]]:
         ("Resultado Antígeno", "RES_AN", [9]),
         ("Data do PCR", "DT_PCR", []),
         ("Laboratório", "LAB_AN", []),
-        ("Vacina COVID-19", "VACINA_COV", [9]),
-        ("Dose 1 COVID", "DOSE_1_COV", [9]),
-        ("Dose 2 COVID", "DOSE_2_COV", [9]),
-        ("Reforço COVID", "DOSE_REF", [9]),
-        ("Vacina Influenza", "VACINA", [9]),
-        ("Data da Última Dose", "DT_UT_DOSE", []),
-        ("Gestante", "CS_GESTANT", [9]),
-        ("Puérpera", "PUERPERA", [9]),
+        ("Co-detecção", "CO_DETEC", [9]),
+        ("Cadeia de Surto", "SURTO_SG", [9]),
+        ("Variante (OMS)", "VG_OMS", [9]),
+        ("Linhagem", "VG_LIN", []),
+        ("Método Lab.", "VG_MET", [9]),
+        ("Possível Reinfecção", "VG_REINF", [9]),
     ]
 
     blocks = {
@@ -649,15 +647,13 @@ def compute_quality_by_unit(df: pd.DataFrame) -> list[dict[str, Any]]:
             "DT_PCR",
             "LAB_AN",
         ],
-        "Vacinação": [
-            "VACINA_COV",
-            "DOSE_1_COV",
-            "DOSE_2_COV",
-            "DOSE_REF",
-            "VACINA",
-            "DT_UT_DOSE",
-            "CS_GESTANT",
-            "PUERPERA",
+        "Vigilância Genômica": [
+            "CO_DETEC",
+            "SURTO_SG",
+            "VG_OMS",
+            "VG_LIN",
+            "VG_MET",
+            "VG_REINF",
         ],
     }
 
@@ -931,14 +927,12 @@ def compute_quality_by_bairro(df: pd.DataFrame) -> list[dict[str, Any]]:
         ("Resultado Antígeno", "RES_AN", [9]),
         ("Data do PCR", "DT_PCR", []),
         ("Laboratório", "LAB_AN", []),
-        ("Vacina COVID-19", "VACINA_COV", [9]),
-        ("Dose 1 COVID", "DOSE_1_COV", [9]),
-        ("Dose 2 COVID", "DOSE_2_COV", [9]),
-        ("Reforço COVID", "DOSE_REF", [9]),
-        ("Vacina Influenza", "VACINA", [9]),
-        ("Data da Última Dose", "DT_UT_DOSE", []),
-        ("Gestante", "CS_GESTANT", [9]),
-        ("Puérpera", "PUERPERA", [9]),
+        ("Co-detecção", "CO_DETEC", [9]),
+        ("Cadeia de Surto", "SURTO_SG", [9]),
+        ("Variante (OMS)", "VG_OMS", [9]),
+        ("Linhagem", "VG_LIN", []),
+        ("Método Lab.", "VG_MET", [9]),
+        ("Possível Reinfecção", "VG_REINF", [9]),
     ]
 
     blocks = {
@@ -978,15 +972,13 @@ def compute_quality_by_bairro(df: pd.DataFrame) -> list[dict[str, Any]]:
             "DT_PCR",
             "LAB_AN",
         ],
-        "Vacinação": [
-            "VACINA_COV",
-            "DOSE_1_COV",
-            "DOSE_2_COV",
-            "DOSE_REF",
-            "VACINA",
-            "DT_UT_DOSE",
-            "CS_GESTANT",
-            "PUERPERA",
+        "Vigilância Genômica": [
+            "CO_DETEC",
+            "SURTO_SG",
+            "VG_OMS",
+            "VG_LIN",
+            "VG_MET",
+            "VG_REINF",
         ],
     }
 
@@ -1237,6 +1229,65 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
     ]
 
 
+def compute_delay_by_bairro(df: pd.DataFrame, limit: int = 30) -> list[dict[str, Any]]:
+    """Compute median notification delay by bairro/localidade."""
+    if df.empty:
+        return []
+
+    out = df.copy()
+    out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+    out["DT_NOTIFIC"] = pd.to_datetime(out["DT_NOTIFIC"], errors="coerce")
+
+    valid = out.dropna(subset=["DT_SIN_PRI", "DT_NOTIFIC"])
+    valid = valid[valid["DT_NOTIFIC"] >= valid["DT_SIN_PRI"]]
+
+    if valid.empty:
+        return []
+
+    valid["delay"] = (valid["DT_NOTIFIC"] - valid["DT_SIN_PRI"]).dt.days
+    valid = valid[valid["delay"] <= 60]
+
+    if "NM_BAIRRO" not in valid.columns:
+        return []
+
+    valid["bairro"] = valid["NM_BAIRRO"].fillna("Não informado").astype(str).str.strip()
+    valid = valid[valid["bairro"] != ""]
+
+    if valid.empty:
+        return []
+
+    grouped = (
+        valid.groupby("bairro")
+        .agg(
+            median_delay=("delay", "median"),
+            avg_delay=("delay", "mean"),
+            total=("delay", "size"),
+            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())[:100]),
+        )
+        .reset_index()
+    )
+
+    grouped["median_delay"] = grouped["median_delay"].round(1)
+    grouped["avg_delay"] = grouped["avg_delay"].round(1)
+
+    grouped = grouped.sort_values(by="total", ascending=False).head(limit)
+
+    samples_by_bairro: dict[str, list[int]] = {
+        str(r["bairro"]): list(r["delay_list"]) for _, r in grouped.iterrows()
+    }
+
+    return [
+        {
+            "bairro": str(r["bairro"]),
+            "total": int(r["total"]),
+            "median_delay": float(r["median_delay"]),
+            "avg_delay": float(r["avg_delay"]),
+            "delay_samples": samples_by_bairro[str(r["bairro"])],
+        }
+        for _, r in grouped.iterrows()
+    ]
+
+
 def compute_positivity_by_sample_type(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Compute tested cases, positive cases, and positivity rate by sample type (TP_AMOSTRA)."""
     if df.empty:
@@ -1373,4 +1424,230 @@ def compute_diagnostic_latency_phases(df: pd.DataFrame) -> dict[str, float]:
         "notification_to_collection": notification_to_collection,
         "collection_to_result": collection_to_result,
         "symptom_to_treatment": symptom_to_treatment,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Timeliness flow (Sankey-ready data)
+# ---------------------------------------------------------------------------
+
+# Target thresholds in days for each surveillance phase
+_TIMELINESS_TARGETS: dict[str, int] = {
+    "notification": 7,  # Symptoms → Notification ≤ 7 days
+    "collection": 5,  # Notification → Collection ≤ 5 days
+    "result": 7,  # Collection → Result ≤ 7 days
+    "treatment": 2,  # Symptoms → Antiviral treatment ≤ 2 days
+}
+
+
+def _compute_phase_deltas(
+    df: pd.DataFrame,
+    start_col: str,
+    end_col: str,
+    max_val: int,
+) -> pd.Series:
+    """Return per-case day delta clamped to [0, max_val]; NaN where unavailable."""
+    if start_col not in df.columns or end_col not in df.columns:
+        return pd.Series(np.nan, index=df.index)
+    start_date = pd.to_datetime(df[start_col], errors="coerce")
+    end_date = pd.to_datetime(df[end_col], errors="coerce")
+    delta = (end_date - start_date).dt.days
+    delta = delta.where(delta >= 0).where(delta <= max_val)
+    return delta
+
+
+def _classify_stage(delta: pd.Series, target: int) -> pd.Series:
+    """Classify as 'oportuno', 'atrasado', or 'sem_dados'."""
+    result = pd.Series("sem_dados", index=delta.index)
+    result[delta.notna() & (delta <= target)] = "oportuno"
+    result[delta.notna() & (delta > target)] = "atrasado"
+    return result
+
+
+def compute_timeliness_flow(df: pd.DataFrame) -> dict[str, Any]:
+    """Compute Sankey-ready timeliness flow data for the Audit panel.
+
+    Returns a dict with:
+      - nodes: list of Sankey nodes
+      - links: list of Sankey links with source/target/value/pct
+      - kpis: list of per-stage KPI dicts (target, median, adherence_rate, count)
+      - total_cases: int
+    """
+    empty = {"nodes": [], "links": [], "kpis": [], "total_cases": 0}
+    if df.empty:
+        return empty
+
+    out = df.copy()
+
+    # Compute per-case deltas for each phase
+    delta_notification = _compute_phase_deltas(out, "DT_SIN_PRI", "DT_NOTIFIC", 60)
+    delta_collection = _compute_phase_deltas(out, "DT_NOTIFIC", "DT_COLETA", 30)
+    delta_result = _compute_phase_deltas(out, "DT_COLETA", "DT_PCR", 30)
+
+    # For result, also consider DT_RES_AN if DT_PCR is missing
+    if "DT_RES_AN" in out.columns:
+        delta_result_an = _compute_phase_deltas(out, "DT_COLETA", "DT_RES_AN", 30)
+        delta_result = pd.concat([delta_result, delta_result_an], axis=1).min(axis=1)
+
+    # Treatment: only for antiviral cases
+    delta_treatment = pd.Series(np.nan, index=out.index)
+    if "ANTIVIRAL" in out.columns and "DT_SIN_PRI" in out.columns and "DT_ANTIVIR" in out.columns:
+        antiviral_mask = pd.to_numeric(out["ANTIVIRAL"], errors="coerce") == 1
+        treated_idx = out.index[antiviral_mask]
+        delta_treatment.loc[treated_idx] = _compute_phase_deltas(
+            out.loc[treated_idx], "DT_SIN_PRI", "DT_ANTIVIR", 14
+        )
+
+    # Classify each case per stage
+    stage_notification = _classify_stage(delta_notification, _TIMELINESS_TARGETS["notification"])
+    stage_collection = _classify_stage(delta_collection, _TIMELINESS_TARGETS["collection"])
+    stage_result = _classify_stage(delta_result, _TIMELINESS_TARGETS["result"])
+    stage_treatment = _classify_stage(delta_treatment, _TIMELINESS_TARGETS["treatment"])
+
+    total = len(out)
+
+    # --- KPIs per stage ---
+    kpis: list[dict[str, Any]] = []
+
+    def _stage_kpi(
+        label: str,
+        delta: pd.Series,
+        stage: pd.Series,
+        target: int,
+        unit: str,
+    ) -> dict[str, Any]:
+        valid_count = int((stage != "sem_dados").sum())
+        oportuno_count = int((stage == "oportuno").sum())
+        adherence = round(oportuno_count / valid_count * 100, 1) if valid_count > 0 else 0.0
+        valid_deltas = delta.dropna()
+        median_val = float(round(valid_deltas.median(), 1)) if not valid_deltas.empty else 0.0
+        return {
+            "label": label,
+            "target": f"≤{target}{unit}",
+            "median": median_val,
+            "adherence_rate": adherence,
+            "count": valid_count,
+            "oportuno_count": oportuno_count,
+            "atrasado_count": int((stage == "atrasado").sum()),
+            "sem_dados_count": int((stage == "sem_dados").sum()),
+        }
+
+    kpis.append(
+        _stage_kpi(
+            "Notificação",
+            delta_notification,
+            stage_notification,
+            _TIMELINESS_TARGETS["notification"],
+            "d",
+        )
+    )
+    kpis.append(
+        _stage_kpi(
+            "Coleta",
+            delta_collection,
+            stage_collection,
+            _TIMELINESS_TARGETS["collection"],
+            "d",
+        )
+    )
+    kpis.append(
+        _stage_kpi(
+            "Resultado",
+            delta_result,
+            stage_result,
+            _TIMELINESS_TARGETS["result"],
+            "d",
+        )
+    )
+    kpis.append(
+        _stage_kpi(
+            "Tratamento Antiviral",
+            delta_treatment,
+            stage_treatment,
+            _TIMELINESS_TARGETS["treatment"],
+            "d",
+        )
+    )
+
+    # --- Sankey nodes ---
+    node_names = [
+        "Total de Casos",
+        "Notificação ≤7d",
+        "Notificação >7d",
+        "Sem Data Sintomas",
+        "Coleta no Prazo",
+        "Coleta Fora do Prazo",
+        "Sem Data Coleta",
+        "Resultado ≤7d",
+        "Resultado >7d",
+        "Sem Data Resultado",
+        "Tratamento ≤48h",
+        "Tratamento >48h",
+        "Sem Tratamento",
+    ]
+    nodes = [{"name": n} for n in node_names]
+
+    # --- Sankey links ---
+    links: list[dict[str, Any]] = []
+
+    def _add_link(source: str, target: str, count: int) -> None:
+        if count > 0:
+            pct = round(count / total * 100, 1) if total > 0 else 0.0
+            links.append({"source": source, "target": target, "value": count, "pct": pct})
+
+    # Level 1: Total → Notification
+    n_oportuno = int((stage_notification == "oportuno").sum())
+    n_atrasado = int((stage_notification == "atrasado").sum())
+    n_sem_dados = int((stage_notification == "sem_dados").sum())
+    _add_link("Total de Casos", "Notificação ≤7d", n_oportuno)
+    _add_link("Total de Casos", "Notificação >7d", n_atrasado)
+    _add_link("Total de Casos", "Sem Data Sintomas", n_sem_dados)
+
+    # Level 2: Notification → Collection
+    for notif_node, notif_class in [
+        ("Notificação ≤7d", "oportuno"),
+        ("Notificação >7d", "atrasado"),
+        ("Sem Data Sintomas", "sem_dados"),
+    ]:
+        mask_notif = stage_notification == notif_class
+        c_oportuno = int((stage_collection[mask_notif] == "oportuno").sum())
+        c_atrasado = int((stage_collection[mask_notif] == "atrasado").sum())
+        c_sem = int((stage_collection[mask_notif] == "sem_dados").sum())
+        _add_link(notif_node, "Coleta no Prazo", c_oportuno)
+        _add_link(notif_node, "Coleta Fora do Prazo", c_atrasado)
+        _add_link(notif_node, "Sem Data Coleta", c_sem)
+
+    # Level 3: Collection → Result
+    for coll_node, coll_class in [
+        ("Coleta no Prazo", "oportuno"),
+        ("Coleta Fora do Prazo", "atrasado"),
+        ("Sem Data Coleta", "sem_dados"),
+    ]:
+        mask_coll = stage_collection == coll_class
+        r_oportuno = int((stage_result[mask_coll] == "oportuno").sum())
+        r_atrasado = int((stage_result[mask_coll] == "atrasado").sum())
+        r_sem = int((stage_result[mask_coll] == "sem_dados").sum())
+        _add_link(coll_node, "Resultado ≤7d", r_oportuno)
+        _add_link(coll_node, "Resultado >7d", r_atrasado)
+        _add_link(coll_node, "Sem Data Resultado", r_sem)
+
+    # Level 4: Result → Treatment
+    for res_node, res_class in [
+        ("Resultado ≤7d", "oportuno"),
+        ("Resultado >7d", "atrasado"),
+        ("Sem Data Resultado", "sem_dados"),
+    ]:
+        mask_res = stage_result == res_class
+        t_oportuno = int((stage_treatment[mask_res] == "oportuno").sum())
+        t_atrasado = int((stage_treatment[mask_res] == "atrasado").sum())
+        t_sem = int((stage_treatment[mask_res] == "sem_dados").sum())
+        _add_link(res_node, "Tratamento ≤48h", t_oportuno)
+        _add_link(res_node, "Tratamento >48h", t_atrasado)
+        _add_link(res_node, "Sem Tratamento", t_sem)
+
+    return {
+        "nodes": nodes,
+        "links": links,
+        "kpis": kpis,
+        "total_cases": total,
     }

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import * as Epi from '../../types/epi';
 import LeafletMap from '../charts/LeafletMap';
 import RankTable from '../ui/RankTable';
+import DelayByUnitRidgelinePlot from '../charts/DelayByUnitRidgelinePlot';
 
 const ZONE_COLORS: Record<string, string> = {
   Urbana: '#0f766e',
@@ -33,6 +34,7 @@ interface TerritoryPanelProps {
   } | null;
   ruralSectorsGeo: FeatureCollection;
   zoneFilter: string[];
+  delayByBairro: Epi.BairroDelayRecord[];
 }
 
 const ZONE_FILTER_TO_MAP: Record<string, string> = {
@@ -49,6 +51,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
   ruralData,
   ruralSectorsGeo,
   zoneFilter,
+  delayByBairro,
 }) => {
   const availableModes = useMemo(() => {
     if (zoneFilter.length === 0) return ['Urbana', 'Rural'];
@@ -106,11 +109,11 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
 
       <article className="panel" style={{ boxShadow: 'none' }}>
         <RankTable
-          title="Bairros notificados"
+          title="Localidades notificadas"
           subtitle="Top 10 com busca e paginação"
-          searchPlaceholder="Buscar bairro"
+          searchPlaceholder="Buscar localidade"
           columns={[
-            { key: 'bairro', label: 'Bairro' },
+            { key: 'bairro', label: 'Localidade' },
             { key: 'count', label: 'Notificados', align: 'right' },
             { key: 'curados', label: 'Curados', align: 'right' },
             { key: 'obitos', label: 'Óbitos', align: 'right' },
@@ -118,6 +121,43 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
           ]}
           rows={bairroRows}
         />
+      </article>
+
+      {/* Ridgeline — atraso de notificação por localidade */}
+      <article className="panel" style={{ marginTop: '20px' }}>
+        <div className="section-header">
+          <div>
+            <h3>Atraso de Notificação por Localidade</h3>
+            <p className="meta">Distribuição de dias entre primeiros sintomas e notificação</p>
+          </div>
+        </div>
+        <div style={{ marginTop: '15px' }}>
+          <DelayByUnitRidgelinePlot
+            data={
+              delayByBairro.length > 0
+                ? delayByBairro.map((d) => ({
+                    id_unidade: d.bairro,
+                    nome_fantasia: d.bairro,
+                    total: d.total,
+                    median_delay: d.median_delay,
+                    avg_delay: d.avg_delay,
+                    delay_samples: d.delay_samples,
+                  }))
+                : null
+            }
+          />
+        </div>
+        <p
+          className="meta"
+          style={{
+            marginTop: '10px',
+            fontSize: '11px',
+            fontStyle: 'italic',
+            lineHeight: '1.4',
+          }}
+        >
+          * Exibidas apenas localidades com ≥5 casos notificados. Amostra de até 100 casos por localidade.
+        </p>
       </article>
 
       <article className="panel">

@@ -28,6 +28,7 @@ from srag.data.analytics import (
     compute_quality_by_unit,
     compute_time_series,
     compute_time_series_by_virus,
+    compute_timeliness_flow,
     compute_virus_detailed_distribution,
     compute_virus_distribution,
 )
@@ -240,6 +241,7 @@ def get_audit_bootstrap(
             "quality_by_bairro": [],
             "quality_by_laboratory": [],
             "inconsistencies": [],
+            "timeliness_flow": {"nodes": [], "links": [], "kpis": [], "total_cases": 0},
         }
 
     return sanitize_data(
@@ -250,5 +252,6 @@ def get_audit_bootstrap(
             "quality_by_bairro": compute_quality_by_bairro(df),
             "quality_by_laboratory": compute_quality_by_laboratory(df),
             "inconsistencies": compute_logical_inconsistencies(df),
+            "timeliness_flow": compute_timeliness_flow(df),
         }
     )

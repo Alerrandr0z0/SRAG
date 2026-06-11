@@ -45,6 +45,7 @@ export function useTerritoryData(
     urban_bairros: [],
     rural_comunidades: [],
   });
+  const [delayByBairro, setDelayByBairro] = useState<Epi.BairroDelayRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export function useTerritoryData(
           setBoundary(bootstrap.boundary);
           setChoropleth(bootstrap.choropleth);
           setEntities(bootstrap.territory_entities);
+          setDelayByBairro(bootstrap.delay_by_bairro || []);
         }
       } catch (e) {
         console.error('Failed to load territory bootstrap', e);
@@ -128,5 +130,5 @@ export function useTerritoryData(
     };
   }, [active]);
 
-  return { territory, boundary, choropleth, ruralData, ruralSectorsGeo, entities, loading };
+  return { territory, boundary, choropleth, ruralData, ruralSectorsGeo, entities, delayByBairro, loading };
 }

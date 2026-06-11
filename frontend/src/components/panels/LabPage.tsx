@@ -682,13 +682,13 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         <article className="panel">
           <RankTable
             title="Desempenho por Laboratório"
-            subtitle="Score de qualidade = completude média dos blocos do diagnóstico, cuidado, demografia, identificação e vacinação. Cobertura diagnóstica = percentual de exames com resultado disponível."
+            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Conclusão de exames = percentual de amostras recebidas com resultado final reportado."
             searchPlaceholder="Buscar laboratório..."
             columns={[
               { key: 'laboratorio', label: 'Laboratório' },
               { key: 'total', label: 'Volume testado', align: 'right' },
               { key: 'median_turnaround_days', label: 'Latência mediana', align: 'right' },
-              { key: 'cobertura', label: 'Cobertura diagnóstica', align: 'right' },
+              { key: 'cobertura', label: 'Conclusão de exames', align: 'right' },
               { key: 'score', label: 'Score de qualidade', align: 'right' },
               { key: 'sinal_alarme', label: 'Sinal de alerta' },
             ]}
@@ -1513,7 +1513,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                               style={{
                                 width: '100%',
                                 height: '6px',
-                                background: 'var(--bg-pill)',
+                                background: 'var(--border-subtle)',
                                 borderRadius: '3px',
                                 overflow: 'hidden',
                               }}

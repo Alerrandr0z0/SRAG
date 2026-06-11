@@ -4,7 +4,6 @@ import './App.css';
 import AuditPanel from './components/panels/AuditPanel';
 import CitizenPanel from './components/panels/CitizenPanel';
 import LabPage from './components/panels/LabPage';
-import NotebooksPanel from './components/panels/NotebooksPanel';
 // Panels
 import TerritoryPanel from './components/panels/TerritoryPanel';
 import UnitsPanel from './components/panels/UnitsPanel';
@@ -302,9 +301,7 @@ function App() {
           </button>
         )}
 
-        {panel !== 'notebooks' && (
-          <>
-            <GlobalFilterBar
+          <GlobalFilterBar
               years={availableYears}
               dashboardYear={dashboardYear}
               setDashboardYear={setDashboardYear}
@@ -344,8 +341,6 @@ function App() {
               <KpiCard label="Óbitos" value={kpis.deathCount} />
               <KpiCard label="Letalidade" value={kpis.death} />
             </section>
-          </>
-        )}
 
         <section className="main-grid">
           {panel === 'territorio' && (
@@ -360,6 +355,7 @@ function App() {
                   territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
                 }
                 zoneFilter={zoneFilter}
+                delayByBairro={territoryData.delayByBairro}
               />
             </article>
           )}
@@ -428,12 +424,11 @@ function App() {
               completenessTrend={auditData.completenessTrend}
               qualityByUnit={auditData.qualityByUnit}
               qualityByBairro={auditData.qualityByBairro}
-              qualityByLaboratory={auditData.qualityByLaboratory}
               inconsistencies={auditData.inconsistencies}
+              timelinessFlow={auditData.timelinessFlow}
             />
           )}
 
-          {panel === 'notebooks' && <NotebooksPanel />}
         </section>
       </main>
     </div>

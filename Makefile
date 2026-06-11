@@ -51,7 +51,6 @@ start-docker:
 	@printf "\nServicos em execucao:\n"
 	@printf -- "- Frontend: http://localhost\n"
 	@printf -- "- Backend:  http://localhost:8000\n"
-	@printf -- "- Jupyter:  http://localhost:8888/lab/\n"
 
 stop-docker:
 	docker compose down
@@ -112,7 +111,7 @@ property-test-front:
 
 e2e:
 	@echo "E2E flow tests require backend (port 8000) + Vite (port 5173) running."
-	@echo "Start with: make start --no-jupyter"
+	@echo "Start with: make start"
 	@echo ""
 	cd frontend && npm run test:e2e:dashboard
 

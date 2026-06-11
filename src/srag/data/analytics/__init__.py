@@ -41,6 +41,7 @@ from srag.data.analytics.quality import (
     compute_closure_by_agent,
     compute_completeness_trend,
     compute_data_completeness,
+    compute_delay_by_bairro,
     compute_delay_by_unit,
     compute_diagnostic_latency,
     compute_diagnostic_latency_phases,
@@ -52,6 +53,7 @@ from srag.data.analytics.quality import (
     compute_quality_by_unit,
     compute_sample_type_distribution,
     compute_testing_coverage,
+    compute_timeliness_flow,
 )
 from srag.data.analytics.surveillance import (
     CAMPANHAS_GRIPE,
@@ -122,6 +124,7 @@ __all__ = [
     "compute_comorbidities_treemap",
     "compute_completeness_trend",
     "compute_data_completeness",
+    "compute_delay_by_bairro",
     "compute_delay_by_unit",
     # quality
     "compute_diagnostic_latency",
@@ -165,6 +168,7 @@ __all__ = [
     "compute_testing_coverage",
     "compute_time_series",
     "compute_time_series_by_virus",
+    "compute_timeliness_flow",
     "compute_traditional_community_distribution",
     "compute_treatment_window_outcomes",
     "compute_unit_distribution",

@@ -81,6 +81,14 @@ export interface IcuBottleneckRecord {
   [key: string]: unknown;
 }
 
+export interface BairroDelayRecord {
+  bairro: string;
+  total: number;
+  median_delay: number;
+  avg_delay: number;
+  delay_samples: number[];
+}
+
 export interface TerritoryBootstrap {
   territory: {
     bairros: NeighborhoodStats[];
@@ -118,6 +126,7 @@ export interface TerritoryBootstrap {
     urban_bairros: Array<{ label: string; count: number }>;
     rural_comunidades: Array<{ label: string; count: number }>;
   };
+  delay_by_bairro: BairroDelayRecord[];
 }
 
 export interface LaboratoryNetwork {
@@ -414,6 +423,24 @@ export interface LogicalInconsistency {
   severity: 'critical' | 'warning' | 'info';
 }
 
+export interface TimelinessKpi {
+  label: string;
+  target: string;
+  median: number;
+  adherence_rate: number;
+  count: number;
+  oportuno_count: number;
+  atrasado_count: number;
+  sem_dados_count: number;
+}
+
+export interface TimelinessFlow {
+  nodes: Array<{ name: string }>;
+  links: Array<{ source: string; target: string; value: number; pct: number }>;
+  kpis: TimelinessKpi[];
+  total_cases: number;
+}
+
 export interface AuditBootstrap {
   completeness: DataCompletenessGroup[];
   completeness_trend: CompletenessTrendPoint[];
@@ -421,6 +448,7 @@ export interface AuditBootstrap {
   quality_by_bairro: BairroQualityScore[];
   quality_by_laboratory: LaboratorioQualityScore[];
   inconsistencies: LogicalInconsistency[];
+  timeliness_flow: TimelinessFlow;
 }
 
 export type TemporalGrouping = 'year' | 'month' | 'week';

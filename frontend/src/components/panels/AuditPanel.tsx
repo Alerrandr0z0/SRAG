@@ -3,6 +3,7 @@ import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import * as Epi from '../../types/epi';
 import RankTable, { RankTableColumn } from '../ui/RankTable';
+import SankeyChart from '../charts/SankeyChart';
 
 interface AuditPanelProps {
   loading: boolean;
@@ -10,8 +11,8 @@ interface AuditPanelProps {
   completenessTrend: Epi.CompletenessTrendPoint[];
   qualityByUnit: Epi.UnitQualityScore[];
   qualityByBairro: Epi.BairroQualityScore[];
-  qualityByLaboratory: Epi.LaboratorioQualityScore[];
   inconsistencies: Epi.LogicalInconsistency[];
+  timelinessFlow: Epi.TimelinessFlow;
 }
 
 const getScoreColor = (score: number, isDark = false) => {
@@ -65,7 +66,7 @@ const BLOCK_LABELS = [
   'Demografia e Residência',
   'Linha do Cuidado',
   'Coleta e Diagnóstico',
-  'Vacinação e Gestação',
+  'Vigilância Genômica e Reinfecção',
 ];
 
 const CompletenessTrendChart: React.FC<{ data: Epi.CompletenessTrendPoint[] }> = ({ data }) => {
@@ -131,13 +132,13 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
   completenessTrend,
   qualityByUnit,
   qualityByBairro,
-  qualityByLaboratory,
   inconsistencies,
+  timelinessFlow,
 }) => {
   const theme = useThemeMode();
   const isDark = theme === 'dark';
 
-  const [qualMode, setQualMode] = useState<'unidade' | 'localidade' | 'laboratorio'>('unidade');
+  const [qualMode, setQualMode] = useState<'unidade' | 'localidade'>('unidade');
   const [selectedUf, setSelectedUf] = useState('');
   const [selectedMun, setSelectedMun] = useState('');
   const [munSearch, setMunSearch] = useState('');
@@ -206,28 +207,20 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
     0,
   );
   const totalInconsistencies = inconsistencies.reduce((acc, inc) => acc + inc.count, 0);
-  const worstUnit = qualityByUnit[0];
-
   const qualTitle =
     qualMode === 'unidade'
       ? 'Qualidade por Unidade'
-      : qualMode === 'localidade'
-        ? 'Qualidade por Localidade'
-        : 'Qualidade por Laboratório';
+      : 'Qualidade por Localidade';
 
   const qualSubtitle =
     qualMode === 'unidade'
       ? 'Completude global e principal gargalo por unidade notificadora'
-      : qualMode === 'localidade'
-        ? 'Completude global agregada por município'
-        : 'Completude global por laboratório';
+      : 'Completude global agregada por localidade';
 
   const qualPlaceholder =
     qualMode === 'unidade'
       ? 'Filtrar por unidade ou CNES...'
-      : qualMode === 'localidade'
-        ? 'Filtrar por município...'
-        : 'Filtrar por laboratório...';
+      : 'Filtrar por localidade...';
 
   const qualColumns: RankTableColumn[] =
     qualMode === 'unidade'
@@ -239,21 +232,13 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
           { key: 'worst_field', label: 'Campo Mais Negligenciado' },
           { key: 'worst_rate', label: 'Completude Campo (%)', align: 'right' },
         ]
-      : qualMode === 'localidade'
-        ? [
-            { key: 'localizacao', label: 'Bairro/Comunidade' },
-            { key: 'total', label: 'Notificações', align: 'right' },
-            { key: 'score', label: 'Score Geral (%)', align: 'right' },
-            { key: 'worst_field', label: 'Pior Campo' },
-            { key: 'worst_rate', label: 'Completude (%)', align: 'right' },
-          ]
-        : [
-            { key: 'laboratorio', label: 'Laboratório' },
-            { key: 'total', label: 'Exames', align: 'right' },
-            { key: 'score', label: 'Score Geral (%)', align: 'right' },
-            { key: 'diagnostico_score', label: 'Diagnóstico (%)', align: 'right' },
-            { key: 'resultado_pct', label: 'Resultado (%)', align: 'right' },
-          ];
+      : [
+          { key: 'localizacao', label: 'Bairro/Comunidade' },
+          { key: 'total', label: 'Notificações', align: 'right' },
+          { key: 'score', label: 'Score Geral (%)', align: 'right' },
+          { key: 'worst_field', label: 'Pior Campo' },
+          { key: 'worst_rate', label: 'Completude (%)', align: 'right' },
+        ];
 
   const qualRows =
     qualMode === 'unidade'
@@ -291,59 +276,30 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
             ),
           },
         }))
-      : qualMode === 'localidade'
-        ? localidadeData.map((loc) => ({
-            key: loc.bairro,
-            values: {
-              localizacao: (
-                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{loc.bairro}</span>
-              ),
-              total: loc.total,
-              score: (
-                <span style={{ fontWeight: 800, color: getScoreColor(loc.score, isDark) }}>
-                  {loc.score}%
-                </span>
-              ),
-              worst_field: (
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                  {loc.worst_field}
-                </span>
-              ),
-              worst_rate: (
-                <span style={{ fontWeight: 700, color: getScoreColor(loc.worst_rate, isDark) }}>
-                  {loc.worst_rate}%
-                </span>
-              ),
-            },
-          }))
-        : (qualityByLaboratory || []).map((lab) => ({
-            key: lab.laboratorio,
-            values: {
-              laboratorio: (
-                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                  {lab.laboratorio}
-                </span>
-              ),
-              total: lab.total,
-              score: (
-                <span style={{ fontWeight: 800, color: getScoreColor(lab.score, isDark) }}>
-                  {lab.score}%
-                </span>
-              ),
-              diagnostico_score: (
-                <span
-                  style={{ fontWeight: 700, color: getScoreColor(lab.diagnostico_score, isDark) }}
-                >
-                  {lab.diagnostico_score}%
-                </span>
-              ),
-              resultado_pct: (
-                <span style={{ fontWeight: 700, color: getScoreColor(lab.resultado_pct, isDark) }}>
-                  {lab.resultado_pct}%
-                </span>
-              ),
-            },
-          }));
+      : localidadeData.map((loc) => ({
+          key: loc.bairro,
+          values: {
+            localizacao: (
+              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{loc.bairro}</span>
+            ),
+            total: loc.total,
+            score: (
+              <span style={{ fontWeight: 800, color: getScoreColor(loc.score, isDark) }}>
+                {loc.score}%
+              </span>
+            ),
+            worst_field: (
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                {loc.worst_field}
+              </span>
+            ),
+            worst_rate: (
+              <span style={{ fontWeight: 700, color: getScoreColor(loc.worst_rate, isDark) }}>
+                {loc.worst_rate}%
+              </span>
+            ),
+          },
+        }));
 
   return (
     <div className="stack" style={{ gap: '2rem' }}>
@@ -515,42 +471,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
           </p>
         </article>
 
-        <article
-          className="panel"
-          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-        >
-          <span
-            style={{
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              fontWeight: 700,
-            }}
-          >
-            Menor Completude
-          </span>
-          <p
-            style={{
-              margin: '6px 0 0 0',
-              fontSize: '1.1rem',
-              fontWeight: 800,
-              color: isDark ? '#f87171' : '#ef4444',
-            }}
-          >
-            {worstUnit ? `${worstUnit.score}%` : 'N/A'}
-          </p>
-          <span
-            style={{
-              fontSize: '10px',
-              color: 'var(--text-muted)',
-              textOverflow: 'ellipsis',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {worstUnit ? worstUnit.nome_fantasia : ''}
-          </span>
-        </article>
+
       </section>
 
       {/* SECTION 2: Completude por Bloco de Dados */}
@@ -716,8 +637,118 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
         </div>
       </section>
 
+      {/* SECTION 4.5: Oportunidade (Timeliness) */}
+      {timelinessFlow && timelinessFlow.total_cases > 0 && (
+        <article className="panel">
+          <div style={{ marginBottom: '1rem' }}>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: 'var(--text-main)',
+              }}
+            >
+              Oportunidade - Fluxo de Vigilancia
+            </h3>
+            <p
+              style={{
+                margin: '4px 0 0 0',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Proporcao de casos que percorrem cada etapa dentro do prazo.{' '}
+              <strong>{timelinessFlow.total_cases.toLocaleString()}</strong> casos analisados.
+            </p>
+          </div>
+
+          {/* KPI Cards Row */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '12px',
+              marginBottom: '1.5rem',
+            }}
+          >
+            {timelinessFlow.kpis.map((kpi) => {
+              const adherenceColor =
+                kpi.adherence_rate >= 80
+                  ? isDark ? '#34d399' : '#059669'
+                  : kpi.adherence_rate >= 50
+                    ? isDark ? '#fbbf24' : '#d97706'
+                    : isDark ? '#f87171' : '#ef4444';
+              return (
+                <div
+                  key={kpi.label}
+                  style={{
+                    background: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.9)',
+                    border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                    borderRadius: '10px',
+                    padding: '14px 12px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: 'var(--text-main)',
+                      marginBottom: '8px',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {kpi.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '28px',
+                      fontWeight: 800,
+                      color: adherenceColor,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {kpi.adherence_rate.toFixed(1)}%
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'var(--text-main)',
+                      opacity: 0.8,
+                      marginTop: '6px',
+                    }}
+                  >
+                    meta {kpi.target} &middot; mediana {kpi.median}d
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-main)',
+                      opacity: 0.6,
+                      marginTop: '4px',
+                    }}
+                  >
+                    {kpi.oportuno_count} ok &middot; {kpi.atrasado_count} atraso &middot;{' '}
+                    {kpi.sem_dados_count} s/dados
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Sankey Chart */}
+          {timelinessFlow.nodes.length > 0 && timelinessFlow.links.length > 0 && (
+            <div style={{ height: '400px', width: '100%' }}>
+              <SankeyChart nodes={timelinessFlow.nodes} links={timelinessFlow.links} />
+            </div>
+          )}
+        </article>
+      )}
+
       {/* SECTION 5: Problemas de Preenchimento */}
-      <section className="panel" style={{ height: 'fit-content' }}>
+      <article className="panel" style={{ height: 'fit-content' }}>
         <div className="section-header" style={{ marginBottom: '1.25rem' }}>
           <div>
             <h3
@@ -919,7 +950,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
             })
           )}
         </div>
-      </section>
+      </article>
 
       {/* SECTION 4: Qualidade por Estabelecimento */}
       <article className="panel" style={{ boxShadow: 'none' }}>
@@ -935,7 +966,6 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
               {[
                 { v: 'unidade', l: 'Unidade' },
                 { v: 'localidade', l: 'Localidade' },
-                { v: 'laboratorio', l: 'Laboratório' },
               ].map((opt) => (
                 <button
                   key={opt.v}
@@ -1117,48 +1147,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
         </RankTable>
       </article>
 
-      {/* FOOTER: Nota Metodológica */}
-      <article
-        className="panel"
-        style={{
-          background: 'var(--bg-active-pill)',
-          border: '1px dashed var(--border-active-pill)',
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'flex-start',
-        }}
-      >
-        <span style={{ fontSize: '1.25rem' }}>💡</span>
-        <div>
-          <h4
-            style={{
-              margin: '0 0 4px 0',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: 'var(--text-active-pill)',
-            }}
-          >
-            Nota Metodológica e Estratégia de Qualidade
-          </h4>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '12px',
-              color: 'var(--text-main)',
-              opacity: 0.9,
-              lineHeight: 1.6,
-            }}
-          >
-            Esta central analisa a completude (campos preenchidos com valores válidos, ignorando
-            códigos 9 de "Ignorado" e nulos) e a consistência (regras lógicas cruzadas que validam a
-            coerência clínica das datas e registros). Um Score Global superior a 90% é recomendado
-            para a tomada de decisões de saúde municipal seguras. Ações de educação continuada para
-            digitadores das unidades notificadoras devem priorizar os{' '}
-            <strong>estabelecimentos com menor score</strong> e os
-            <strong>campos mais negligenciados</strong> apontados no ranking acima.
-          </p>
-        </div>
-      </article>
+
     </div>
   );
 };

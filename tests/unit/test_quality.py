@@ -17,6 +17,7 @@ from srag.data.analytics.quality import (
     compute_quality_by_unit,
     compute_sample_type_distribution,
     compute_testing_coverage,
+    compute_timeliness_flow,
 )
 
 
@@ -179,12 +180,12 @@ class TestDataCompleteness:
                 "RES_AN": [1, 9, 4],
                 "DT_PCR": ["2023-01-05", "", np.nan],
                 "LAB_AN": ["L1", "", np.nan],
-                "VACINA_COV": [1, 9, 2],
-                "DOSE_1_COV": [1, 9, 2],
-                "DOSE_2_COV": [1, 9, 2],
-                "DOSE_REF": [1, 9, 2],
-                "VACINA": [1, 9, 2],
-                "DT_UT_DOSE": ["2023-01-01", "", np.nan],
+                "CO_DETEC": [1, 9, 2],
+                "SURTO_SG": [1, 9, 2],
+                "VG_OMS": [1, 9, 2],
+                "VG_LIN": ["BA.5", "", np.nan],
+                "VG_MET": [1, 9, 2],
+                "VG_REINF": [1, 9, 2],
                 "CS_GESTANT": [3, 9, 1],
                 "PUERPERA": [1, 9, 0],
             }
@@ -194,8 +195,8 @@ class TestDataCompleteness:
         assert "Demografia e Residência" in res
         assert "Linha do Cuidado" in res
         assert "Coleta e Diagnóstico" in res
-        assert "Vacinação e Gestação" in res
-        assert res["Vacinação e Gestação"] == 70.8
+        assert "Vigilância Genômica e Reinfecção" in res
+        assert res["Vigilância Genômica e Reinfecção"] == 61.1
 
     def test_empty_df(self) -> None:
         assert compute_data_completeness(pd.DataFrame()) == []
@@ -237,12 +238,12 @@ class TestCompletenessTrend:
                 "RES_AN": [1, 9],
                 "DT_PCR": ["2023-01-01", ""],
                 "LAB_AN": ["LAB A", ""],
-                "VACINA_COV": [1, 9],
-                "DOSE_1_COV": [1, 9],
-                "DOSE_2_COV": [1, 9],
-                "DOSE_REF": [1, 9],
-                "VACINA": [1, 9],
-                "DT_UT_DOSE": ["2023-01-01", ""],
+                "CO_DETEC": [1, 9],
+                "SURTO_SG": [1, 9],
+                "VG_OMS": [1, 9],
+                "VG_LIN": ["BA.5", ""],
+                "VG_MET": [1, 9],
+                "VG_REINF": [1, 9],
                 "CS_GESTANT": [9, 9],
                 "PUERPERA": [9, 9],
             }
@@ -263,7 +264,7 @@ class TestCompletenessTrend:
                 "Demografia e Residência",
                 "Linha do Cuidado",
                 "Coleta e Diagnóstico",
-                "Vacinação e Gestação",
+                "Vigilância Genômica e Reinfecção",
             ]:
                 assert b in r["blocks"]
 
@@ -489,3 +490,74 @@ class TestDiagnosticLatencyPhases:
         assert res["notification_to_collection"] == 2.0
         assert res["collection_to_result"] == 4.0
         assert res["symptom_to_treatment"] == 1.0
+
+
+class TestTimelinessFlow:
+    def test_empty_df(self) -> None:
+        res = compute_timeliness_flow(pd.DataFrame())
+        assert res == {"nodes": [], "links": [], "kpis": [], "total_cases": 0}
+
+    def test_structure_has_all_stages(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-03"],
+                "DT_COLETA": ["2023-01-05"],
+                "DT_PCR": ["2023-01-08"],
+            }
+        )
+        res = compute_timeliness_flow(df)
+        assert res["total_cases"] == 1
+        assert len(res["kpis"]) == 4
+        assert res["kpis"][0]["label"] == "Notificação"
+        assert res["kpis"][1]["label"] == "Coleta"
+        assert res["kpis"][2]["label"] == "Resultado"
+        assert res["kpis"][3]["label"] == "Tratamento Antiviral"
+        assert len(res["nodes"]) == 13
+        assert len(res["links"]) > 0
+
+    def test_oportuno_classification(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-03"],
+                "DT_COLETA": ["2023-01-05"],
+                "DT_PCR": ["2023-01-07"],
+            }
+        )
+        res = compute_timeliness_flow(df)
+        notif_kpi = res["kpis"][0]
+        assert notif_kpi["oportuno_count"] == 1
+        assert notif_kpi["adherence_rate"] == 100.0
+
+    def test_atrasado_classification(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-20"],
+            }
+        )
+        res = compute_timeliness_flow(df)
+        notif_kpi = res["kpis"][0]
+        assert notif_kpi["atrasado_count"] == 1
+        assert notif_kpi["adherence_rate"] == 0.0
+
+    def test_sem_dados_classification(self) -> None:
+        df = pd.DataFrame({"DT_SIN_PRI": ["2023-01-01"]})
+        res = compute_timeliness_flow(df)
+        notif_kpi = res["kpis"][0]
+        assert notif_kpi["sem_dados_count"] == 1
+        assert notif_kpi["count"] == 0
+
+    def test_sankey_links_have_pct(self) -> None:
+        df = pd.DataFrame(
+            {
+                "DT_SIN_PRI": ["2023-01-01", "2023-01-01"],
+                "DT_NOTIFIC": ["2023-01-03", "2023-01-10"],
+            }
+        )
+        res = compute_timeliness_flow(df)
+        for link in res["links"]:
+            assert "pct" in link
+            assert "value" in link
+            assert link["value"] > 0

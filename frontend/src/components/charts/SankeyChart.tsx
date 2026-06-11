@@ -21,6 +21,19 @@ const mobileLabels: Record<string, string> = {
   Cura: 'Cura',
   Óbito: 'Óbito',
   'Em Aberto': 'Aberto',
+  'Total de Casos': 'Total',
+  'Notificação ≤7d': 'Notif ≤7d',
+  'Notificação >7d': 'Notif >7d',
+  'Sem Data Sintomas': 'S/ Sintomas',
+  'Coleta no Prazo': 'Coleta OK',
+  'Coleta Fora do Prazo': 'Coleta Atr.',
+  'Sem Data Coleta': 'S/ Coleta',
+  'Resultado ≤7d': 'Res ≤7d',
+  'Resultado >7d': 'Res >7d',
+  'Sem Data Resultado': 'S/ Resultado',
+  'Tratamento ≤48h': 'Trat. ≤48h',
+  'Tratamento >48h': 'Trat. >48h',
+  'Sem Tratamento': 'S/ Tratamento',
 };
 
 const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
@@ -55,23 +68,49 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       Cura: '#059669',
       Óbito: '#9f1239',
       'Em Aberto': '#cbd5e1',
+      // Timeliness flow nodes
+      'Total de Casos': '#3b82f6',
+      'Notificação ≤7d': '#10b981',
+      'Notificação >7d': '#ef4444',
+      'Sem Data Sintomas': '#94a3b8',
+      'Coleta no Prazo': '#10b981',
+      'Coleta Fora do Prazo': '#f59e0b',
+      'Sem Data Coleta': '#94a3b8',
+      'Resultado ≤7d': '#10b981',
+      'Resultado >7d': '#ef4444',
+      'Sem Data Resultado': '#94a3b8',
+      'Tratamento ≤48h': '#10b981',
+      'Tratamento >48h': '#ef4444',
+      'Sem Tratamento': '#94a3b8',
     };
 
     const totalCases = links
       .filter((l) => ['Comunitária', 'Infecção Hospitalar', 'Origem (Ignorado)'].includes(l.source))
       .reduce((sum, l) => sum + l.value, 0);
 
+    // Fallback: find root nodes (sources that are never targets)
+    const rootTotal = totalCases > 0
+      ? totalCases
+      : (() => {
+          const targetNames = new Set(links.map((l) => l.target));
+          const rootNodes = nodes.filter((n) => !targetNames.has(n.name));
+          return rootNodes.reduce((sum, n) => {
+            return sum + links.filter((l) => l.source === n.name).reduce((s, l) => s + l.value, 0);
+          }, 0);
+        })();
+
     const coloredNodes = nodes.map((n) => {
-      const isNoise = n.name.includes('(Ignorado)') || n.name === 'Em Aberto';
+      const isNoise = n.name.includes('(Ignorado)') || n.name === 'Em Aberto' || n.name.startsWith('Sem Data ');
 
       // Calcular volume do nó para o TOOLTIP apenas
       const nodeVolume =
         links.filter((l) => l.source === n.name).reduce((sum, l) => sum + l.value, 0) ||
         links.filter((l) => l.target === n.name).reduce((sum, l) => sum + l.value, 0);
 
-      const nodePct = totalCases > 0 ? ((nodeVolume / totalCases) * 100).round(1) : 0;
+      const nodePct = rootTotal > 0 ? ((nodeVolume / rootTotal) * 100).round(1) : 0;
 
       const isRightmost = ['Cura', 'Óbito', 'Em Aberto'].includes(n.name);
+      const isTimelinessTerminal = ['Tratamento ≤48h', 'Tratamento >48h', 'Sem Tratamento'].includes(n.name);
       const displayName = isNarrow ? (mobileLabels[n.name] || n.name) : n.name;
       const showLabel = !isNarrow || !isNoise;
 
@@ -80,7 +119,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         value: nodeVolume,
         nodePct,
         label: {
-          position: isRightmost ? 'left' : 'right',
+          position: isRightmost ? 'left' : isTimelinessTerminal ? 'right' : 'right',
           show: showLabel,
           formatter: () => displayName,
         },
@@ -97,7 +136,9 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       const isNoise =
         l.source.includes('(Ignorado)') ||
         l.target.includes('(Ignorado)') ||
-        l.target === 'Em Aberto';
+        l.target === 'Em Aberto' ||
+        l.source.startsWith('Sem Data ') ||
+        l.target.startsWith('Sem Data ');
       return {
         ...l,
         lineStyle: {
@@ -130,7 +171,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
             data: { nodePct?: number; value: number; source: string; target: string; pct?: number };
           };
           if (p.dataType === 'node') {
-            const isNoise = p.name.includes('(Ignorado)') || p.name === 'Em Aberto';
+            const isNoise = p.name.includes('(Ignorado)') || p.name === 'Em Aberto' || p.name.startsWith('Sem Data ');
             return `
                     <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">
                         ${isNoise ? 'QUALIDADE DE DADO' : 'MARCO CLÍNICO'}
@@ -166,7 +207,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
           data: coloredNodes,
           links: coloredLinks,
           nodeWidth: isNarrow ? 12 : 18,
-          nodeGap: isNarrow ? 12 : 18,
+          nodeGap: isNarrow ? 12 : 48,
           draggable: false,
           label: {
             position: 'right',

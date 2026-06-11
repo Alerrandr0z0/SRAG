@@ -182,6 +182,7 @@ class AuditBootstrapResponse(TypedDict):
     quality_by_bairro: list[dict[str, Any]]
     quality_by_laboratory: list[dict[str, Any]]
     inconsistencies: list[dict[str, Any]]
+    timeliness_flow: dict[str, Any]
 
 
 class LaboratoryQualityRow(TypedDict):
