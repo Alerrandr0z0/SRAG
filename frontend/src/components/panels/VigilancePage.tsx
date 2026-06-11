@@ -777,11 +777,8 @@ const VigilanceSeverityKpiSection = React.memo<{ kpis: Epi.SeverityKpisResponse 
 
     return (
       <div
-        className="vigilance-metric-grid"
+        className="responsive-grid-3col"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1.5rem',
           marginBottom: '2rem',
           marginTop: '1.5rem',
         }}
@@ -864,7 +861,9 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   dashboardMonth,
   dashboardDay,
 }) => {
-  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados' | 'atrasados'>('notificados');
+  const [casosMode, setCasosMode] = useState<'notificados' | 'confirmados' | 'atrasados'>(
+    'notificados',
+  );
   const [weeksWindow, setWeeksWindow] = useState('0');
   const [delayWeeks, setDelayWeeks] = useState('0');
   const delaySeries = data?.laboratoryNetwork?.notification_delay || [];
@@ -1270,7 +1269,7 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         onDelayWeeks={setDelayWeeks}
       />
       <VigilanceSeverityKpiSection kpis={severityKpis} />
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <section className="responsive-grid-2col">
         <VigilanceViralProfile
           virus={virus}
           virusDetail={virusDetail}

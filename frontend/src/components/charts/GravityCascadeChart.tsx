@@ -50,7 +50,7 @@ const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data, mode })
           left: '3%',
           right: '3%',
           bottom: '10%',
-          top: '5%',
+          top: 35,
           containLabel: true,
         },
         xAxis: {
@@ -135,7 +135,7 @@ const GravityCascadeChart: React.FC<GravityCascadeChartProps> = ({ data, mode })
           left: '3%',
           right: '3%',
           bottom: '10%',
-          top: '5%',
+          top: 35,
           containLabel: true,
         },
         xAxis: {

@@ -29,7 +29,7 @@ const KaplanMeierChart: React.FC<KaplanMeierChartProps> = ({ survivalData }) => 
         data: ['COVID-19', 'Gripe'],
         textStyle: { fontSize: 13, color: textColor },
       },
-      grid: { top: 60, left: 60, right: 30, bottom: 60 },
+      grid: { top: 60, left: '10%', right: '5%', bottom: 60, containLabel: true },
       xAxis: {
         type: 'value',
         min: 0,

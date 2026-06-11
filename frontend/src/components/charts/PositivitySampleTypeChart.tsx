@@ -61,7 +61,7 @@ const PositivitySampleTypeChart: React.FC<PositivitySampleTypeChartProps> = ({ d
         left: '3%',
         right: '4%',
         bottom: '12%',
-        top: '10%',
+        top: 35,
         containLabel: true,
       },
       xAxis: {

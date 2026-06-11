@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { COLORS } from '../../constants';
 import { useEcharts } from '../../hooks/useEcharts';
 import { SymptomSignature } from '../../types/epi';
@@ -10,6 +10,17 @@ interface Props {
 
 const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' }) => {
   const { labels = [], bands = [], matrices = {} } = signature || {};
+
+  const [isNarrow, setIsNarrow] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsNarrow(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const option = useMemo(() => {
     const hasData =
@@ -75,22 +86,26 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
     const titles: Array<Record<string, unknown>> = [];
 
     pathogens.forEach((p, idx) => {
-      const left = 15 + idx * 28;
-      const width = 24;
+      const left = isNarrow ? 26 : (15 + idx * 28);
+      const width = isNarrow ? 68 : 24;
+      const top = isNarrow ? (8 + idx * 30) : 12;
+      const height = isNarrow ? 20 : null;
+      const bottom = isNarrow ? null : '18%';
 
       grids.push({
         left: `${left}%`,
         width: `${width}%`,
-        top: '12%',
-        bottom: '18%',
+        top: isNarrow ? `${top}%` : '12%',
+        height: height ? `${height}%` : undefined,
+        bottom: bottom || undefined,
         containLabel: false,
       });
 
       titles.push({
         text: p.title,
-        left: `${left + width / 2}%`,
+        left: isNarrow ? `${left + width / 2}%` : `${left + width / 2}%`,
         textAlign: 'center',
-        top: '2%',
+        top: isNarrow ? `${top - 6}%` : '2%',
         textStyle: { fontSize: 13, fontWeight: 'bold', color: '#334155' },
       });
 
@@ -110,10 +125,10 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
         gridIndex: idx,
         inverse: true,
         axisLabel: {
-          show: idx === 0,
-          fontSize: 10,
+          show: isNarrow ? true : idx === 0,
+          fontSize: 9,
           color: '#475569',
-          width: 130,
+          width: isNarrow ? 90 : 120,
           overflow: 'break',
           interval: 0,
         },
@@ -165,6 +180,7 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
     return {
       tooltip: {
         position: 'top',
+        confine: true,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderWidth: 1,
         borderColor: '#e2e8f0',
@@ -216,12 +232,12 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       yAxis: yAxes,
       series: series,
     };
-  }, [labels, bands, matrices, selectedAgent]);
+  }, [labels, bands, matrices, selectedAgent, isNarrow]);
 
   const { chartRef } = useEcharts(option, [signature, selectedAgent], { replaceOnUpdate: true });
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '500px', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: isNarrow ? '750px' : '500px', position: 'relative' }}>
       <div ref={chartRef} className="echart-host" style={{ width: '100%', height: '100%' }} />
     </div>
   );

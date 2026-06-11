@@ -25,22 +25,33 @@ const SymptomsHeatmap: React.FC<SymptomsHeatmapProps> = ({ labels, matrix }) => 
     return {
       tooltip: {
         position: 'top',
+        confine: true,
         formatter: (params: HeatmapTooltip) =>
           `${labels[params.value[1]]} x ${labels[params.value[0]]}: ${params.value[2]}`,
       },
-      grid: { top: 40, left: 150, right: 20, bottom: 60 },
+      grid: { top: 40, left: '10%', right: 20, bottom: 60, containLabel: true },
       xAxis: {
         type: 'category',
         data: labels,
         splitArea: { show: true },
-        axisLabel: { rotate: 45, interval: 0, fontSize: 10 },
+        axisLabel: {
+          rotate: 45,
+          interval: 0,
+          fontSize: 9,
+          formatter: (value: string) =>
+            value.length > 12 ? `${value.substring(0, 10)}...` : value,
+        },
       },
       yAxis: {
         type: 'category',
         data: labels,
         splitArea: { show: true },
         inverse: true,
-        axisLabel: { fontSize: 10 },
+        axisLabel: {
+          fontSize: 9,
+          formatter: (value: string) =>
+            value.length > 12 ? `${value.substring(0, 10)}...` : value,
+        },
       },
       visualMap: {
         min: 0,

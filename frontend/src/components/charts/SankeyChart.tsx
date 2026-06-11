@@ -43,10 +43,15 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
 
       const nodePct = totalCases > 0 ? ((nodeVolume / totalCases) * 100).round(1) : 0;
 
+      const isRightmost = ['Cura', 'Óbito', 'Em Aberto'].includes(n.name);
+
       return {
         name: n.name,
         value: nodeVolume,
         nodePct,
+        label: {
+          position: isRightmost ? 'left' : 'right',
+        },
         itemStyle: {
           color: colorMap[n.name] || '#ccc',
           opacity: isNoise ? 0.4 : 1,
@@ -80,6 +85,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
     return {
       tooltip: {
         trigger: 'item',
+        confine: true,
         backgroundColor: tooltipBg,
         padding: [10, 15],
         borderColor: tooltipBorder,

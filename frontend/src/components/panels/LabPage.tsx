@@ -170,8 +170,6 @@ const MiniBoxplot: React.FC<{
     const xTarget = scaleX(meta);
     const xUpperFence = scaleX(Math.min(upperFence, maxScale));
 
-
-
     svg
       .append('line')
       .attr('x1', xTarget)
@@ -365,15 +363,38 @@ const MiniBoxplot: React.FC<{
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <div style={{ fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '3px', marginBottom: '3px' }}>
+            <div
+              style={{
+                fontWeight: 600,
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                paddingBottom: '3px',
+                marginBottom: '3px',
+              }}
+            >
               Distribuição do Tempo
             </div>
-            <div>Mínimo: <b>{minV}d</b></div>
-            <div>Q1 (P25): <b>{q1}d</b></div>
-            <div>Mediana (P50): <b>{med}d</b></div>
-            <div>Q3 (P75): <b>{q3}d</b></div>
-            <div>Máximo: <b>{maxV}d</b></div>
-            <div style={{ marginTop: '2px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '2px' }}>
+            <div>
+              Mínimo: <b>{minV}d</b>
+            </div>
+            <div>
+              Q1 (P25): <b>{q1}d</b>
+            </div>
+            <div>
+              Mediana (P50): <b>{med}d</b>
+            </div>
+            <div>
+              Q3 (P75): <b>{q3}d</b>
+            </div>
+            <div>
+              Máximo: <b>{maxV}d</b>
+            </div>
+            <div
+              style={{
+                marginTop: '2px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                paddingTop: '2px',
+              }}
+            >
               Meta: <b style={{ color: themeColors.metaColor }}>≤ {meta}d</b>
             </div>
             <div style={{ opacity: 0.8, fontSize: '9px', marginTop: '2px' }}>
@@ -435,52 +456,49 @@ const RateDonutKpi: React.FC<{
 }> = ({ rate, label, color, title }) => {
   const theme = useThemeMode();
 
-  const option = useMemo(
-    () => {
-      const isDark = theme === 'dark';
-      const trackColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.05)';
-      const tooltipBorderColor = isDark ? '#334155' : '#e2e8f0';
-      const tooltipBgColor = isDark ? '#0f172a' : '#ffffff';
-      const tooltipTextColor = isDark ? '#f8fafc' : '#0f172a';
+  const option = useMemo(() => {
+    const isDark = theme === 'dark';
+    const trackColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.05)';
+    const tooltipBorderColor = isDark ? '#334155' : '#e2e8f0';
+    const tooltipBgColor = isDark ? '#0f172a' : '#ffffff';
+    const tooltipTextColor = isDark ? '#f8fafc' : '#0f172a';
 
-      return {
-        tooltip: {
-          show: true,
-          trigger: 'item',
-          backgroundColor: tooltipBgColor,
-          borderColor: tooltipBorderColor,
-          textStyle: { color: tooltipTextColor, fontSize: 11 },
-          formatter: (params: { dataIndex: number; value: number }) => {
-            const name = params.dataIndex === 0 ? 'Taxa Registrada' : 'Pendente';
-            return `<div style="font-weight:600;margin-bottom:4px;white-space:normal;max-width:180px">${title || label}</div>
+    return {
+      tooltip: {
+        show: true,
+        trigger: 'item',
+        backgroundColor: tooltipBgColor,
+        borderColor: tooltipBorderColor,
+        textStyle: { color: tooltipTextColor, fontSize: 11 },
+        formatter: (params: { dataIndex: number; value: number }) => {
+          const name = params.dataIndex === 0 ? 'Taxa Registrada' : 'Pendente';
+          return `<div style="font-weight:600;margin-bottom:4px;white-space:normal;max-width:180px">${title || label}</div>
                     <div>${name}: <b>${params.value.toFixed(1)}%</b></div>`;
-          },
         },
-        series: [
-          {
-            type: 'pie',
-            radius: ['62%', '84%'],
-            center: ['50%', '50%'],
-            silent: false,
-            label: {
-              show: true,
-              position: 'center',
-              formatter: `${rate}%`,
-              fontSize: 16,
-              fontWeight: 800,
-              color,
-            },
-            data: [
-              { value: rate, itemStyle: { color } },
-              { value: 100 - rate, itemStyle: { color: trackColor } },
-            ],
-            itemStyle: { borderRadius: 3, borderColor: 'transparent', borderWidth: 0 },
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['62%', '84%'],
+          center: ['50%', '50%'],
+          silent: false,
+          label: {
+            show: true,
+            position: 'center',
+            formatter: `${rate}%`,
+            fontSize: 16,
+            fontWeight: 800,
+            color,
           },
-        ],
-      };
-    },
-    [rate, color, theme, title, label],
-  );
+          data: [
+            { value: rate, itemStyle: { color } },
+            { value: 100 - rate, itemStyle: { color: trackColor } },
+          ],
+          itemStyle: { borderRadius: 3, borderColor: 'transparent', borderWidth: 0 },
+        },
+      ],
+    };
+  }, [rate, color, theme, title, label]);
 
   const { chartRef } = useEcharts(option, [rate, color, theme, title, label]);
 
@@ -495,7 +513,15 @@ const RateDonutKpi: React.FC<{
       }}
     >
       <div ref={chartRef} style={{ width: 105, height: 105 }} />
-      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>
+      <span
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          fontWeight: 500,
+          textAlign: 'center',
+          lineHeight: 1.2,
+        }}
+      >
         {label}
       </span>
     </div>
@@ -676,7 +702,6 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         </article>
       </section>
 
-
       <section className="vigilance-block" style={{ marginTop: '2rem' }}>
         <article className="panel">
           <div className="section-header">
@@ -689,10 +714,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           </div>
 
           <div
+            className="responsive-grid-4col"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '1rem',
               marginTop: '1rem',
             }}
           >
@@ -731,14 +754,17 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   title="Casos com PCR ou teste antigênico processado e com resultado disponível. Meta ≥ 80%."
                 />
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 <RateDonutKpi
                   rate={
                     lab?.overall?.tested_cases != null &&
                     lab?.quality_metrics?.testing_coverage?.total
                       ? Number(
                           (
-                            (lab.overall.tested_cases / lab.quality_metrics.testing_coverage.total) *
+                            (lab.overall.tested_cases /
+                              lab.quality_metrics.testing_coverage.total) *
                             100
                           ).toFixed(1),
                         )
@@ -793,7 +819,9 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   title="Casos com amostra laboratorial coletada. Meta ≥ 80%."
                 />
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 <RateDonutKpi
                   rate={lab?.quality_metrics?.testing_coverage?.rate ?? 0}
                   label={
@@ -802,7 +830,9 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                       ? `${lab.quality_metrics.testing_coverage.collected} de ${lab.quality_metrics.testing_coverage.total}`
                       : '—'
                   }
-                  color={coverageSeverity(lab?.quality_metrics?.testing_coverage?.rate ?? null).color}
+                  color={
+                    coverageSeverity(lab?.quality_metrics?.testing_coverage?.rate ?? null).color
+                  }
                   title="Casos com amostra laboratorial coletada."
                 />
               </div>
@@ -835,7 +865,14 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   title="Mediana do tempo entre coleta e resultado (P50). Meta OMS ≤ 7d."
                 />
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
                   <span
                     style={{
@@ -914,7 +951,14 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   title="Tempo médio entre coleta e resultado. Meta ≤ 2d."
                 />
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
                 <TurnaroundKpi
                   days={lab?.overall?.avg_turnaround_days ?? null}
                   median={lab?.overall?.median_turnaround_days ?? null}
@@ -927,10 +971,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           </div>
 
           <div
+            className="responsive-grid-2col"
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem',
               marginTop: '1.25rem',
             }}
           >
@@ -1110,10 +1152,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           </div>
 
           <div
+            className="responsive-grid-4col"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '0.75rem',
               marginTop: '1rem',
             }}
           >
@@ -1283,11 +1323,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           </div>
 
           <div
-            className="layout-grid"
+            className="layout-grid responsive-grid-split"
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1.4fr 1fr',
-              gap: '16px',
               marginTop: '1.25rem',
             }}
           >
@@ -1312,7 +1349,10 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
               >
                 Oportunidade terapêutica
               </div>
-              <div className="chart-wrap" style={{ minHeight: '360px', height: '360px', width: '100%' }}>
+              <div
+                className="chart-wrap"
+                style={{ minHeight: '360px', height: '360px', width: '100%' }}
+              >
                 {latencyPerDrug.length > 0 ? (
                   <TherapeuticKdeChart
                     data={latencyPerDrug.map((d) => ({
@@ -1359,7 +1399,10 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                 >
                   Impacto clínico do antiviral
                 </div>
-                <div className="chart-wrap" style={{ minHeight: '200px', height: '200px', width: '100%' }}>
+                <div
+                  className="chart-wrap"
+                  style={{ minHeight: '200px', height: '200px', width: '100%' }}
+                >
                   {treatmentWindowOutcomes.length > 0 ? (
                     <AntiviralOutcomeSlopegraph data={treatmentWindowOutcomes} />
                   ) : (
@@ -1372,10 +1415,8 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
 
               {/* Bottom row side-by-side */}
               <div
+                className="responsive-grid-2col"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '16px',
                   width: '100%',
                 }}
               >
@@ -1402,7 +1443,10 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   >
                     Distribuição de Fármacos
                   </div>
-                  <div className="chart-wrap" style={{ minHeight: '120px', height: '120px', width: '100%' }}>
+                  <div
+                    className="chart-wrap"
+                    style={{ minHeight: '120px', height: '120px', width: '100%' }}
+                  >
                     <AntiviralDonutChart data={antiviralTypes} />
                   </div>
                 </div>
@@ -1430,9 +1474,19 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   >
                     Casos por Janela
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center', height: '120px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      justifyContent: 'center',
+                      height: '120px',
+                    }}
+                  >
                     {(() => {
-                      const treatedWindows = treatmentWindowOutcomes.filter((w) => w.window !== 's/ antiviral');
+                      const treatedWindows = treatmentWindowOutcomes.filter(
+                        (w) => w.window !== 's/ antiviral',
+                      );
                       const totalAll = treatedWindows.reduce((s, x) => s + x.total, 0) || 1;
                       return treatedWindows.map((w, i) => {
                         const pct = (w.total / totalAll) * 100;

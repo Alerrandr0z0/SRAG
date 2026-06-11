@@ -290,10 +290,8 @@ const ImagingVolcanoChart: React.FC<ImagingVolcanoChartProps> = ({ data }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
+        className="responsive-grid-2col"
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 16,
           marginTop: 4,
           flex: 1,
           minHeight: 0,

@@ -60,7 +60,7 @@ const VaccinationProfileChart: React.FC<VaccinationProfileChartProps> = ({
           },
         },
         legend: { bottom: 0, textStyle: { fontSize: 9 }, type: 'scroll' },
-        grid: { top: 40, left: 120, right: 40, bottom: 80 },
+        grid: { top: 40, left: '10%', right: '10%', bottom: 80, containLabel: true },
         xAxis: { type: 'value', name: 'Casos' },
         yAxis: { type: 'category', data: ['COVID-19'] },
         series: [
@@ -120,7 +120,7 @@ const VaccinationProfileChart: React.FC<VaccinationProfileChartProps> = ({
           },
         },
         legend: { bottom: 0, textStyle: { fontSize: 9 }, type: 'scroll' },
-        grid: { top: 40, left: 120, right: 40, bottom: 80 },
+        grid: { top: 40, left: '10%', right: '10%', bottom: 80, containLabel: true },
         xAxis: { type: 'value', name: 'Casos' },
         yAxis: { type: 'category', data: ['Influenza'] },
         series: [
@@ -190,7 +190,7 @@ const VaccinationProfileChart: React.FC<VaccinationProfileChartProps> = ({
         },
       },
       legend: { bottom: 0, textStyle: { fontSize: 9 }, type: 'scroll' },
-      grid: { top: 40, left: 120, right: 40, bottom: 80 },
+      grid: { top: 40, left: '10%', right: '10%', bottom: 80, containLabel: true },
       xAxis: { type: 'value', name: 'Casos' },
       yAxis: { type: 'category', data: ['Gripe', 'COVID-19'] },
       series: [

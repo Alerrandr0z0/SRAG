@@ -68,7 +68,7 @@ const LethalityGroupedBarChart: React.FC<LethalityGroupedBarChartProps> = ({
         left: '3%',
         right: '4%',
         bottom: '15%',
-        top: '10%',
+        top: 35,
         containLabel: true,
       },
       xAxis: {

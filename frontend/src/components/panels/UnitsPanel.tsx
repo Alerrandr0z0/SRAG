@@ -315,10 +315,8 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
         </div>
         {hospitalization && (hospitalization.cure_count > 0 || hospitalization.death_count > 0) && (
           <div
+            className="responsive-grid-4col"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 8,
               marginBottom: 12,
             }}
           >

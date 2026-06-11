@@ -187,7 +187,7 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
         left: '3%',
         right: '4%',
         bottom: '12%',
-        top: '8%',
+        top: 35,
         containLabel: true,
       },
       xAxis: {

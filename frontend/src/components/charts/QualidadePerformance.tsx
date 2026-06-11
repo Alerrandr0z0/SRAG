@@ -426,7 +426,7 @@ const AntiviralKPIs: React.FC<{ items: AntiviralItem[]; themeColors: Record<stri
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${Math.max(1, items.length)}, 1fr)`,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '10px',
         }}
       >
@@ -813,13 +813,7 @@ const QualidadePerformance: React.FC<QualidadePerformanceProps> = ({ data }) => 
     <div style={{ padding: '0', fontFamily: 'inherit' }}>
       <Tooltip {...tooltip} />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16px',
-        }}
-      >
+      <div className="responsive-grid-3col">
         {cards.map((card, i) => (
           <div
             key={i}

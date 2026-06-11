@@ -95,7 +95,7 @@ const VentilatorySupportChart: React.FC<VentilatorySupportChartProps> = ({ data,
         left: '3%',
         right: '4%',
         bottom: '12%',
-        top: '5%',
+        top: 35,
         containLabel: true,
       },
       xAxis: {

@@ -12,11 +12,11 @@ interface AntiviralDonutChartProps {
 }
 
 const DRUG_COLORS: Record<string, string> = {
-  'Oseltamivir': '#0f766e',
-  'Paxlovid': '#6d28d9',
-  'Zanamivir': '#b45309',
-  'Lagevrio': '#0284c7',
-  'Olumiant': '#ec4899',
+  Oseltamivir: '#0f766e',
+  Paxlovid: '#6d28d9',
+  Zanamivir: '#b45309',
+  Lagevrio: '#0284c7',
+  Olumiant: '#ec4899',
   'Outro (Gripe)': '#64748b',
   'Outro (COVID)': '#475569',
 };
