@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import { test } from '@playwright/test';
 
 const ARTIFACTS_DIR =
-  '/home/alerrandro/.gemini/antigravity/brain/09087bea-43c5-4d91-be13-4ee78b8da636/';
+  '/home/alerrandro/.gemini/antigravity/brain/084ff387-b19f-4562-b8c8-a7509f372036/';
 
 test.describe('Capture All Panels', () => {
   test('Capture all tabs at 1440px', async ({ page }) => {
@@ -43,9 +43,9 @@ test.describe('Capture All Panels', () => {
 
         // Toggle to Rural
         try {
-          const select = page.locator('.section-header select');
+          const select = page.locator('.filters label select');
           if ((await select.count()) > 0) {
-            await select.first().selectOption('Rural');
+            await select.first().selectOption('Rural', { timeout: 1000 });
             await page.waitForTimeout(2000);
             await page.screenshot({
               path: path.join(ARTIFACTS_DIR, `panel_${tab.key}_rural.png`),

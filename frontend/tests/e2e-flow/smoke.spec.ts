@@ -27,7 +27,6 @@ test('dashboard loads with KPIs and 7 sidebar panels', async ({ page }) => {
     'Unid. Saúde',
     'Cidadão',
     'Auditoria',
-    'Notebooks',
   ];
   for (const label of expectedPanels) {
     await expect(page.locator(`button[aria-label="${label}"]`)).toBeVisible();

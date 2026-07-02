@@ -4,6 +4,13 @@ test('year filter applied persists when navigating to Citizen panel', async ({ p
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
+  // Expand filter bar if collapsed
+  const toggleBtn = page.locator('button[aria-label="Mostrar Filtros"]');
+  if (await toggleBtn.count() > 0) {
+    await toggleBtn.first().click();
+    await page.waitForTimeout(500);
+  }
+
   const yearSelect = page
     .locator('.gfb-group', { has: page.locator('text=Ano') })
     .locator('select');
@@ -22,6 +29,13 @@ test('year filter applied persists when navigating to Citizen panel', async ({ p
 test('switching between panels preserves global filter state', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
+
+  // Expand filter bar if collapsed
+  const toggleBtn = page.locator('button[aria-label="Mostrar Filtros"]');
+  if (await toggleBtn.count() > 0) {
+    await toggleBtn.first().click();
+    await page.waitForTimeout(500);
+  }
 
   const yearSelect = page
     .locator('.gfb-group', { has: page.locator('text=Ano') })

@@ -1911,6 +1911,10 @@ select {
   overflow: hidden;
 }
 
+.gfb-collapsible.open-finished {
+  overflow: visible;
+}
+
 /* Flatten title border when collapsed with no chips */
 .gfb-title--collapsed-empty {
   border-bottom-color: transparent;
@@ -1969,41 +1973,73 @@ select {
   transform: rotate(180deg);
 }
 
-.gfb-groups {
+.gfb-row {
   display: flex;
-  align-items: stretch;
-  gap: 1.25rem;
   flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
   width: 100%;
 }
 
-.gfb-section {
+.gfb-row--primary {
+  padding-bottom: 0.25rem;
+}
+
+.gfb-row--advanced {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition:
+    max-height 350ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 250ms ease,
+    margin-top 350ms,
+    padding-top 350ms,
+    border-top-color 350ms;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 1px dashed transparent;
+  width: 100%;
+}
+
+.gfb-row--advanced.expanded {
+  max-height: 350px;
+  opacity: 1;
+  visibility: visible;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top-color: var(--border-subtle);
+  overflow: visible;
+}
+
+.gfb-advanced-toggle {
   display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem;
-  background: var(--bg-status);
+  align-items: center;
+  gap: 6px;
+  background: transparent;
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  flex: 1 1 300px;
-  min-width: 280px;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-active-pill);
+  cursor: pointer;
+  transition: all 200ms ease;
+  height: 28px;
+  margin-bottom: 1px;
 }
 
-.gfb-section-title {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 4px;
-  margin-bottom: 2px;
+.gfb-advanced-toggle:hover {
+  background: var(--bg-active-pill);
+  border-color: var(--border-active-pill);
 }
 
-.gfb-section-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
+.gfb-advanced-chevron {
+  transition: transform 200ms ease;
+}
+
+.gfb-advanced-chevron.open {
+  transform: rotate(180deg);
 }
 
 .gfb-group {
@@ -2124,7 +2160,7 @@ select {
   color: var(--text-main);
   font-size: 12px;
   outline: none;
-  width: 120px;
+  width: 180px;
   transition:
     border-color 200ms ease-out,
     box-shadow 200ms ease-out;

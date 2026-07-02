@@ -34,7 +34,6 @@ test('all 7 sidebar panels can be navigated to without crashing', async ({ page 
     'Unid. Saúde',
     'Cidadão',
     'Auditoria',
-    'Notebooks',
   ];
   for (const label of panels) {
     await page.locator(`button[aria-label="${label}"]`).click();

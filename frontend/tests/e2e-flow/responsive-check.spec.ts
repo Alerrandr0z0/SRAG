@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import { test } from '@playwright/test';
 
 const ARTIFACTS_DIR =
-  '/home/alerrandro/.gemini/antigravity/brain/09087bea-43c5-4d91-be13-4ee78b8da636/';
+  '/home/alerrandro/.gemini/antigravity/brain/084ff387-b19f-4562-b8c8-a7509f372036/';
 
 test.describe('Responsive Dashboard Checks', () => {
   // Mobile Viewport Size
