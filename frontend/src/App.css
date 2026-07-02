@@ -24,6 +24,7 @@
   --border-active-pill: #99f6e4;
 
   --shadow-panel: 0 8px 24px rgba(16, 42, 47, 0.06);
+  --color-maternal: #be185d;
   color-scheme: light;
 }
 
@@ -47,6 +48,7 @@
 
   --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.3);
   --primary-teal-light: #134e4a;
+  --color-maternal: #f472b6;
   color-scheme: dark;
 }
 
@@ -68,9 +70,11 @@ body,
 .chart-wrap,
 .meta,
 .select,
-button,
-input,
-textarea {
+.gfb-pill,
+.gfb-toggle-btn,
+.gfb-chip-close,
+.gfb-select,
+.gfb-input {
   transition:
     background-color 180ms var(--ease-out),
     color 180ms var(--ease-out),
@@ -1799,6 +1803,9 @@ select {
    Global Filter Bar
    ============================================ */
 .gfb {
+  position: sticky;
+  top: 0;
+  z-index: 90;
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -1826,6 +1833,52 @@ select {
   padding-bottom: 0.6rem;
   border-bottom: 1px dashed var(--border-subtle);
   margin-bottom: 0.15rem;
+}
+
+.gfb-collapsible {
+  max-height: 500px;
+  opacity: 1;
+  visibility: visible;
+  transition: max-height 300ms var(--ease-out), opacity 200ms ease, visibility 0s;
+  overflow: visible;
+}
+
+.gfb-collapsible.collapsed {
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: max-height 300ms var(--ease-out), opacity 200ms ease, visibility 0s 300ms;
+  overflow: hidden;
+}
+
+.gfb-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.gfb-toggle-btn:hover {
+  background-color: var(--bg-pill);
+  color: var(--text-main);
+}
+
+.gfb-active-badge {
+  background: var(--primary-teal);
+  color: #ffffff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-left: 8px;
 }
 
 .gfb-groups {

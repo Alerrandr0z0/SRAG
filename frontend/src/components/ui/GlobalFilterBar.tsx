@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 
 interface FilterOption {
   key: string;
@@ -138,6 +138,40 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
   const isFemaleSelected = genderFilter.includes('F');
 
+  const occRef = useRef<HTMLDivElement>(null);
+  const bairroRef = useRef<HTMLDivElement>(null);
+  const unitRef = useRef<HTMLDivElement>(null);
+
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('gfb-collapsed') === 'true';
+  });
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('gfb-collapsed', String(next));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bairroRef.current && !bairroRef.current.contains(event.target as Node)) {
+        setShowBairroDropdown(false);
+      }
+      if (unitRef.current && !unitRef.current.contains(event.target as Node)) {
+        setShowUnitDropdown(false);
+      }
+      if (occRef.current && !occRef.current.contains(event.target as Node)) {
+        setShowOccDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const filteredOccupations = useMemo(() => {
     const search = occSearch.toLowerCase();
     const filtered = occupationOptions.filter((o) => o.toLowerCase().includes(search));
@@ -183,22 +217,67 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   return (
     <article className="gfb">
       <div className="gfb-body">
-        <div className="gfb-title">
-          <svg
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div 
+          className="gfb-title" 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%',
+            borderBottom: isCollapsed && totalActive === 0 ? 'none' : undefined,
+            paddingBottom: isCollapsed && totalActive === 0 ? '0' : undefined,
+            marginBottom: isCollapsed && totalActive === 0 ? '0' : undefined
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            <span>Filtros</span>
+            {isCollapsed && totalActive > 0 && (
+              <span className="gfb-active-badge">
+                {totalActive} {totalActive === 1 ? 'ativo' : 'ativos'}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="gfb-toggle-btn"
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? "Mostrar Filtros" : "Ocultar Filtros"}
           >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-          </svg>
-          Filtros
+            {isCollapsed ? 'Mostrar Filtros' : 'Ocultar Filtros'}
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="gfb-toggle-icon"
+              style={{
+                transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+                transition: 'transform 200ms ease'
+              }}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
         </div>
-        <div className="gfb-groups">
+        <div className={`gfb-collapsible ${isCollapsed ? 'collapsed' : ''}`}>
+          <div className="gfb-groups">
           {/* Ano */}
           <div className="gfb-group">
             <span className="gfb-label">Ano</span>
@@ -340,7 +419,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
           {/* Maternal */}
           {isFemaleSelected && (
             <div className="gfb-group">
-              <span className="gfb-label" style={{ color: '#be185d' }}>
+              <span className="gfb-label" style={{ color: 'var(--color-maternal)' }}>
                 Maternal
               </span>
               <div className="gfb-pills">
@@ -374,7 +453,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
           </div>
 
           {/* Localidade */}
-          <div className="gfb-group" style={{ position: 'relative' }}>
+          <div className="gfb-group" style={{ position: 'relative' }} ref={bairroRef}>
             <span className="gfb-label">Localidade</span>
             <div style={{ position: 'relative' }}>
               <input
@@ -389,7 +468,12 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 onFocus={() => setShowBairroDropdown(true)}
               />
               {bairroSearch && (
-                <button className="gfb-input-clear" onClick={() => setBairroSearch('')}>
+                <button
+                  type="button"
+                  className="gfb-input-clear"
+                  onClick={() => setBairroSearch('')}
+                  aria-label="Limpar busca"
+                >
                   ×
                 </button>
               )}
@@ -421,7 +505,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
           </div>
 
           {/* Unidade */}
-          <div className="gfb-group" style={{ position: 'relative' }}>
+          <div className="gfb-group" style={{ position: 'relative' }} ref={unitRef}>
             <span className="gfb-label">Unidade</span>
             <div style={{ position: 'relative' }}>
               <input
@@ -436,7 +520,12 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 onFocus={() => setShowUnitDropdown(true)}
               />
               {unitSearch && (
-                <button className="gfb-input-clear" onClick={() => setUnitSearch('')}>
+                <button
+                  type="button"
+                  className="gfb-input-clear"
+                  onClick={() => setUnitSearch('')}
+                  aria-label="Limpar busca"
+                >
                   ×
                 </button>
               )}
@@ -489,7 +578,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
           </div>
 
           {/* Ocupação */}
-          <div className="gfb-group" style={{ position: 'relative' }}>
+          <div className="gfb-group" style={{ position: 'relative' }} ref={occRef}>
             <span className="gfb-label">Ocupação</span>
             <div style={{ position: 'relative' }}>
               <input
@@ -504,7 +593,12 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 onFocus={() => setShowOccDropdown(true)}
               />
               {occSearch && (
-                <button className="gfb-input-clear" onClick={() => setOccSearch('')}>
+                <button
+                  type="button"
+                  className="gfb-input-clear"
+                  onClick={() => setOccSearch('')}
+                  aria-label="Limpar busca"
+                >
                   ×
                 </button>
               )}
@@ -532,9 +626,10 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             </div>
           </div>
         </div>
+        </div>
 
         {totalActive > 0 && (
-          <div className="gfb-chips">
+          <div className="gfb-chips" style={{ marginTop: isCollapsed ? '0.5rem' : '0' }}>
             {activeFilters.map((f) => (
               <div key={`${f.type}-${f.val}`} className="gfb-chip">
                 <span className="gfb-chip-type">{f.type}:</span>

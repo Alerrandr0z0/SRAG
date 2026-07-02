@@ -41,6 +41,19 @@ function App() {
       document.body.style.overflow = '';
     };
   }, [sidebarOpen]);
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      vigilancia: 'Vigilância | SRAG Mossoró',
+      laboratorio: 'Laboratório | SRAG Mossoró',
+      territorio: 'Território | SRAG Mossoró',
+      unidades: 'Unid. Saúde | SRAG Mossoró',
+      cidadao: 'Cidadão | SRAG Mossoró',
+      auditoria: 'Auditoria | SRAG Mossoró',
+    };
+    document.title = titles[panel] ?? 'SRAG Mossoró';
+  }, [panel]);
+
   const [dashboardYear, setDashboardYear] = useState<number[]>([]);
   const [dashboardMonth, setDashboardMonth] = useState<number[]>([]);
   const [dashboardDay, setDashboardDay] = useState<number[]>([]);
