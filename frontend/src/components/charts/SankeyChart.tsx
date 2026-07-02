@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 
@@ -39,7 +39,7 @@ const mobileLabels: Record<string, string> = {
 const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
   const theme = useThemeMode();
   const [isNarrow, setIsNarrow] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < 980 : false
+    typeof window !== 'undefined' ? window.innerWidth < 980 : false,
   );
 
   useEffect(() => {
@@ -89,18 +89,22 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       .reduce((sum, l) => sum + l.value, 0);
 
     // Fallback: find root nodes (sources that are never targets)
-    const rootTotal = totalCases > 0
-      ? totalCases
-      : (() => {
-          const targetNames = new Set(links.map((l) => l.target));
-          const rootNodes = nodes.filter((n) => !targetNames.has(n.name));
-          return rootNodes.reduce((sum, n) => {
-            return sum + links.filter((l) => l.source === n.name).reduce((s, l) => s + l.value, 0);
-          }, 0);
-        })();
+    const rootTotal =
+      totalCases > 0
+        ? totalCases
+        : (() => {
+            const targetNames = new Set(links.map((l) => l.target));
+            const rootNodes = nodes.filter((n) => !targetNames.has(n.name));
+            return rootNodes.reduce((sum, n) => {
+              return (
+                sum + links.filter((l) => l.source === n.name).reduce((s, l) => s + l.value, 0)
+              );
+            }, 0);
+          })();
 
     const coloredNodes = nodes.map((n) => {
-      const isNoise = n.name.includes('(Ignorado)') || n.name === 'Em Aberto' || n.name.startsWith('Sem Data ');
+      const isNoise =
+        n.name.includes('(Ignorado)') || n.name === 'Em Aberto' || n.name.startsWith('Sem Data ');
 
       // Calcular volume do nó para o TOOLTIP apenas
       const nodeVolume =
@@ -110,8 +114,12 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
       const nodePct = rootTotal > 0 ? ((nodeVolume / rootTotal) * 100).round(1) : 0;
 
       const isRightmost = ['Cura', 'Óbito', 'Em Aberto'].includes(n.name);
-      const isTimelinessTerminal = ['Tratamento ≤48h', 'Tratamento >48h', 'Sem Tratamento'].includes(n.name);
-      const displayName = isNarrow ? (mobileLabels[n.name] || n.name) : n.name;
+      const isTimelinessTerminal = [
+        'Tratamento ≤48h',
+        'Tratamento >48h',
+        'Sem Tratamento',
+      ].includes(n.name);
+      const displayName = isNarrow ? mobileLabels[n.name] || n.name : n.name;
       const showLabel = !isNarrow || !isNoise;
 
       return {
@@ -171,7 +179,10 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
             data: { nodePct?: number; value: number; source: string; target: string; pct?: number };
           };
           if (p.dataType === 'node') {
-            const isNoise = p.name.includes('(Ignorado)') || p.name === 'Em Aberto' || p.name.startsWith('Sem Data ');
+            const isNoise =
+              p.name.includes('(Ignorado)') ||
+              p.name === 'Em Aberto' ||
+              p.name.startsWith('Sem Data ');
             return `
                     <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">
                         ${isNoise ? 'QUALIDADE DE DADO' : 'MARCO CLÍNICO'}

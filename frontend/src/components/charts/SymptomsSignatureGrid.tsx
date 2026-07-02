@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { COLORS } from '../../constants';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
@@ -13,7 +13,9 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
   const { labels = [], bands = [], matrices = {} } = signature || {};
   const theme = useThemeMode();
 
-  const [isNarrow, setIsNarrow] = useState(typeof window !== 'undefined' ? window.innerWidth < 980 : false);
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 980 : false,
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -98,9 +100,9 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
     const titles: Array<Record<string, unknown>> = [];
 
     pathogens.forEach((p, idx) => {
-      const left = isNarrow ? 26 : (15 + idx * 28);
+      const left = isNarrow ? 26 : 15 + idx * 28;
       const width = isNarrow ? 68 : 24;
-      const top = isNarrow ? (8 + idx * 30) : 12;
+      const top = isNarrow ? 8 + idx * 30 : 12;
       const height = isNarrow ? 20 : null;
       const bottom = isNarrow ? null : '18%';
 
@@ -264,7 +266,14 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
   const { chartRef } = useEcharts(option, [signature, selectedAgent], { replaceOnUpdate: true });
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: isNarrow ? '750px' : '500px', position: 'relative' }}>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: isNarrow ? '750px' : '500px',
+        position: 'relative',
+      }}
+    >
       <div ref={chartRef} className="echart-host" style={{ width: '100%', height: '100%' }} />
     </div>
   );

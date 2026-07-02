@@ -24,7 +24,7 @@ test.describe('Capture All Panels', () => {
       console.log(`Navigating to tab: ${tab.label}`);
       // Click on the navigation menu item by selecting button containing the label text or aria-label
       const btn = page.locator(`button:has-text("${tab.label}")`);
-      if (await btn.count() > 0) {
+      if ((await btn.count()) > 0) {
         await btn.first().click();
       } else {
         const btnAttr = page.locator(`button[aria-label="${tab.label}"]`);
@@ -44,7 +44,7 @@ test.describe('Capture All Panels', () => {
         // Toggle to Rural
         try {
           const select = page.locator('.section-header select');
-          if (await select.count() > 0) {
+          if ((await select.count()) > 0) {
             await select.first().selectOption('Rural');
             await page.waitForTimeout(2000);
             await page.screenshot({

@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import * as Epi from '../../types/epi';
-import RankTable, { RankTableColumn } from '../ui/RankTable';
 import SankeyChart from '../charts/SankeyChart';
+import RankTable, { RankTableColumn } from '../ui/RankTable';
 
 interface AuditPanelProps {
   loading: boolean;
@@ -207,10 +207,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
     0,
   );
   const totalInconsistencies = inconsistencies.reduce((acc, inc) => acc + inc.count, 0);
-  const qualTitle =
-    qualMode === 'unidade'
-      ? 'Qualidade por Unidade'
-      : 'Qualidade por Localidade';
+  const qualTitle = qualMode === 'unidade' ? 'Qualidade por Unidade' : 'Qualidade por Localidade';
 
   const qualSubtitle =
     qualMode === 'unidade'
@@ -218,9 +215,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
       : 'Completude global agregada por localidade';
 
   const qualPlaceholder =
-    qualMode === 'unidade'
-      ? 'Filtrar por unidade ou CNES...'
-      : 'Filtrar por localidade...';
+    qualMode === 'unidade' ? 'Filtrar por unidade ou CNES...' : 'Filtrar por localidade...';
 
   const qualColumns: RankTableColumn[] =
     qualMode === 'unidade'
@@ -470,8 +465,6 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
             {criticalFieldsCount}
           </p>
         </article>
-
-
       </section>
 
       {/* SECTION 2: Completude por Bloco de Dados */}
@@ -675,10 +668,16 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
             {timelinessFlow.kpis.map((kpi) => {
               const adherenceColor =
                 kpi.adherence_rate >= 80
-                  ? isDark ? '#34d399' : '#059669'
+                  ? isDark
+                    ? '#34d399'
+                    : '#059669'
                   : kpi.adherence_rate >= 50
-                    ? isDark ? '#fbbf24' : '#d97706'
-                    : isDark ? '#f87171' : '#ef4444';
+                    ? isDark
+                      ? '#fbbf24'
+                      : '#d97706'
+                    : isDark
+                      ? '#f87171'
+                      : '#ef4444';
               return (
                 <div
                   key={kpi.label}
@@ -1146,8 +1145,6 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
           </div>
         </RankTable>
       </article>
-
-
     </div>
   );
 };

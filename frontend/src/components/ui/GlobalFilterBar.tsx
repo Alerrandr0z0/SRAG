@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface FilterOption {
   key: string;
@@ -217,16 +217,16 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   return (
     <article className="gfb">
       <div className="gfb-body">
-        <div 
-          className="gfb-title" 
-          style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
+        <div
+          className="gfb-title"
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             width: '100%',
             borderBottom: isCollapsed && totalActive === 0 ? 'none' : undefined,
             paddingBottom: isCollapsed && totalActive === 0 ? '0' : undefined,
-            marginBottom: isCollapsed && totalActive === 0 ? '0' : undefined
+            marginBottom: isCollapsed && totalActive === 0 ? '0' : undefined,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -254,7 +254,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             onClick={toggleCollapsed}
             className="gfb-toggle-btn"
             aria-expanded={!isCollapsed}
-            aria-label={isCollapsed ? "Mostrar Filtros" : "Ocultar Filtros"}
+            aria-label={isCollapsed ? 'Mostrar Filtros' : 'Ocultar Filtros'}
           >
             {isCollapsed ? 'Mostrar Filtros' : 'Ocultar Filtros'}
             <svg
@@ -269,7 +269,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               className="gfb-toggle-icon"
               style={{
                 transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
-                transition: 'transform 200ms ease'
+                transition: 'transform 200ms ease',
               }}
             >
               <polyline points="6 9 12 15 18 9"></polyline>
@@ -278,354 +278,360 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
         </div>
         <div className={`gfb-collapsible ${isCollapsed ? 'collapsed' : ''}`}>
           <div className="gfb-groups">
-          {/* Ano */}
-          <div className="gfb-group">
-            <span className="gfb-label">Ano</span>
-            <select
-              className="gfb-select"
-              value={dashboardYear[0] ? String(dashboardYear[0]) : ''}
-              onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}
-            >
-              <option value="">Todos</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Mês */}
-          <div className="gfb-group">
-            <span className="gfb-label">Mês</span>
-            <select
-              className="gfb-select"
-              value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
-              onChange={(e) => setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])}
-            >
-              <option value="">Todos</option>
-              {[
-                [1, 'Jan'],
-                [2, 'Fev'],
-                [3, 'Mar'],
-                [4, 'Abr'],
-                [5, 'Mai'],
-                [6, 'Jun'],
-                [7, 'Jul'],
-                [8, 'Ago'],
-                [9, 'Set'],
-                [10, 'Out'],
-                [11, 'Nov'],
-                [12, 'Dez'],
-              ].map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Dia */}
-          <div className="gfb-group">
-            <span className="gfb-label">Dia</span>
-            <select
-              className="gfb-select"
-              value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
-              onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
-            >
-              <option value="">Todos</option>
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Perfil */}
-          <div className="gfb-group">
-            <span className="gfb-label">Perfil</span>
-            <div className="gfb-pills">
-              {PERFIL_OPTS.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`gfb-pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
-                  onClick={() => toggle(citizenTab, opt.key, setCitizenTab)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Raça */}
-          <div className="gfb-group">
-            <span className="gfb-label">Raça</span>
-            <div className="gfb-pills">
-              {RACA_OPTS.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`gfb-pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
-                  onClick={() => toggle(raceFilter, opt.key, setRaceFilter)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Gênero */}
-          <div className="gfb-group">
-            <span className="gfb-label">Gênero</span>
-            <div className="gfb-pills">
-              {GENERO_OPTS.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`gfb-pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
-                  onClick={() => {
-                    const newList = genderFilter.includes(opt.key)
-                      ? genderFilter.filter((i) => i !== opt.key)
-                      : [...genderFilter, opt.key];
-                    setGenderFilter(newList);
-                    if (opt.key === 'F' && genderFilter.includes('F')) {
-                      setMaternalFilter([]);
-                    }
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Agente Etiológico */}
-          <div className="gfb-group">
-            <span className="gfb-label">Agente Etiológico</span>
-            <div className="gfb-pills">
-              {AGENT_OPTS.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`gfb-pill ${agentFilter[0] === opt.key ? 'active' : ''}`}
-                  onClick={() => {
-                    setAgentFilter(agentFilter[0] === opt.key ? [] : [opt.key]);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Maternal */}
-          {isFemaleSelected && (
+            {/* Ano */}
             <div className="gfb-group">
-              <span className="gfb-label" style={{ color: 'var(--color-maternal)' }}>
-                Maternal
-              </span>
+              <span className="gfb-label">Ano</span>
+              <select
+                className="gfb-select"
+                value={dashboardYear[0] ? String(dashboardYear[0]) : ''}
+                onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}
+              >
+                <option value="">Todos</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Mês */}
+            <div className="gfb-group">
+              <span className="gfb-label">Mês</span>
+              <select
+                className="gfb-select"
+                value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
+                onChange={(e) => setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])}
+              >
+                <option value="">Todos</option>
+                {[
+                  [1, 'Jan'],
+                  [2, 'Fev'],
+                  [3, 'Mar'],
+                  [4, 'Abr'],
+                  [5, 'Mai'],
+                  [6, 'Jun'],
+                  [7, 'Jul'],
+                  [8, 'Ago'],
+                  [9, 'Set'],
+                  [10, 'Out'],
+                  [11, 'Nov'],
+                  [12, 'Dez'],
+                ].map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Dia */}
+            <div className="gfb-group">
+              <span className="gfb-label">Dia</span>
+              <select
+                className="gfb-select"
+                value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
+                onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
+              >
+                <option value="">Todos</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Perfil */}
+            <div className="gfb-group">
+              <span className="gfb-label">Perfil</span>
               <div className="gfb-pills">
-                {MATERNAL_OPTS.map((opt) => (
+                {PERFIL_OPTS.map((opt) => (
                   <button
                     key={opt.key}
-                    className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
-                    onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
+                    className={`gfb-pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
+                    onClick={() => toggle(citizenTab, opt.key, setCitizenTab)}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Zona */}
-          <div className="gfb-group">
-            <span className="gfb-label">Zona</span>
-            <div className="gfb-pills">
-              {ZONA_OPTS.map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`gfb-pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}
-                  onClick={() => toggle(zoneFilter, opt.key, setZoneFilter)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Localidade */}
-          <div className="gfb-group" style={{ position: 'relative' }} ref={bairroRef}>
-            <span className="gfb-label">Localidade</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="gfb-input"
-                placeholder="Buscar bairro ou zona rural..."
-                value={bairroSearch}
-                onChange={(e) => {
-                  setBairroSearch(e.target.value);
-                  setShowBairroDropdown(true);
-                }}
-                onFocus={() => setShowBairroDropdown(true)}
-              />
-              {bairroSearch && (
-                <button
-                  type="button"
-                  className="gfb-input-clear"
-                  onClick={() => setBairroSearch('')}
-                  aria-label="Limpar busca"
-                >
-                  ×
-                </button>
-              )}
-              {showBairroDropdown && (
-                <div className="gfb-dropdown">
-                  <div className="gfb-dropdown-list">
-                    {filteredBairros.map((b) => (
-                      <button
-                        key={b.name}
-                        className={`gfb-dropdown-item ${bairroFilter.includes(b.name) ? 'active' : ''}`}
-                        onClick={() => toggle(bairroFilter, b.name, setBairroFilter)}
-                      >
-                        {b.name} <small style={{ opacity: 0.6 }}>({b.count})</small>
-                      </button>
-                    ))}
-                    {filteredBairros.length === 0 && (
-                      <p className="gfb-dropdown-empty">Nenhuma localidade encontrada</p>
-                    )}
-                  </div>
+            {/* Raça */}
+            <div className="gfb-group">
+              <span className="gfb-label">Raça</span>
+              <div className="gfb-pills">
+                {RACA_OPTS.map((opt) => (
                   <button
-                    className="gfb-dropdown-close"
-                    onClick={() => setShowBairroDropdown(false)}
+                    key={opt.key}
+                    className={`gfb-pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
+                    onClick={() => toggle(raceFilter, opt.key, setRaceFilter)}
                   >
-                    Concluído
+                    {opt.label}
                   </button>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Unidade */}
-          <div className="gfb-group" style={{ position: 'relative' }} ref={unitRef}>
-            <span className="gfb-label">Unidade</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="gfb-input"
-                placeholder="Buscar unidade..."
-                value={unitSearch}
-                onChange={(e) => {
-                  setUnitSearch(e.target.value);
-                  setShowUnitDropdown(true);
-                }}
-                onFocus={() => setShowUnitDropdown(true)}
-              />
-              {unitSearch && (
-                <button
-                  type="button"
-                  className="gfb-input-clear"
-                  onClick={() => setUnitSearch('')}
-                  aria-label="Limpar busca"
-                >
-                  ×
-                </button>
-              )}
-              {showUnitDropdown && (
-                <div className="gfb-dropdown" style={{ width: '320px' }}>
-                  <div className="gfb-dropdown-list">
-                    {filteredUnits.map((u) => (
-                      <button
-                        key={u.id_unidade}
-                        className={`gfb-dropdown-item ${unitFilter.includes(u.id_unidade) ? 'active' : ''}`}
-                        onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          width: '100%',
-                          padding: '8px 12px',
-                        }}
-                      >
-                        <div
+            {/* Gênero */}
+            <div className="gfb-group">
+              <span className="gfb-label">Gênero</span>
+              <div className="gfb-pills">
+                {GENERO_OPTS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`gfb-pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
+                    onClick={() => {
+                      const newList = genderFilter.includes(opt.key)
+                        ? genderFilter.filter((i) => i !== opt.key)
+                        : [...genderFilter, opt.key];
+                      setGenderFilter(newList);
+                      if (opt.key === 'F' && genderFilter.includes('F')) {
+                        setMaternalFilter([]);
+                      }
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Agente Etiológico */}
+            <div className="gfb-group">
+              <span className="gfb-label">Agente Etiológico</span>
+              <div className="gfb-pills">
+                {AGENT_OPTS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`gfb-pill ${agentFilter[0] === opt.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setAgentFilter(agentFilter[0] === opt.key ? [] : [opt.key]);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Maternal */}
+            {isFemaleSelected && (
+              <div className="gfb-group">
+                <span className="gfb-label" style={{ color: 'var(--color-maternal)' }}>
+                  Maternal
+                </span>
+                <div className="gfb-pills">
+                  {MATERNAL_OPTS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
+                      onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Zona */}
+            <div className="gfb-group">
+              <span className="gfb-label">Zona</span>
+              <div className="gfb-pills">
+                {ZONA_OPTS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`gfb-pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}
+                    onClick={() => toggle(zoneFilter, opt.key, setZoneFilter)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Localidade */}
+            <div className="gfb-group" style={{ position: 'relative' }} ref={bairroRef}>
+              <span className="gfb-label">Localidade</span>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="gfb-input"
+                  placeholder="Buscar bairro ou zona rural..."
+                  value={bairroSearch}
+                  onChange={(e) => {
+                    setBairroSearch(e.target.value);
+                    setShowBairroDropdown(true);
+                  }}
+                  onFocus={() => setShowBairroDropdown(true)}
+                />
+                {bairroSearch && (
+                  <button
+                    type="button"
+                    className="gfb-input-clear"
+                    onClick={() => setBairroSearch('')}
+                    aria-label="Limpar busca"
+                  >
+                    ×
+                  </button>
+                )}
+                {showBairroDropdown && (
+                  <div className="gfb-dropdown">
+                    <div className="gfb-dropdown-list">
+                      {filteredBairros.map((b) => (
+                        <button
+                          key={b.name}
+                          className={`gfb-dropdown-item ${bairroFilter.includes(b.name) ? 'active' : ''}`}
+                          onClick={() => toggle(bairroFilter, b.name, setBairroFilter)}
+                        >
+                          {b.name} <small style={{ opacity: 0.6 }}>({b.count})</small>
+                        </button>
+                      ))}
+                      {filteredBairros.length === 0 && (
+                        <p className="gfb-dropdown-empty">Nenhuma localidade encontrada</p>
+                      )}
+                    </div>
+                    <button
+                      className="gfb-dropdown-close"
+                      onClick={() => setShowBairroDropdown(false)}
+                    >
+                      Concluído
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Unidade */}
+            <div className="gfb-group" style={{ position: 'relative' }} ref={unitRef}>
+              <span className="gfb-label">Unidade</span>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="gfb-input"
+                  placeholder="Buscar unidade..."
+                  value={unitSearch}
+                  onChange={(e) => {
+                    setUnitSearch(e.target.value);
+                    setShowUnitDropdown(true);
+                  }}
+                  onFocus={() => setShowUnitDropdown(true)}
+                />
+                {unitSearch && (
+                  <button
+                    type="button"
+                    className="gfb-input-clear"
+                    onClick={() => setUnitSearch('')}
+                    aria-label="Limpar busca"
+                  >
+                    ×
+                  </button>
+                )}
+                {showUnitDropdown && (
+                  <div className="gfb-dropdown" style={{ width: '320px' }}>
+                    <div className="gfb-dropdown-list">
+                      {filteredUnits.map((u) => (
+                        <button
+                          key={u.id_unidade}
+                          className={`gfb-dropdown-item ${unitFilter.includes(u.id_unidade) ? 'active' : ''}`}
+                          onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
                           style={{
                             display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            textAlign: 'left',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            width: '100%',
+                            padding: '8px 12px',
                           }}
                         >
-                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                            {u.nome_fantasia}
-                          </span>
-                          {u.municipio && u.uf && (
-                            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                              {u.municipio} - {u.uf} (CNES: {u.id_unidade})
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                              {u.nome_fantasia}
                             </span>
-                          )}
-                        </div>
-                        <small style={{ opacity: 0.6, marginLeft: '8px' }}>({u.count})</small>
-                      </button>
-                    ))}
-                    {filteredUnits.length === 0 && (
-                      <p className="gfb-dropdown-empty">Nenhuma unidade encontrada</p>
-                    )}
+                            {u.municipio && u.uf && (
+                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                                {u.municipio} - {u.uf} (CNES: {u.id_unidade})
+                              </span>
+                            )}
+                          </div>
+                          <small style={{ opacity: 0.6, marginLeft: '8px' }}>({u.count})</small>
+                        </button>
+                      ))}
+                      {filteredUnits.length === 0 && (
+                        <p className="gfb-dropdown-empty">Nenhuma unidade encontrada</p>
+                      )}
+                    </div>
+                    <button
+                      className="gfb-dropdown-close"
+                      onClick={() => setShowUnitDropdown(false)}
+                    >
+                      Concluído
+                    </button>
                   </div>
-                  <button className="gfb-dropdown-close" onClick={() => setShowUnitDropdown(false)}>
-                    Concluído
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Ocupação */}
-          <div className="gfb-group" style={{ position: 'relative' }} ref={occRef}>
-            <span className="gfb-label">Ocupação</span>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="gfb-input"
-                placeholder="Buscar ocupação..."
-                value={occSearch}
-                onChange={(e) => {
-                  setOccSearch(e.target.value);
-                  setShowOccDropdown(true);
-                }}
-                onFocus={() => setShowOccDropdown(true)}
-              />
-              {occSearch && (
-                <button
-                  type="button"
-                  className="gfb-input-clear"
-                  onClick={() => setOccSearch('')}
-                  aria-label="Limpar busca"
-                >
-                  ×
-                </button>
-              )}
-              {showOccDropdown && (
-                <div className="gfb-dropdown">
-                  <div className="gfb-dropdown-list">
-                    {filteredOccupations.map((occ) => (
-                      <button
-                        key={occ}
-                        className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''}`}
-                        onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
-                      >
-                        {occ}
-                      </button>
-                    ))}
-                    {filteredOccupations.length === 0 && (
-                      <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
-                    )}
-                  </div>
-                  <button className="gfb-dropdown-close" onClick={() => setShowOccDropdown(false)}>
-                    Concluído
+            {/* Ocupação */}
+            <div className="gfb-group" style={{ position: 'relative' }} ref={occRef}>
+              <span className="gfb-label">Ocupação</span>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="gfb-input"
+                  placeholder="Buscar ocupação..."
+                  value={occSearch}
+                  onChange={(e) => {
+                    setOccSearch(e.target.value);
+                    setShowOccDropdown(true);
+                  }}
+                  onFocus={() => setShowOccDropdown(true)}
+                />
+                {occSearch && (
+                  <button
+                    type="button"
+                    className="gfb-input-clear"
+                    onClick={() => setOccSearch('')}
+                    aria-label="Limpar busca"
+                  >
+                    ×
                   </button>
-                </div>
-              )}
+                )}
+                {showOccDropdown && (
+                  <div className="gfb-dropdown">
+                    <div className="gfb-dropdown-list">
+                      {filteredOccupations.map((occ) => (
+                        <button
+                          key={occ}
+                          className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''}`}
+                          onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
+                        >
+                          {occ}
+                        </button>
+                      ))}
+                      {filteredOccupations.length === 0 && (
+                        <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
+                      )}
+                    </div>
+                    <button
+                      className="gfb-dropdown-close"
+                      onClick={() => setShowOccDropdown(false)}
+                    >
+                      Concluído
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         </div>
 
         {totalActive > 0 && (

@@ -19,6 +19,22 @@ import { useTerritoryData } from './hooks/useTerritoryData';
 import { useUnitsData } from './hooks/useUnitsData';
 import { api } from './services/api';
 
+const EmptyState: React.FC<{ onClearFilters: () => void }> = ({ onClearFilters }) => (
+  <article className="panel empty-state">
+    <div className="empty-state-icon">🔍</div>
+    <div className="empty-state-text">
+      <h3>Nenhum registro encontrado</h3>
+      <p>
+        Não há notificações de SRAG para a combinação de filtros selecionada. Tente remover ou
+        alterar alguns filtros.
+      </p>
+    </div>
+    <button type="button" onClick={onClearFilters} className="empty-state-btn">
+      Limpar todos os filtros
+    </button>
+  </article>
+);
+
 // Hooks
 
 function App() {
@@ -314,135 +330,163 @@ function App() {
           </button>
         )}
 
-          <GlobalFilterBar
-              years={availableYears}
-              dashboardYear={dashboardYear}
-              setDashboardYear={setDashboardYear}
-              citizenTab={citizenTab}
-              setCitizenTab={setCitizenTab}
-              raceFilter={raceFilter}
-              setRaceFilter={setRaceFilter}
-              genderFilter={genderFilter}
-              setGenderFilter={setGenderFilter}
-              maternalFilter={maternalFilter}
-              setMaternalFilter={setMaternalFilter}
-              occupationFilter={occupationFilter}
-              setOccupationFilter={setOccupationFilter}
-              zoneFilter={zoneFilter}
-              setZoneFilter={setZoneFilter}
-              bairroFilter={bairroFilter}
-              setBairroFilter={setBairroFilter}
-              bairrosList={bairrosList}
-              unitFilter={unitFilter}
-              setUnitFilter={setUnitFilter}
-              agentFilter={agentFilter}
-              setAgentFilter={setAgentFilter}
-              unitsList={unitsList}
-              occupationOptions={availableOccupations}
-              activeFilters={activeFilters}
-              clearAllFilters={clearAllFilters}
-              dashboardMonth={dashboardMonth}
-              setDashboardMonth={setDashboardMonth}
-              dashboardDay={dashboardDay}
-              setDashboardDay={setDashboardDay}
-            />
+        <GlobalFilterBar
+          years={availableYears}
+          dashboardYear={dashboardYear}
+          setDashboardYear={setDashboardYear}
+          citizenTab={citizenTab}
+          setCitizenTab={setCitizenTab}
+          raceFilter={raceFilter}
+          setRaceFilter={setRaceFilter}
+          genderFilter={genderFilter}
+          setGenderFilter={setGenderFilter}
+          maternalFilter={maternalFilter}
+          setMaternalFilter={setMaternalFilter}
+          occupationFilter={occupationFilter}
+          setOccupationFilter={setOccupationFilter}
+          zoneFilter={zoneFilter}
+          setZoneFilter={setZoneFilter}
+          bairroFilter={bairroFilter}
+          setBairroFilter={setBairroFilter}
+          bairrosList={bairrosList}
+          unitFilter={unitFilter}
+          setUnitFilter={setUnitFilter}
+          agentFilter={agentFilter}
+          setAgentFilter={setAgentFilter}
+          unitsList={unitsList}
+          occupationOptions={availableOccupations}
+          activeFilters={activeFilters}
+          clearAllFilters={clearAllFilters}
+          dashboardMonth={dashboardMonth}
+          setDashboardMonth={setDashboardMonth}
+          dashboardDay={dashboardDay}
+          setDashboardDay={setDashboardDay}
+        />
 
-            <section className="kpi-grid">
-              <KpiCard label="Total Notificações" value={kpis.notif} />
-              <KpiCard label="Total Internações" value={kpis.total} />
-              <KpiCard label="Total UTI" value={kpis.uti} />
-              <KpiCard label="Óbitos" value={kpis.deathCount} />
-              <KpiCard label="Letalidade" value={kpis.death} />
-            </section>
-
-        <section className="main-grid">
-          {panel === 'territorio' && (
-            <article className="panel">
-              <TerritoryPanel
-                loading={territoryData.loading}
-                territory={territoryData.territory}
-                boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
-                choropleth={territoryData.choropleth}
-                ruralData={territoryData.ruralData}
-                ruralSectorsGeo={
-                  territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
-                }
-                zoneFilter={zoneFilter}
-                delayByBairro={territoryData.delayByBairro}
-              />
-            </article>
-          )}
-
-          {panel === 'unidades' && (
-            <article className="panel">
-              <UnitsPanel
-                loading={unitsData.loading}
-                units={unitsData.units}
-                hospitalization={unitsData.hospitalization}
-                clinicalFlow={unitsData.clinicalFlow}
-                timelineData={unitsData.timelineData}
-                delayByUnit={data?.laboratoryNetwork?.delay_by_unit ?? null}
-                swimmerVirus={swimmerVirus}
-                setSwimmerVirus={setSwimmerVirus}
-                etiologicAgentFilter={agentFilter}
-                dashboardYear={dashboardYear}
-              />
-            </article>
-          )}
-
-          {panel === 'cidadao' && (
-            <article className="panel">
-              <CitizenPanel
-                loading={citizenData.loading}
-                pyramid={citizenData.pyramid}
-                schooling={citizenData.schooling}
-                occupation={citizenData.occupation}
-                animalContact={citizenData.animalContact}
-                symptomsSignature={citizenData.symptomsSignature}
-                riskFactors={citizenData.riskFactors}
-                maternalProfile={citizenData.maternalProfile}
-                vaccination={citizenData.vaccination}
-                genderFilter={genderFilter}
-                etiologicAgentFilter={agentFilter}
-              />
-            </article>
-          )}
-
-          {panel === 'vigilancia' && (
-            <VigilancePage
-              data={data}
-              agentFilter={agentFilter}
-              citizenTab={citizenTab}
-              raceFilter={raceFilter}
-              genderFilter={genderFilter}
-              zoneFilter={zoneFilter}
-              bairroFilter={bairroFilter}
-              unitFilter={unitFilter}
-              dashboardYear={dashboardYear}
-              maternalFilter={maternalFilter}
-              occupationFilter={occupationFilter}
-              dashboardMonth={dashboardMonth}
-              dashboardDay={dashboardDay}
-            />
-          )}
-
-          {panel === 'laboratorio' && (
-            <LabPage data={data} qualityByLaboratory={auditData.qualityByLaboratory} />
-          )}
-
-          {panel === 'auditoria' && (
-            <AuditPanel
-              loading={auditData.loading}
-              completeness={auditData.completeness}
-              completenessTrend={auditData.completenessTrend}
-              qualityByUnit={auditData.qualityByUnit}
-              qualityByBairro={auditData.qualityByBairro}
-              inconsistencies={auditData.inconsistencies}
-              timelinessFlow={auditData.timelinessFlow}
-            />
-          )}
-
+        <section className="kpi-grid">
+          <KpiCard
+            label="Total Notificações"
+            value={kpis.notif}
+            type="info"
+            loading={status === 'loading'}
+          />
+          <KpiCard
+            label="Total Internações"
+            value={kpis.total}
+            type="success"
+            loading={status === 'loading'}
+          />
+          <KpiCard
+            label="Total UTI"
+            value={kpis.uti}
+            type="warning"
+            loading={status === 'loading'}
+          />
+          <KpiCard
+            label="Óbitos"
+            value={kpis.deathCount}
+            type="danger"
+            loading={status === 'loading'}
+          />
+          <KpiCard
+            label="Letalidade"
+            value={kpis.death}
+            type="danger"
+            loading={status === 'loading'}
+          />
         </section>
+
+        {status === 'online' && kpis.notif === 0 ? (
+          <EmptyState onClearFilters={clearAllFilters} />
+        ) : (
+          <section className="main-grid">
+            {panel === 'territorio' && (
+              <article className="panel">
+                <TerritoryPanel
+                  loading={territoryData.loading}
+                  territory={territoryData.territory}
+                  boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
+                  choropleth={territoryData.choropleth}
+                  ruralData={territoryData.ruralData}
+                  ruralSectorsGeo={
+                    territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
+                  }
+                  zoneFilter={zoneFilter}
+                  delayByBairro={territoryData.delayByBairro}
+                />
+              </article>
+            )}
+
+            {panel === 'unidades' && (
+              <article className="panel">
+                <UnitsPanel
+                  loading={unitsData.loading}
+                  units={unitsData.units}
+                  hospitalization={unitsData.hospitalization}
+                  clinicalFlow={unitsData.clinicalFlow}
+                  timelineData={unitsData.timelineData}
+                  delayByUnit={data?.laboratoryNetwork?.delay_by_unit ?? null}
+                  swimmerVirus={swimmerVirus}
+                  setSwimmerVirus={setSwimmerVirus}
+                  etiologicAgentFilter={agentFilter}
+                  dashboardYear={dashboardYear}
+                />
+              </article>
+            )}
+
+            {panel === 'cidadao' && (
+              <article className="panel">
+                <CitizenPanel
+                  loading={citizenData.loading}
+                  pyramid={citizenData.pyramid}
+                  schooling={citizenData.schooling}
+                  occupation={citizenData.occupation}
+                  animalContact={citizenData.animalContact}
+                  symptomsSignature={citizenData.symptomsSignature}
+                  riskFactors={citizenData.riskFactors}
+                  maternalProfile={citizenData.maternalProfile}
+                  vaccination={citizenData.vaccination}
+                  genderFilter={genderFilter}
+                  etiologicAgentFilter={agentFilter}
+                />
+              </article>
+            )}
+
+            {panel === 'vigilancia' && (
+              <VigilancePage
+                data={data}
+                agentFilter={agentFilter}
+                citizenTab={citizenTab}
+                raceFilter={raceFilter}
+                genderFilter={genderFilter}
+                zoneFilter={zoneFilter}
+                bairroFilter={bairroFilter}
+                unitFilter={unitFilter}
+                dashboardYear={dashboardYear}
+                maternalFilter={maternalFilter}
+                occupationFilter={occupationFilter}
+                dashboardMonth={dashboardMonth}
+                dashboardDay={dashboardDay}
+              />
+            )}
+
+            {panel === 'laboratorio' && (
+              <LabPage data={data} qualityByLaboratory={auditData.qualityByLaboratory} />
+            )}
+
+            {panel === 'auditoria' && (
+              <AuditPanel
+                loading={auditData.loading}
+                completeness={auditData.completeness}
+                completenessTrend={auditData.completenessTrend}
+                qualityByUnit={auditData.qualityByUnit}
+                qualityByBairro={auditData.qualityByBairro}
+                inconsistencies={auditData.inconsistencies}
+                timelinessFlow={auditData.timelinessFlow}
+              />
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

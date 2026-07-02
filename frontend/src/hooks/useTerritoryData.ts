@@ -130,5 +130,14 @@ export function useTerritoryData(
     };
   }, [active]);
 
-  return { territory, boundary, choropleth, ruralData, ruralSectorsGeo, entities, delayByBairro, loading };
+  return {
+    territory,
+    boundary,
+    choropleth,
+    ruralData,
+    ruralSectorsGeo,
+    entities,
+    delayByBairro,
+    loading,
+  };
 }

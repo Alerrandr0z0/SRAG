@@ -8,7 +8,7 @@ import {
 } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 import type { HospitalizationDurationData } from '../../types/epi';
@@ -36,7 +36,7 @@ const formatDays = (value: number) => `${value.toFixed(1)}d`;
 const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ data }) => {
   const theme = useThemeMode();
   const [isNarrow, setIsNarrow] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < 980 : false
+    typeof window !== 'undefined' ? window.innerWidth < 980 : false,
   );
 
   useEffect(() => {
@@ -202,49 +202,57 @@ const HospitalizationHistogram: React.FC<HospitalizationHistogramProps> = ({ dat
           return [`Dia ${day}d`, ...rows].join('<br/>');
         },
       },
-      grid: { top: isNarrow ? 70 : 80, left: isNarrow ? 10 : 56, right: isNarrow ? 10 : 56, bottom: 50, containLabel: true },
-      graphic: isNarrow ? [] : [
-        ...(hasCure
-          ? [
-              {
-                type: 'group',
-                right: 4,
-                top: 70,
-                children: [
+      grid: {
+        top: isNarrow ? 70 : 80,
+        left: isNarrow ? 10 : 56,
+        right: isNarrow ? 10 : 56,
+        bottom: 50,
+        containLabel: true,
+      },
+      graphic: isNarrow
+        ? []
+        : [
+            ...(hasCure
+              ? [
                   {
-                    type: 'rect',
-                    shape: { width: 96, height: 28, r: 4 },
-                    style: {
-                      fill: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
-                      stroke: axisColor,
-                      lineWidth: 0.5,
-                    },
+                    type: 'group',
+                    right: 4,
+                    top: 70,
+                    children: [
+                      {
+                        type: 'rect',
+                        shape: { width: 96, height: 28, r: 4 },
+                        style: {
+                          fill: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
+                          stroke: axisColor,
+                          lineWidth: 0.5,
+                        },
+                      },
+                      {
+                        type: 'text',
+                        left: 6,
+                        top: 4,
+                        style: {
+                          text: `Cura: ${formatDays(data.median_cure)}`,
+                          fill: '#0f6e56',
+                          font: 'bold 11px sans-serif',
+                        },
+                      },
+                      {
+                        type: 'text',
+                        left: 6,
+                        top: 16,
+                        style: {
+                          text: `Óbito: ${formatDays(data.median_death)}`,
+                          fill: '#a32d2d',
+                          font: 'bold 11px sans-serif',
+                        },
+                      },
+                    ],
                   },
-                  {
-                    type: 'text',
-                    left: 6,
-                    top: 4,
-                    style: {
-                      text: `Cura: ${formatDays(data.median_cure)}`,
-                      fill: '#0f6e56',
-                      font: 'bold 11px sans-serif',
-                    },
-                  },
-                  {
-                    type: 'text',
-                    left: 6,
-                    top: 16,
-                    style: {
-                      text: `Óbito: ${formatDays(data.median_death)}`,
-                      fill: '#a32d2d',
-                      font: 'bold 11px sans-serif',
-                    },
-                  },
-                ],
-              },
-            ]
-          : []),
-      ],
+                ]
+              : []),
+          ],
       xAxis: {
         type: 'category',
         data: bins,

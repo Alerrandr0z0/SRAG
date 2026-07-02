@@ -1,9 +1,9 @@
 import type { FeatureCollection } from 'geojson';
 import React, { useEffect, useMemo, useState } from 'react';
 import * as Epi from '../../types/epi';
+import DelayByUnitRidgelinePlot from '../charts/DelayByUnitRidgelinePlot';
 import LeafletMap from '../charts/LeafletMap';
 import RankTable from '../ui/RankTable';
-import DelayByUnitRidgelinePlot from '../charts/DelayByUnitRidgelinePlot';
 
 const ZONE_COLORS: Record<string, string> = {
   Urbana: '#0f766e',
@@ -156,7 +156,8 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
             lineHeight: '1.4',
           }}
         >
-          * Exibidas apenas localidades com ≥5 casos notificados. Amostra de até 100 casos por localidade.
+          * Exibidas apenas localidades com ≥5 casos notificados. Amostra de até 100 casos por
+          localidade.
         </p>
       </article>
 

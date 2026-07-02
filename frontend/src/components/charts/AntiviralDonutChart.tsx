@@ -87,7 +87,15 @@ const AntiviralDonutChart: React.FC<AntiviralDonutChartProps> = ({ data }) => {
   const hasData = safeData.length > 0;
 
   return (
-    <div style={{ width: '100%', height: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div
+      style={{
+        width: '100%',
+        height: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+      }}
+    >
       {!hasData && (
         <div
           style={{
