@@ -218,18 +218,9 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
     <article className="gfb">
       <div className="gfb-body">
         <div
-          className="gfb-title"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: '100%',
-            borderBottom: isCollapsed && totalActive === 0 ? 'none' : undefined,
-            paddingBottom: isCollapsed && totalActive === 0 ? '0' : undefined,
-            marginBottom: isCollapsed && totalActive === 0 ? '0' : undefined,
-          }}
+          className={`gfb-title${isCollapsed && totalActive === 0 ? ' gfb-title--collapsed-empty' : ''}`}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="gfb-title-left">
             <svg
               viewBox="0 0 24 24"
               width="14"
@@ -266,13 +257,9 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="gfb-toggle-icon"
-              style={{
-                transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
-                transition: 'transform 200ms ease',
-              }}
+              className={`gfb-toggle-icon ${isCollapsed ? '' : 'gfb-toggle-icon--open'}`}
             >
-              <polyline points="6 9 12 15 18 9"></polyline>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
         </div>
