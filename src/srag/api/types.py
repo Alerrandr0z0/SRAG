@@ -11,6 +11,7 @@ class SummaryResponse(TypedDict):
     death_rate: float
     death_count: int
     total: int
+    hospitalized: int
     notification_total: int
     available_years: list[int]
 

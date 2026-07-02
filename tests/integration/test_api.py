@@ -8,9 +8,10 @@ the shared _cache fixture, and validate that:
   3. The body actually contains the expected data
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from srag.api.main import app
 from srag.api.types import (
@@ -26,9 +27,6 @@ from srag.api.types import (
     VaccinationProfileResponse,
 )
 from tests.integration._helpers import assert_typeddict_keys
-
-if TYPE_CHECKING:
-    from httpx import Response
 
 client = TestClient(app)
 

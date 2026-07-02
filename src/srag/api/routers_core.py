@@ -42,6 +42,8 @@ def health() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
 
 
+from srag.data.analytics.filters import epi_week_year
+
 @router.get("/summary")
 def get_summary(
     filters: CommonFilters = Depends(get_common_filters),
@@ -50,9 +52,7 @@ def get_summary(
     available_years: list[int] = []
     if not df_all.empty and "DT_SIN_PRI" in df_all.columns:
         dt_s = pd.to_datetime(df_all["DT_SIN_PRI"], errors="coerce")
-        idx = (dt_s.dt.weekday + 1) % 7
-        sun = dt_s - pd.to_timedelta(idx, unit="D")
-        years_series = (sun + pd.to_timedelta(3, unit="D")).dt.year.dropna()
+        years_series = epi_week_year(dt_s).dropna()
         available_years = sorted({int(y) for y in years_series})
 
     df = apply_global_filters(
@@ -77,6 +77,7 @@ def get_summary(
                 "death_rate": 0.0,
                 "death_count": 0,
                 "total": 0,
+                "hospitalized": 0,
                 "notification_total": 0,
                 "available_years": available_years,
             }
@@ -100,8 +101,9 @@ def get_summary(
             if closed_count > 0
             else 0.0,
             "death_count": death_cases,
-            "total": hospitalized,
-            "notification_total": len(df),
+            "total": total,
+            "hospitalized": hospitalized,
+            "notification_total": total,
             "available_years": available_years,
         }
     )

@@ -2,14 +2,13 @@
 
 import hashlib
 import logging
+import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 logger = logging.getLogger("SRAG-Database")
 
@@ -30,8 +29,17 @@ def _find_project_root() -> Path:
     return current
 
 
+def _get_db_url() -> str:
+    """Get DB URL from environment or auto-detect project root."""
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        return env_url
+    root = _find_project_root()
+    return f"sqlite:///{root / 'data' / 'processed' / 'srag_mossoro.db'}"
+
+
 PROJECT_ROOT = _find_project_root()
-DB_URL = f"sqlite:///{PROJECT_ROOT / 'data' / 'processed' / 'srag_mossoro.db'}"
+DB_URL = _get_db_url()
 CASE_HASH_FIELDS = (
     "DT_NOTIFIC",
     "ID_MUNICIP",
@@ -259,16 +267,21 @@ def _map_case_to_record(
     return SragRecord(unique_hash=case_hash, **data)
 
 
+_ingest_engine = None
+
+
 def save_cases(cases: list[dict[str, Any]]) -> int:
     """Save a list of cases to the database, skipping duplicates with automated mapping.
 
     Returns:
         The number of NEW cases added.
     """
-    engine = create_engine(DB_URL)
+    global _ingest_engine
+    if _ingest_engine is None:
+        _ingest_engine = create_engine(DB_URL)
     # expire_on_commit=False previne o erro e3q8 (ObjectDeletedError) ao acessar/atualizar objetos
     # caso o banco seja alterado por outro processo (ex: DuckDB ingest script)
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    session_factory = sessionmaker(bind=_ingest_engine, expire_on_commit=False)
 
     # Get model columns for automated mapping (excluding primary key)
     model_columns = {c.name for c in SragRecord.__table__.columns if c.name != "unique_hash"}

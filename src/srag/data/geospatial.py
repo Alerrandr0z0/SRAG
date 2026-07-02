@@ -257,7 +257,7 @@ def get_municipality_boundary() -> dict[str, Any]:
         _boundary_memo = payload
         _boundary_mtime_ns = BOUNDARY_CACHE_PATH.stat().st_mtime_ns
         return payload
-    except requests.RequestException, ValueError, json.JSONDecodeError:
+    except (requests.RequestException, ValueError, json.JSONDecodeError):
         fallback = _boundary_from_bairros_bbox(BAIRROS_GEOJSON_FALLBACK_PATH)
         if fallback is not None:
             _boundary_memo = fallback

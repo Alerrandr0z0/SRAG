@@ -22,10 +22,11 @@ TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
 
 @pytest.fixture
 def test_db_setup(monkeypatch):
-    # Patch DB_URL in database.py
+    # Patch DB_URL and reset engine in database.py
     import srag.data.database
 
     monkeypatch.setattr(srag.data.database, "DB_URL", TEST_DB_URL)
+    monkeypatch.setattr(srag.data.database, "_ingest_engine", None)
 
     # Initialize DB
     init_db()
@@ -33,6 +34,8 @@ def test_db_setup(monkeypatch):
     yield
 
     # Cleanup
+    if srag.data.database._ingest_engine is not None:
+        srag.data.database._ingest_engine.dispose()
     if TEST_DB_FILE.exists():
         TEST_DB_FILE.unlink()
 

@@ -7,7 +7,7 @@ RUN npm install --legacy-peer-deps
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.14-slim
+FROM python:3.13-slim
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv

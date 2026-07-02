@@ -7,6 +7,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 from srag.data.analytics import infer_etiologic_agent
+from srag.data.analytics.filters import epi_week_year
 from srag.data.database import DB_URL
 
 logger = logging.getLogger(__name__)
@@ -50,9 +51,7 @@ def apply_surveillance_filters(
     if years and "DT_SIN_PRI" in out.columns:
         year_values = set(years)
         dt_s = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
-        idx = (dt_s.dt.weekday + 1) % 7
-        sun = dt_s - pd.to_timedelta(idx, unit="D")
-        se_years = (sun + pd.to_timedelta(3, unit="D")).dt.year
+        se_years = epi_week_year(dt_s)
         out = out[se_years.isin(year_values)]
     if months and "DT_SIN_PRI" in out.columns:
         month_values = set(months)

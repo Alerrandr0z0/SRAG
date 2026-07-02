@@ -25,7 +25,7 @@ def get_epi_week(dt: object) -> tuple[int, int]:
     try:
         if pd.isna(dt):  # type: ignore
             return 0, 0
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return 0, 0
 
     # Ensure we have a datetime.date object
@@ -36,7 +36,7 @@ def get_epi_week(dt: object) -> tuple[int, int]:
         elif isinstance(dt, str):
             dt_converted = pd.to_datetime(dt)
             dt = getattr(dt_converted, "date", lambda: None)()
-    except TypeError, ValueError, AttributeError, Exception:
+    except (TypeError, ValueError, AttributeError, Exception):
         return 0, 0
 
     if dt is None or pd.isna(dt):  # type: ignore

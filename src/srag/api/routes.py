@@ -14,6 +14,9 @@ def register_routes(app: FastAPI) -> None:
     from srag.api.routers_surveillance import router as surveillance_router
     from srag.api.routers_territory import router as territory_router
 
+    # Register routes under both "" and "/api" for flexibility and backwards compatibility.
+    # The empty prefix "" is used when requests bypass Nginx or Nginx strips the "/api" prefix.
+    # The "/api" prefix is used for explicit versioning/routing structures.
     for prefix in ["", "/api"]:
         app.include_router(core_router, prefix=prefix)
         app.include_router(territory_router, prefix=prefix)

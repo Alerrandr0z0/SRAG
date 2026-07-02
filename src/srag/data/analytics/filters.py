@@ -23,6 +23,13 @@ def _age_years(df: pd.DataFrame) -> pd.Series:
     return pd.to_numeric(idade_anos, errors="coerce")
 
 
+def epi_week_year(dt_series: pd.Series) -> pd.Series:
+    """Return the epidemiological year for a datetime Series (SIVEP convention)."""
+    idx = (dt_series.dt.weekday + 1) % 7
+    sun = dt_series - pd.to_timedelta(idx, unit="D")
+    return (sun + pd.to_timedelta(3, unit="D")).dt.year
+
+
 def _filter_by_years(df: pd.DataFrame, years: list[int] | None) -> pd.DataFrame:
     """Filter the DataFrame by SIVEP epidemiological week year."""
     if not years:
@@ -30,11 +37,8 @@ def _filter_by_years(df: pd.DataFrame, years: list[int] | None) -> pd.DataFrame:
     # Normalize years to int to handle potential string inputs from API
     years_int = [int(y) for y in years if str(y).isdigit()]
     dt_s = pd.to_datetime(df["DT_SIN_PRI"], errors="coerce")
-    # Calculate SE Year vectorized: Start of week (Sunday) + 3 days (Wednesday)
-    idx = (dt_s.dt.weekday + 1) % 7
-    sun = dt_s - pd.to_timedelta(idx, unit="D")
     df_copy = df.copy()
-    df_copy["_tmp_year"] = (sun + pd.to_timedelta(3, unit="D")).dt.year
+    df_copy["_tmp_year"] = epi_week_year(dt_s)
     df_copy = df_copy[df_copy["_tmp_year"].isin(years_int)]
     return df_copy.drop(columns=["_tmp_year"])
 

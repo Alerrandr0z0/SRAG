@@ -123,7 +123,7 @@ def _parse_date_safe(value: str | date | pd.Timestamp | float | None) -> date | 
     if isinstance(value, str):
         try:
             return pd.to_datetime(value, dayfirst=True, format="mixed").date()
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
     return None
 
@@ -155,7 +155,7 @@ def _parse_vacina_code(value: float | str | None) -> float:
     """Safely parse vaccination status code to float."""
     try:
         return float(value) if pd.notna(value) else np.nan
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return np.nan
 
 

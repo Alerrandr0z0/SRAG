@@ -3,7 +3,7 @@ name = "srag"
 version = "0.1.0"
 description = "SRAG outbreak prediction tools using data analysis and machine learning"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "pandas>=2.2",
     "numpy>=2.0",
@@ -48,7 +48,7 @@ planner = [
 ]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py313"
 line-length = 99
 src = ["src", "tests"]
 
@@ -126,7 +126,7 @@ known-first-party = ["srag"]
 [tool.pyright]
 include = ["src", "scripts"]
 exclude = ["**/__pycache__", ".venv", "tests"]
-pythonVersion = "3.14"
+pythonVersion = "3.13"
 typeCheckingMode = "strict"
 useLibraryCodeForTypes = true
 reportMissingTypeStubs = false
@@ -139,7 +139,7 @@ reportPrivateUsage = false
 reportUnnecessaryIsInstance = false
 
 [tool.pre-commit]
-default_language_version = { python = "python3.14" }
+default_language_version = { python = "python3.13" }
 
 [tool.mutmut]
 paths_to_mutate = ["src"]
