@@ -6,7 +6,15 @@ import numpy as np
 import pandas as pd
 
 from srag.data.cnes_lookup import lookup_unit_name
-from srag.utils.epi_weeks import format_epi_week, get_epi_week
+from srag.utils.epi_weeks import compute_epi_week_columns
+
+
+def _ensure_epi_week(df: pd.DataFrame) -> pd.DataFrame:
+    """Add pre-computed epi_week columns if missing (e.g. when called from tests)."""
+    if "_epi_week" not in df.columns and "DT_SIN_PRI" in df.columns:
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        return pd.concat([df, epi], axis=1)
+    return df
 
 
 def _empty_datetime_series(index: pd.Index) -> pd.Series:
@@ -411,10 +419,10 @@ def compute_completeness_trend(df: pd.DataFrame) -> list[dict[str, Any]]:
     if df.empty:
         return []
 
+    df = _ensure_epi_week(df)
     out = df.copy()
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
     out = out[out["epi_week"] != "N/A"]
 
     if out.empty:
@@ -1169,8 +1177,6 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
     """Compute median notification delay by notifying health unit (CNES)."""
     if df.empty:
         return []
-
-    from srag.data.cnes_lookup import lookup_unit_name
 
     out = df.copy()
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")

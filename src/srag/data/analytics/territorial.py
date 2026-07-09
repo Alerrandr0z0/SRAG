@@ -4,7 +4,14 @@ import pandas as pd
 
 from srag.data.analytics.filters import outcome_death_mask
 from srag.data.cnes_lookup import lookup_unit_name
-from srag.utils.epi_weeks import format_epi_week, get_epi_week
+from srag.utils.epi_weeks import compute_epi_week_columns
+
+
+def _ensure_epi_week(df: pd.DataFrame) -> pd.DataFrame:
+    if "_epi_week" not in df.columns and "DT_SIN_PRI" in df.columns:
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        return pd.concat([df, epi], axis=1)
+    return df
 
 
 def _status_counts(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
@@ -213,10 +220,10 @@ def compute_territory_week_heatmap(
         return pd.DataFrame(columns=["BAIRRO_REF", "epi_week", "count"])
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out = out[out["DT_SIN_PRI"].notna()]
     out["BAIRRO_REF"] = out["BAIRRO_REF"].fillna("NAO INFORMADO")
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     bairros = (
         out.groupby("BAIRRO_REF")

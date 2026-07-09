@@ -9,7 +9,15 @@ import pandas as pd
 from lifelines import KaplanMeierFitter
 
 from srag.data.analytics.filters import outcome_death_mask
-from srag.utils.epi_weeks import format_epi_week, get_epi_week
+from srag.utils.epi_weeks import compute_epi_week_columns
+
+
+def _ensure_epi_week(df: pd.DataFrame) -> pd.DataFrame:
+    if "_epi_week" not in df.columns and "DT_SIN_PRI" in df.columns:
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        return pd.concat([df, epi], axis=1)
+    return df
+
 
 ETIOLOGIC_AGENT_PRIORITY = [
     "VSR",
@@ -247,10 +255,10 @@ def compute_time_series_by_virus(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["epi_week", "virus", "count"])
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["virus"] = infer_etiologic_agent(out)
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     ts = out.groupby(["epi_week", "virus"]).size().reset_index(name="count")
     # Exclui 'Não Especificada' para focar apenas em circulação viral confirmada
@@ -264,8 +272,8 @@ def compute_alert_thresholds(df: pd.DataFrame) -> dict[str, int]:
         return {"medium": 0, "high": 0, "very_high": 0}
 
     out = df.copy()
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out = _ensure_epi_week(out)
+    out["epi_week"] = out["_epi_week"]
 
     weekly_volumes = out.groupby("epi_week").size()
 
@@ -292,6 +300,7 @@ def compute_notification_delay_series(df: pd.DataFrame) -> list[dict[Any, Any]]:
         return []
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out["DT_NOTIFIC"] = pd.to_datetime(out["DT_NOTIFIC"], errors="coerce")
 
@@ -304,8 +313,7 @@ def compute_notification_delay_series(df: pd.DataFrame) -> list[dict[Any, Any]]:
     valid["delay"] = (valid["DT_NOTIFIC"] - valid["DT_SIN_PRI"]).dt.days
     valid = valid[valid["delay"] <= 60]
 
-    valid["se_year_week"] = valid["DT_SIN_PRI"].apply(get_epi_week)
-    valid["epi_week"] = valid["se_year_week"].apply(lambda x: format_epi_week(*x))
+    valid["epi_week"] = valid["_epi_week"]
 
     ts = (
         valid.groupby("epi_week")
@@ -331,8 +339,8 @@ def compute_positivity_trend(df: pd.DataFrame) -> list[dict[Any, Any]]:
 
     out["is_positive"] = (pcr_res == 1) | (an_res == 1)
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out = _ensure_epi_week(out)
+    out["epi_week"] = out["_epi_week"]
 
     grouped = (
         out.groupby("epi_week")
@@ -433,8 +441,8 @@ def compute_time_series(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["epi_week", "total"])
 
     out = df.copy()
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out = _ensure_epi_week(out)
+    out["epi_week"] = out["_epi_week"]
 
     ts = out.groupby("epi_week").size().reset_index(name="total")
     return ts.sort_values("epi_week")
@@ -604,8 +612,8 @@ def compute_genomic_variants(df: pd.DataFrame) -> dict[str, object]:
     if genomic.empty:
         return {"weeks": [], "variants": {}}
 
-    genomic["se_year_week"] = genomic["DT_SIN_PRI"].apply(get_epi_week)
-    genomic["epi_week"] = genomic["se_year_week"].apply(lambda x: format_epi_week(*x))
+    genomic = _ensure_epi_week(genomic)
+    genomic["epi_week"] = genomic["_epi_week"]
 
     grouped = genomic.groupby(["epi_week", "variant_name"]).size().unstack(fill_value=0)
 
@@ -936,8 +944,8 @@ def compute_laboratory_network_summary(df: pd.DataFrame) -> dict[str, object]:
         reinfection_total = int((pd.to_numeric(out["VG_REINF"], errors="coerce") == 1).sum())
         reinf_df = out[pd.to_numeric(out["VG_REINF"], errors="coerce") == 1].copy()
         if not reinf_df.empty:
-            reinf_df["se_year_week"] = reinf_df["DT_SIN_PRI"].apply(get_epi_week)
-            reinf_df["epi_week"] = reinf_df["se_year_week"].apply(lambda x: format_epi_week(*x))
+            reinf_df = _ensure_epi_week(reinf_df)
+            reinf_df["epi_week"] = reinf_df["_epi_week"]
             reinfection_ts = (
                 reinf_df.groupby("epi_week")
                 .size()
@@ -1250,21 +1258,19 @@ def compute_aggregated_timeline(df: pd.DataFrame, virus: str = "covid") -> list[
 
 def compute_seasonal_trends(df: pd.DataFrame) -> dict[str, Any]:
     """Group SARI cases by year and epidemiological week (1 to 53) for Mossoró."""
-    from srag.utils.epi_weeks import get_epi_week
-
     if df.empty:
         return {"years": [], "weeks": [], "series": {}}
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out = out.dropna(subset=["DT_SIN_PRI"])
 
     if out.empty:
         return {"years": [], "weeks": [], "series": {}}
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["year"] = out["se_year_week"].apply(lambda x: x[0])
-    out["week"] = out["se_year_week"].apply(lambda x: x[1])
+    out["year"] = out["_epi_year"]
+    out["week"] = out["_epi_week_int"]
 
     # Group by year and week to count cases
     counts = out.groupby(["year", "week"]).size().reset_index(name="count")
@@ -1291,12 +1297,12 @@ def compute_seasonal_trends(df: pd.DataFrame) -> dict[str, Any]:
 def compute_heatmap_se_age(df: pd.DataFrame) -> dict[str, Any]:
     """Group cases by epidemiological week and age group for a 2D density Heatmap."""
     from srag.data.analytics.filters import _age_years
-    from srag.utils.epi_weeks import format_epi_week, get_epi_week
 
     if df.empty:
         return {"weeks": [], "age_groups": [], "data": []}
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out = out.dropna(subset=["DT_SIN_PRI"])
     if out.empty:
@@ -1321,8 +1327,7 @@ def compute_heatmap_se_age(df: pd.DataFrame) -> dict[str, Any]:
     ]
     out["age_group"] = pd.cut(out["IDADE_ANOS"], bins=bins, labels=labels, right=False)
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     # Drop cases without a valid age group or week
     out = out.dropna(subset=["age_group", "epi_week"])
@@ -1358,19 +1363,17 @@ def compute_heatmap_se_age(df: pd.DataFrame) -> dict[str, Any]:
 
 def compute_ventilatory_support(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Compute weekly breakdown of ventilatory support types over time."""
-    from srag.utils.epi_weeks import format_epi_week, get_epi_week
-
     if df.empty:
         return []
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out = out.dropna(subset=["DT_SIN_PRI"])
     if out.empty:
         return []
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     s = pd.to_numeric(out["SUPORT_VEN"], errors="coerce").fillna(9)
     out["support_type"] = "ignorado"

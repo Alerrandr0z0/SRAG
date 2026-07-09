@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from srag.data.analytics import infer_etiologic_agent
 from srag.data.analytics.filters import epi_week_year
 from srag.data.database import DB_URL
+from srag.utils.epi_weeks import compute_epi_week_columns
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +56,12 @@ def apply_surveillance_filters(
         out = out[se_years.isin(year_values)]
     if months and "DT_SIN_PRI" in out.columns:
         month_values = set(months)
-        out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.month.isin(month_values)]
+        dt_s = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+        out = out[dt_s.dt.month.isin(month_values)]
     if days and "DT_SIN_PRI" in out.columns:
         day_values = set(days)
-        out = out[pd.to_datetime(out["DT_SIN_PRI"], errors="coerce").dt.day.isin(day_values)]
+        dt_s = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
+        out = out[dt_s.dt.day.isin(day_values)]
     if agents:
         agent_norm = {str(a).strip().upper() for a in agents if a}
         out = out[infer_etiologic_agent(out).str.upper().isin(agent_norm)]
@@ -188,7 +191,7 @@ def get_df() -> pd.DataFrame:
     if (
         _cache["df"] is not None
         and _cache["loaded_at"]
-        and (now - _cache["loaded_at"]) < timedelta(minutes=15)
+        and (now - _cache["loaded_at"]) < timedelta(minutes=30)
     ):
         return _cache["df"]  # type: ignore[no-any-return]
 
@@ -335,6 +338,8 @@ def get_df() -> pd.DataFrame:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
         df = df[df["DT_SIN_PRI"].notna()]
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        df = pd.concat([df, epi], axis=1)
         _cache["df"] = df
         _cache["loaded_at"] = now
         return df

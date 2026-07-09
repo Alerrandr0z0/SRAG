@@ -133,7 +133,7 @@ class TestGetDf:
     def test_get_df_cache_expired(self, monkeypatch) -> None:
         df_mock = pd.DataFrame({"DT_NOTIFIC": ["2024-01-01"], "DT_SIN_PRI": ["2024-01-01"]})
         _cache["df"] = pd.DataFrame()
-        _cache["loaded_at"] = datetime.now(UTC) - timedelta(minutes=20)
+        _cache["loaded_at"] = datetime.now(UTC) - timedelta(minutes=40)
 
         monkeypatch.setattr("pandas.read_sql", lambda *args, **kwargs: df_mock)
         result = get_df()
@@ -167,7 +167,7 @@ class TestGetDf:
     def test_get_df_error_with_cache(self, monkeypatch) -> None:
         df_mock = pd.DataFrame({"DT_NOTIFIC": ["2024-01-01"]})
         _cache["df"] = df_mock
-        _cache["loaded_at"] = datetime.now(UTC) - timedelta(minutes=20)
+        _cache["loaded_at"] = datetime.now(UTC) - timedelta(minutes=40)
 
         def fake_read_sql(*args, **kwargs) -> Never:
             raise Exception("DB Error")

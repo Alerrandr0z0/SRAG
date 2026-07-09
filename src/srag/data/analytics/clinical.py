@@ -6,9 +6,17 @@ import numpy as np
 import pandas as pd
 
 from srag.data.analytics.filters import _age_years, outcome_death_mask
+from srag.utils.epi_weeks import compute_epi_week_columns
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _ensure_epi_week(df: pd.DataFrame) -> pd.DataFrame:
+    if "_epi_week" not in df.columns and "DT_SIN_PRI" in df.columns:
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        return pd.concat([df, epi], axis=1)
+    return df
 
 
 def compute_severity_metrics(df: pd.DataFrame) -> dict[str, float]:
@@ -907,20 +915,18 @@ def _calculate_kpis(subset: pd.DataFrame) -> dict[str, float]:
 
 def compute_severity_kpis(df: pd.DataFrame) -> dict[str, Any]:
     """Calculate severity KPIs overall and trends for the last 12 weeks."""
-    from srag.utils.epi_weeks import format_epi_week, get_epi_week
-
     current = _calculate_kpis(df)
     if df.empty:
         return {"current": current, "trend": []}
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out = out.dropna(subset=["DT_SIN_PRI"])
     if out.empty:
         return {"current": current, "trend": []}
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     unique_weeks = sorted(out["epi_week"].unique())
     last_12_weeks = unique_weeks[-12:]
@@ -1027,19 +1033,17 @@ def compute_severity_pyramid(df: pd.DataFrame) -> list[dict[str, Any]]:
 
 def compute_gravity_cascade(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Compute weekly counts of cases, hospitalizations, UTI admissions, and deaths."""
-    from srag.utils.epi_weeks import format_epi_week, get_epi_week
-
     if df.empty:
         return []
 
     out = df.copy()
+    out = _ensure_epi_week(out)
     out["DT_SIN_PRI"] = pd.to_datetime(out["DT_SIN_PRI"], errors="coerce")
     out = out.dropna(subset=["DT_SIN_PRI"])
     if out.empty:
         return []
 
-    out["se_year_week"] = out["DT_SIN_PRI"].apply(get_epi_week)
-    out["epi_week"] = out["se_year_week"].apply(lambda x: format_epi_week(*x))
+    out["epi_week"] = out["_epi_week"]
 
     # Convert to numeric for clean comparisons
     hosp = pd.to_numeric(out["HOSPITAL"], errors="coerce")

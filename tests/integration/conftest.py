@@ -13,9 +13,13 @@ import pandas as pd
 import pytest
 
 from srag.api.main import _cache
+from srag.utils.epi_weeks import compute_epi_week_columns
 
 
 def _inject(df: pd.DataFrame) -> None:
+    if "_epi_week" not in df.columns and "DT_SIN_PRI" in df.columns:
+        epi = compute_epi_week_columns(df["DT_SIN_PRI"])
+        df = pd.concat([df, epi], axis=1)
     _cache["df"] = df
     _cache["loaded_at"] = datetime.now(UTC)
 

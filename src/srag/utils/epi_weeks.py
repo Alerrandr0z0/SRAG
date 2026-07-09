@@ -2,6 +2,7 @@
 
 from datetime import date, timedelta
 
+import numpy as np
 import pandas as pd
 
 
@@ -91,3 +92,78 @@ def get_date_from_epi_week(year: int, week: int) -> date:
     first_sun = jan4 - timedelta(days=(jan4.weekday() + 1) % 7)
 
     return first_sun + timedelta(weeks=week - 1)
+
+
+def compute_epi_week_columns(
+    dates: pd.Series,
+) -> pd.DataFrame:
+    """Vectorized computation of epidemiological week columns.
+
+    Given a Series of dates, returns a DataFrame with:
+      _epi_week      — formatted string "YYYY-WW" (or "N/A")
+      _epi_year      — integer year of the epi week (or 0)
+      _epi_week_int  — integer week number (or 0)
+
+    Fully vectorized using the .dt accessor — no row-wise .apply.
+    """
+    s = pd.to_datetime(dates, errors="coerce")
+    nan_mask = s.isna()
+
+    # offset so Sunday=0 … Saturday=6
+    idx = (s.dt.weekday + 1) % 7
+    sun = s - pd.to_timedelta(idx, unit="d")
+    wed = sun + pd.to_timedelta(3, unit="d")
+    year = wed.dt.year
+
+    jan4 = pd.to_datetime(
+        {
+            "year": year,
+            "month": 1,
+            "day": 4,
+        }
+    )
+    first_sun = jan4 - pd.to_timedelta((jan4.dt.weekday + 1) % 7, unit="d")
+    week_num = ((sun - first_sun).dt.days // 7) + 1
+
+    # week ≤ 0 → roll to previous year
+    roll = week_num <= 0
+    if roll.any():
+        prev = sun[roll] - pd.to_timedelta(1, unit="d")
+        prev_idx = (prev.dt.weekday + 1) % 7
+        prev_sun = prev - pd.to_timedelta(prev_idx, unit="d")
+        prev_wed = prev_sun + pd.to_timedelta(3, unit="d")
+        prev_year = prev_wed.dt.year
+        prev_jan4 = pd.to_datetime(
+            {
+                "year": prev_year,
+                "month": 1,
+                "day": 4,
+            }
+        )
+        prev_first_sun = prev_jan4 - pd.to_timedelta(
+            (prev_jan4.dt.weekday + 1) % 7, unit="d"
+        )
+        prev_week_num = ((prev_sun - prev_first_sun).dt.days // 7) + 1
+        year[roll] = prev_year[roll]
+        week_num[roll] = prev_week_num[roll]
+
+    # mask NaT values
+    year = year.where(~nan_mask, 0)
+    week_num = week_num.where(~nan_mask, 0).astype(int)
+    # clip negative to 0
+    week_num = np.clip(week_num, 0, None)
+
+    epi_week_str = np.where(
+        nan_mask | (year == 0),
+        "N/A",
+        year.astype(str) + "-" + pd.Series(week_num.astype(str)).str.zfill(2),
+    )
+
+    return pd.DataFrame(
+        {
+            "_epi_week": epi_week_str,
+            "_epi_year": year.astype(int),
+            "_epi_week_int": week_num,
+        },
+        index=dates.index,
+    )
