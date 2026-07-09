@@ -15,10 +15,10 @@ services:
       - .env
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
-      interval: 30s
-      timeout: 10s
+      interval: 5s
+      timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 25s
     restart: unless-stopped
     networks:
       - srag_network
