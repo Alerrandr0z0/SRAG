@@ -17,6 +17,9 @@ frontend/storybook-static/
 frontend/.stryker-tmp/
 frontend/reports/
 frontend/test-results/
+htmlcov/
+mutants/
+.mutmut-cache/
 
 # Environment and secrets
 .env
@@ -41,7 +44,19 @@ tests/
 
 # Documentation and temporary files
 docs/
-notebooks/.ipynb_checkpoints/
+notebooks/
 *.md
 LICENSE
 README.md
+
+# Data (raw files only — processed binaries needed at runtime)
+data/raw/
+
+# Agent / editor files
+.agents/
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

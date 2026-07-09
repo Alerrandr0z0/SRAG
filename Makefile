@@ -40,10 +40,10 @@ setup-front:
 
 # --- Operational ---
 ingest:
-	$(DOCKER_RUN_BACK) uv run scripts/ingest_data.py
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run scripts/ingest_data.py
 
 cnes-lookup:
-	$(DOCKER_RUN_BACK) uv run scripts/fetch_cnes_lookup.py
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run scripts/fetch_cnes_lookup.py
 	@echo "CNES lookup updated at data/processed/cnes_units_geo.json"
 
 start:
@@ -68,49 +68,49 @@ status:
 # --- Quality & Security ---
 lint: lint-back lint-front
 lint-back:
-	$(DOCKER_RUN_BACK) uv run ruff check .
-	$(DOCKER_RUN_BACK) uv run pyright
-	$(DOCKER_RUN_BACK) uv run complexipy src/srag/ --max-complexity-allowed 15
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pyright
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run complexipy src/srag/ --max-complexity-allowed 15
 
 .PHONY: complexity
 complexity:
-	$(DOCKER_RUN_BACK) uv run complexipy src/srag/ --max-complexity-allowed 15
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run complexipy src/srag/ --max-complexity-allowed 15
 
 lint-front:
 	$(DOCKER_RUN_FRONT) npm run lint
 
 fix: fix-back fix-front
 fix-back:
-	$(DOCKER_RUN_BACK) uv run ruff check . --fix --unsafe-fixes
-	$(DOCKER_RUN_BACK) uv run ruff format .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check . --fix --unsafe-fixes
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff format .
 fix-front:
 	$(DOCKER_RUN_FRONT) npm run fix
 
 security: security-back security-secrets security-deps security-frontend
 security-back:
-	$(DOCKER_RUN_BACK) uv run bandit -r src/srag scripts/ -s B101
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run bandit -r src/srag scripts/ -s B101
 security-secrets:
 	docker run --rm -v $(shell pwd):/path zricethezav/gitleaks:latest detect --source=/path -v || true
 security-deps:
-	$(DOCKER_RUN_BACK) uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed"
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pip-audit --strict --desc on 2>/dev/null || echo "pip-audit: security audit completed"
 security-frontend:
 	$(DOCKER_RUN_FRONT) npm audit --audit-level=high 2>/dev/null || echo "npm audit completed with warnings"
 
 hooks:
-	$(DOCKER_RUN_BACK) uv run ruff check . --fix
-	$(DOCKER_RUN_BACK) uv run ruff format .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check . --fix
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff format .
 	@$(MAKE) graph-sync
 
 # --- Testing ---
 test: test-back test-front
 test-back:
-	$(DOCKER_RUN_BACK) uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
 test-front:
 	$(DOCKER_RUN_FRONT) npm run test
 
 property-test: property-test-back property-test-front
 property-test-back:
-	$(DOCKER_RUN_BACK) uv run pytest -m "not slow" tests/unit/test_hypothesis_sivep.py
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pytest -m "not slow" tests/unit/test_hypothesis_sivep.py
 property-test-front:
 	$(DOCKER_RUN_FRONT) npm run test:property
 
@@ -123,26 +123,34 @@ e2e:
 mutation: mutation-back mutation-front
 mutation-back:
 	rm -rf mutants .mutmut-cache
-	$(DOCKER_RUN_BACK) uv run mutmut run --max-children 4
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run mutmut run --max-children 4
 	@echo "\n=== Mutation Score ==="
-	-$(DOCKER_RUN_BACK) uv run mutmut results --no-pager 2>/dev/null | tail -5
+	-$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run mutmut results --no-pager 2>/dev/null | tail -5
 mutation-incr:
 	@if [ -z "$(PATHS)" ]; then echo "Uso: make mutation-incr PATHS='...' [TESTS='tests/...']"; exit 1; fi
-	cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" $(DOCKER_RUN_BACK) uv run python scripts/_patch_mutmut_config.py && $(DOCKER_RUN_BACK) uv run mutmut run --max-children 4 && $(DOCKER_RUN_BACK) uv run mutmut results --no-pager 2>/dev/null | tail -10
+	cp pyproject.toml .pyproject.toml.bak && trap 'mv .pyproject.toml.bak pyproject.toml 2>/dev/null' EXIT && rm -rf mutants .mutmut-cache && TESTS="$(TESTS)" PATHS="$(PATHS)" $(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run python scripts/_patch_mutmut_config.py && $(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run mutmut run --max-children 4 && $(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-score:
-	$(DOCKER_RUN_BACK) uv run mutmut results --no-pager 2>/dev/null | tail -10
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run mutmut results --no-pager 2>/dev/null | tail -10
 mutation-front:
 	$(DOCKER_RUN_FRONT) npm run test:mutation
 
 bench:
-	$(DOCKER_RUN_BACK) uv run pytest tests/unit/test_benchmark.py
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pytest tests/unit/test_benchmark.py
 
 # --- Observability & Knowledge ---
 observability:
 	logfire dashboard
 
 graph-sync:
-	$(DOCKER_RUN_BACK) uv run graphify update .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run graphify update .
 
 graph-orchestrate:
-	$(DOCKER_RUN_BACK) uv run python scripts/orchestrate_graphify.py
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run python scripts/orchestrate_graphify.py
+
+.PHONY: skill-validate
+skill-validate:
+	docker-compose run --rm -v ./tests:/app/tests -v ./scripts:/app/scripts -v ./.agents:/app/.agents backend env UV_CACHE_DIR=/tmp/.uv-cache uv run python scripts/validate_skills.py
+
+.PHONY: skill-validate-fix
+skill-validate-fix:
+	docker-compose run --rm -v ./tests:/app/tests -v ./scripts:/app/scripts -v ./.agents:/app/.agents backend env UV_CACHE_DIR=/tmp/.uv-cache uv run python scripts/validate_skills.py --fix
