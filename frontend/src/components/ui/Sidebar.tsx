@@ -12,6 +12,8 @@ interface SidebarProps {
   onToggleCollapsed: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
+  onOpenFilters: () => void;
+  totalActiveFilters: number;
 }
 
 interface MenuItem {
@@ -33,6 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapsed,
   mobileOpen,
   onMobileClose,
+  onOpenFilters,
+  totalActiveFilters,
 }) => {
   const lastUpdateLabel = lastUpdateIso
     ? new Intl.DateTimeFormat('pt-BR', {
@@ -232,6 +236,50 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span className="nav-label sidebar-nav-label">{item.label}</span>
             </button>
           ))}
+
+          {/* Global Filters Drawer Trigger */}
+          <button
+            type="button"
+            className={`nav-item nav-item--filters ${collapsed ? 'nav-item--collapsed' : ''}`}
+            onClick={onOpenFilters}
+            aria-label="Mostrar Filtros"
+            title={collapsed ? 'Filtros' : undefined}
+          >
+            <span className="nav-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+            </span>
+            <span
+              className="nav-label sidebar-nav-label"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}
+            >
+              <span>Filtros</span>
+              {totalActiveFilters > 0 && (
+                <span className="sb-filter-badge">{totalActiveFilters}</span>
+              )}
+            </span>
+            {collapsed && totalActiveFilters > 0 && (
+              <span className="sb-filter-badge sb-filter-badge--collapsed">
+                {totalActiveFilters}
+              </span>
+            )}
+          </button>
         </nav>
 
         <div className="sidebar-footer">

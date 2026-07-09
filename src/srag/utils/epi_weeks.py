@@ -80,6 +80,73 @@ def format_epi_week(year: int, week: int) -> str:
     return f"{year}-{week:02d}"
 
 
+def compute_epi_week_columns(dt_series: pd.Series) -> pd.DataFrame:
+    """Vectorized computation of epidemiological week year and week number.
+
+    Uses the Brazilian SIVEP convention (ISO-like, weeks start on Sunday,
+    first week has at least 4 days in January).  Returns a DataFrame with
+    columns ``_epi_year``, ``_epi_week_int``, and ``_epi_week`` (formatted
+    string ``YYYY-WW``).
+
+    Parameters
+    ----------
+    dt_series:
+        A datetime-like Series (will be coerced with ``pd.to_datetime``).
+
+    Returns:
+    -------
+    pd.DataFrame
+    """
+    dt = pd.to_datetime(dt_series, errors="coerce")
+    mask_valid = dt.notna()
+
+    result = pd.DataFrame(
+        {
+            "_epi_year": pd.Series(0, index=dt.index, dtype=np.int32),
+            "_epi_week_int": pd.Series(0, index=dt.index, dtype=np.int32),
+            "_epi_week": pd.Series("N/A", index=dt.index, dtype=str),
+        },
+        index=dt.index,
+    )
+
+    if not mask_valid.any():
+        return result
+
+    dt = dt[mask_valid]
+    idx = (dt.dt.weekday + 1) % 7
+    sun = dt - pd.to_timedelta(idx, unit="D")
+    wed = sun + pd.to_timedelta(3, unit="D")
+    epi_year = wed.dt.year
+
+    jan4 = pd.to_datetime({"year": epi_year, "month": 1, "day": 4})
+    first_sun = jan4 - pd.to_timedelta((jan4.dt.weekday + 1) % 7, unit="D")
+
+    week_num = ((sun - first_sun).dt.days // 7).astype(np.int32) + 1
+
+    mask_neg = week_num <= 0
+    if mask_neg.any():
+        prev = sun[mask_neg] - pd.Timedelta(days=1)
+        prev_idx = (prev.dt.weekday + 1) % 7
+        prev_sun = prev - pd.to_timedelta(prev_idx, unit="D")
+        prev_wed = prev_sun + pd.to_timedelta(3, unit="D")
+        prev_year = prev_wed.dt.year
+        prev_jan4 = pd.to_datetime({"year": prev_year, "month": 1, "day": 4})
+        prev_first_sun = prev_jan4 - pd.to_timedelta(
+            (prev_jan4.dt.weekday + 1) % 7, unit="D"
+        )
+        prev_week = ((prev_sun - prev_first_sun).dt.days // 7).astype(np.int32) + 1
+        epi_year = epi_year.where(~mask_neg, prev_year)
+        week_num = week_num.where(~mask_neg, prev_week)
+
+    epi_year_ser = epi_year.astype(np.int32)
+    epi_week_str = epi_year_ser.astype(str) + "-" + week_num.astype(str).str.zfill(2)
+
+    result.loc[mask_valid, "_epi_year"] = epi_year_ser.values
+    result.loc[mask_valid, "_epi_week_int"] = week_num.values
+    result.loc[mask_valid, "_epi_week"] = epi_week_str.values
+    return result
+
+
 def get_date_from_epi_week(year: int, week: int) -> date:
     """Return the start date (Sunday) of a given epidemiological week.
 

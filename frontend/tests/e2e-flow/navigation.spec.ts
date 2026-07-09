@@ -27,14 +27,7 @@ test('all 7 sidebar panels can be navigated to without crashing', async ({ page 
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
-  const panels = [
-    'Vigilância',
-    'Laboratório',
-    'Território',
-    'Unid. Saúde',
-    'Cidadão',
-    'Auditoria',
-  ];
+  const panels = ['Vigilância', 'Laboratório', 'Território', 'Unid. Saúde', 'Cidadão', 'Auditoria'];
   for (const label of panels) {
     await page.locator(`button[aria-label="${label}"]`).click();
     await expect(page.locator(`button[aria-label="${label}"].active`)).toBeVisible({

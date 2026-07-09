@@ -7,6 +7,8 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
+
 COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --no-install-project && \
     rm -rf /root/.cache/uv

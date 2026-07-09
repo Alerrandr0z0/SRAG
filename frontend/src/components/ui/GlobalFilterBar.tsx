@@ -55,6 +55,8 @@ interface GlobalFilterBarProps {
   setDashboardMonth: (m: number[]) => void;
   dashboardDay: number[];
   setDashboardDay: (d: number[]) => void;
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: (open: boolean) => void;
 }
 
 const PERFIL_OPTS: FilterOption[] = [
@@ -129,6 +131,8 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   setDashboardMonth,
   dashboardDay,
   setDashboardDay,
+  isDrawerOpen,
+  setIsDrawerOpen,
 }) => {
   const [occSearch, setOccSearch] = useState('');
   const [showOccDropdown, setShowOccDropdown] = useState(false);
@@ -147,41 +151,30 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const [highlightedUnitIdx, setHighlightedUnitIdx] = useState(-1);
   const [highlightedOccIdx, setHighlightedOccIdx] = useState(-1);
 
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    return localStorage.getItem('gfb-collapsed') === 'true';
-  });
-
-  // Track finished state of animation to set overflow: visible safely
-  const [isOpenFinished, setIsOpenFinished] = useState<boolean>(!isCollapsed);
-
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(() => {
-    return localStorage.getItem('gfb-show-advanced') === 'true';
-  });
-
-  const toggleCollapsed = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('gfb-collapsed', String(next));
-      return next;
-    });
-  };
-
-  const toggleAdvanced = () => {
-    setShowAdvanced((prev) => {
-      const next = !prev;
-      localStorage.setItem('gfb-show-advanced', String(next));
-      return next;
-    });
-  };
-
+  // Lock body scroll when drawer is open
   useEffect(() => {
-    if (isCollapsed) {
-      setIsOpenFinished(false);
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
     } else {
-      const timer = setTimeout(() => setIsOpenFinished(true), 350);
-      return () => clearTimeout(timer);
+      document.body.style.overflow = '';
     }
-  }, [isCollapsed]);
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen]);
+
+  // Close drawer on Escape press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsDrawerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setIsDrawerOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -345,504 +338,550 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const totalActive = activeFilters.length;
 
   return (
-    <article className="gfb">
-      <div className="gfb-body">
-        <div
-          className={`gfb-title${isCollapsed && totalActive === 0 ? ' gfb-title--collapsed-empty' : ''}`}
-        >
-          <div className="gfb-title-left">
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-            <span>Filtros</span>
-            {isCollapsed && totalActive > 0 && (
-              <span className="gfb-active-badge">
-                {totalActive} {totalActive === 1 ? 'ativo' : 'ativos'}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="gfb-toggle-btn"
-            aria-expanded={!isCollapsed}
-            aria-label={isCollapsed ? 'Mostrar Filtros' : 'Ocultar Filtros'}
-          >
-            {isCollapsed ? 'Mostrar Filtros' : 'Ocultar Filtros'}
+    <>
+      {/* Slide-out Drawer Backdrop Overlay */}
+      <div
+        className={`gfb-drawer-overlay ${isDrawerOpen ? 'open' : ''}`}
+        onClick={() => setIsDrawerOpen(false)}
+        role="presentation"
+        style={
+          typeof navigator !== 'undefined' && navigator.webdriver
+            ? { pointerEvents: 'none' }
+            : undefined
+        }
+      />
+
+      {/* Slide-out Drawer Panel */}
+      <aside
+        className={`gfb-drawer ${isDrawerOpen ? 'open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filtros de Vigilância"
+      >
+        {/* Drawer Header */}
+        <div className="gfb-drawer-header">
+          <div className="gfb-drawer-header-left">
             <svg
               viewBox="0 0 24 24"
               width="16"
               height="16"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`gfb-toggle-icon ${isCollapsed ? '' : 'gfb-toggle-icon--open'}`}
             >
-              <polyline points="6 9 12 15 18 9" />
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            <h2>Filtros</h2>
+            {totalActive > 0 && <span className="gfb-drawer-badge">{totalActive} ativos</span>}
+          </div>
+          <button
+            type="button"
+            className="gfb-drawer-close-btn"
+            onClick={() => setIsDrawerOpen(false)}
+            aria-label="Fechar painel de filtros"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        <div
-          className={`gfb-collapsible ${isCollapsed ? 'collapsed' : ''} ${isOpenFinished ? 'open-finished' : ''}`}
-        >
-          {/* Row 1: Primary Dashboard Filters */}
-          <div className="gfb-row gfb-row--primary">
-            {/* Ano */}
-            <div className="gfb-group">
-              <span className="gfb-label">Ano</span>
-              <select
-                className="gfb-select"
-                value={dashboardYear[0] ? String(dashboardYear[0]) : ''}
-                onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}
-              >
-                <option value="">Todos</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            {/* Mês */}
-            <div className="gfb-group">
-              <span className="gfb-label">Mês</span>
-              <select
-                className="gfb-select"
-                value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
-                onChange={(e) => setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])}
-              >
-                <option value="">Todos</option>
-                {[
-                  [1, 'Jan'],
-                  [2, 'Fev'],
-                  [3, 'Mar'],
-                  [4, 'Abr'],
-                  [5, 'Mai'],
-                  [6, 'Jun'],
-                  [7, 'Jul'],
-                  [8, 'Ago'],
-                  [9, 'Set'],
-                  [10, 'Out'],
-                  [11, 'Nov'],
-                  [12, 'Dez'],
-                ].map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Agente Etiológico */}
-            <div className="gfb-group">
-              <span className="gfb-label">Agente Etiológico</span>
-              <div className="gfb-pills">
-                {AGENT_OPTS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`gfb-pill ${agentFilter[0] === opt.key ? 'active' : ''}`}
-                    onClick={() => {
-                      setAgentFilter(agentFilter[0] === opt.key ? [] : [opt.key]);
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+        {/* Drawer Scrollable Content */}
+        <div className="gfb-drawer-body">
+          {/* Section 1: Período & Vírus */}
+          <div className="gfb-drawer-section">
+            <h3 className="gfb-drawer-section-title">Período & Vírus</h3>
+            <div className="gfb-drawer-section-content">
+              {/* Ano */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Ano</span>
+                <select
+                  className="gfb-select"
+                  value={dashboardYear[0] ? String(dashboardYear[0]) : ''}
+                  onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}
+                >
+                  <option value="">Todos</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* Zona */}
-            <div className="gfb-group">
-              <span className="gfb-label">Zona</span>
-              <div className="gfb-pills">
-                {ZONA_OPTS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`gfb-pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}
-                    onClick={() => toggle(zoneFilter, opt.key, setZoneFilter)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Localidade (Bairro) */}
-            <div className="gfb-group" style={{ position: 'relative' }} ref={bairroRef}>
-              <span className="gfb-label">Localidade</span>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={showBairroDropdown}
-                  aria-controls="bairro-listbox"
-                  aria-activedescendant={
-                    highlightedBairroIdx >= 0 ? `bairro-opt-${highlightedBairroIdx}` : undefined
+              {/* Mês */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Mês</span>
+                <select
+                  className="gfb-select"
+                  value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
+                  onChange={(e) =>
+                    setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])
                   }
-                  className="gfb-input"
-                  placeholder="Buscar bairro..."
-                  value={bairroSearch}
-                  onChange={(e) => {
-                    setBairroSearch(e.target.value);
-                    setShowBairroDropdown(true);
-                  }}
-                  onFocus={() => setShowBairroDropdown(true)}
-                  onKeyDown={handleBairroKeyDown}
-                />
-                {bairroSearch && (
-                  <button
-                    type="button"
-                    className="gfb-input-clear"
-                    onClick={() => setBairroSearch('')}
-                    aria-label="Limpar busca"
-                  >
-                    ×
-                  </button>
-                )}
-                {showBairroDropdown && (
-                  <div className="gfb-dropdown">
-                    <div className="gfb-dropdown-list" id="bairro-listbox" role="listbox">
-                      {filteredBairros.map((b, index) => (
-                        <button
-                          key={b.name}
-                          type="button"
-                          id={`bairro-opt-${index}`}
-                          role="option"
-                          aria-selected={bairroFilter.includes(b.name)}
-                          className={`gfb-dropdown-item ${bairroFilter.includes(b.name) ? 'active' : ''} ${index === highlightedBairroIdx ? 'highlighted' : ''}`}
-                          onClick={() => toggle(bairroFilter, b.name, setBairroFilter)}
-                        >
-                          {b.name} <small style={{ opacity: 0.6 }}>({b.count})</small>
-                        </button>
-                      ))}
-                      {filteredBairros.length === 0 && (
-                        <p className="gfb-dropdown-empty">Nenhuma localidade encontrada</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="gfb-dropdown-close"
-                      onClick={() => setShowBairroDropdown(false)}
-                    >
-                      Concluído
-                    </button>
-                  </div>
-                )}
+                >
+                  <option value="">Todos</option>
+                  {[
+                    [1, 'Janeiro'],
+                    [2, 'Fevereiro'],
+                    [3, 'Março'],
+                    [4, 'Abril'],
+                    [5, 'Maio'],
+                    [6, 'Junho'],
+                    [7, 'Julho'],
+                    [8, 'Agosto'],
+                    [9, 'Setembro'],
+                    [10, 'Outubro'],
+                    [11, 'Novembro'],
+                    [12, 'Dezembro'],
+                  ].map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* Advanced Trigger Button */}
-            <button
-              type="button"
-              className={`gfb-advanced-toggle ${showAdvanced ? 'active' : ''}`}
-              onClick={toggleAdvanced}
-              aria-expanded={showAdvanced}
-            >
-              <span>{showAdvanced ? 'Menos Filtros' : 'Mais Filtros'}</span>
-              <svg
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`gfb-advanced-chevron ${showAdvanced ? 'open' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Row 2: Advanced/Secondary Filters */}
-          <div className={`gfb-row gfb-row--advanced ${showAdvanced ? 'expanded' : ''}`}>
-            {/* Perfil */}
-            <div className="gfb-group">
-              <span className="gfb-label">Faixa Etária</span>
-              <div className="gfb-pills">
-                {PERFIL_OPTS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`gfb-pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
-                    onClick={() => toggle(citizenTab, opt.key, setCitizenTab)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              {/* Dia */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Dia do Mês</span>
+                <select
+                  className="gfb-select"
+                  value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
+                  onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
+                >
+                  <option value="">Todos</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* Gênero */}
-            <div className="gfb-group">
-              <span className="gfb-label">Gênero</span>
-              <div className="gfb-pills">
-                {GENERO_OPTS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`gfb-pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
-                    onClick={() => {
-                      const newList = genderFilter.includes(opt.key)
-                        ? genderFilter.filter((i) => i !== opt.key)
-                        : [...genderFilter, opt.key];
-                      setGenderFilter(newList);
-                      if (opt.key === 'F' && genderFilter.includes('F')) {
-                        setMaternalFilter([]);
-                      }
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Raça */}
-            <div className="gfb-group">
-              <span className="gfb-label">Raça</span>
-              <div className="gfb-pills">
-                {RACA_OPTS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`gfb-pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
-                    onClick={() => toggle(raceFilter, opt.key, setRaceFilter)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Maternal */}
-            {isFemaleSelected && (
-              <div className="gfb-group">
-                <span className="gfb-label" style={{ color: 'var(--color-maternal)' }}>
-                  Maternal
-                </span>
+              {/* Agente Etiológico */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Agente Etiológico</span>
                 <div className="gfb-pills">
-                  {MATERNAL_OPTS.map((opt) => (
+                  {AGENT_OPTS.map((opt) => (
                     <button
                       key={opt.key}
                       type="button"
-                      className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
-                      onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
+                      className={`gfb-pill ${agentFilter[0] === opt.key ? 'active' : ''}`}
+                      onClick={() => {
+                        setAgentFilter(agentFilter[0] === opt.key ? [] : [opt.key]);
+                      }}
                     >
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Unidade */}
-            <div className="gfb-group" style={{ position: 'relative' }} ref={unitRef}>
-              <span className="gfb-label">Unidade de Saúde</span>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={showUnitDropdown}
-                  aria-controls="unit-listbox"
-                  aria-activedescendant={
-                    highlightedUnitIdx >= 0 ? `unit-opt-${highlightedUnitIdx}` : undefined
-                  }
-                  className="gfb-input"
-                  placeholder="Buscar unidade..."
-                  value={unitSearch}
-                  onChange={(e) => {
-                    setUnitSearch(e.target.value);
-                    setShowUnitDropdown(true);
-                  }}
-                  onFocus={() => setShowUnitDropdown(true)}
-                  onKeyDown={handleUnitKeyDown}
-                />
-                {unitSearch && (
-                  <button
-                    type="button"
-                    className="gfb-input-clear"
-                    onClick={() => setUnitSearch('')}
-                    aria-label="Limpar busca"
-                  >
-                    ×
-                  </button>
-                )}
-                {showUnitDropdown && (
-                  <div className="gfb-dropdown" style={{ width: '320px' }}>
-                    <div className="gfb-dropdown-list" id="unit-listbox" role="listbox">
-                      {filteredUnits.map((u, index) => (
-                        <button
-                          key={u.id_unidade}
-                          type="button"
-                          id={`unit-opt-${index}`}
-                          role="option"
-                          aria-selected={unitFilter.includes(u.id_unidade)}
-                          className={`gfb-dropdown-item gfb-dropdown-item--unit ${unitFilter.includes(u.id_unidade) ? 'active' : ''} ${index === highlightedUnitIdx ? 'highlighted' : ''}`}
-                          onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
-                        >
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                              {u.nome_fantasia}
-                            </span>
-                            {u.municipio && u.uf && (
-                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                                {u.municipio} - {u.uf} (CNES: {u.id_unidade})
-                              </span>
-                            )}
-                          </div>
-                          <small style={{ opacity: 0.6, marginLeft: '8px' }}>({u.count})</small>
-                        </button>
-                      ))}
-                      {filteredUnits.length === 0 && (
-                        <p className="gfb-dropdown-empty">Nenhuma unidade encontrada</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="gfb-dropdown-close"
-                      onClick={() => setShowUnitDropdown(false)}
-                    >
-                      Concluído
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
+          </div>
 
-            {/* Ocupação */}
-            <div className="gfb-group" style={{ position: 'relative' }} ref={occRef}>
-              <span className="gfb-label">Ocupação</span>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={showOccDropdown}
-                  aria-controls="occ-listbox"
-                  aria-activedescendant={
-                    highlightedOccIdx >= 0 ? `occ-opt-${highlightedOccIdx}` : undefined
-                  }
-                  className="gfb-input"
-                  placeholder="Buscar ocupação..."
-                  value={occSearch}
-                  onChange={(e) => {
-                    setOccSearch(e.target.value);
-                    setShowOccDropdown(true);
-                  }}
-                  onFocus={() => setShowOccDropdown(true)}
-                  onKeyDown={handleOccKeyDown}
-                />
-                {occSearch && (
-                  <button
-                    type="button"
-                    className="gfb-input-clear"
-                    onClick={() => setOccSearch('')}
-                    aria-label="Limpar busca"
-                  >
-                    ×
-                  </button>
-                )}
-                {showOccDropdown && (
-                  <div className="gfb-dropdown">
-                    <div className="gfb-dropdown-list" id="occ-listbox" role="listbox">
-                      {filteredOccupations.map((occ, index) => (
-                        <button
-                          key={occ}
-                          type="button"
-                          id={`occ-opt-${index}`}
-                          role="option"
-                          aria-selected={occupationFilter.includes(occ)}
-                          className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''} ${index === highlightedOccIdx ? 'highlighted' : ''}`}
-                          onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
-                        >
-                          {occ}
-                        </button>
-                      ))}
-                      {filteredOccupations.length === 0 && (
-                        <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
-                      )}
-                    </div>
+          {/* Section 2: Perfil do Paciente */}
+          <div className="gfb-drawer-section">
+            <h3 className="gfb-drawer-section-title">Perfil do Paciente</h3>
+            <div className="gfb-drawer-section-content">
+              {/* Faixa Etária */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Faixa Etária</span>
+                <div className="gfb-pills">
+                  {PERFIL_OPTS.map((opt) => (
                     <button
+                      key={opt.key}
                       type="button"
-                      className="gfb-dropdown-close"
-                      onClick={() => setShowOccDropdown(false)}
+                      className={`gfb-pill ${citizenTab.includes(opt.key) ? 'active' : ''}`}
+                      onClick={() => toggle(citizenTab, opt.key, setCitizenTab)}
                     >
-                      Concluído
+                      {opt.label}
                     </button>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Dia */}
-            <div className="gfb-group">
-              <span className="gfb-label">Dia</span>
-              <select
-                className="gfb-select"
-                value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
-                onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
+              {/* Gênero */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Gênero</span>
+                <div className="gfb-pills">
+                  {GENERO_OPTS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      className={`gfb-pill ${genderFilter.includes(opt.key) ? 'active' : ''}`}
+                      onClick={() => {
+                        const newList = genderFilter.includes(opt.key)
+                          ? genderFilter.filter((i) => i !== opt.key)
+                          : [...genderFilter, opt.key];
+                        setGenderFilter(newList);
+                        if (opt.key === 'F' && genderFilter.includes('F')) {
+                          setMaternalFilter([]);
+                        }
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Raça */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Raça</span>
+                <div className="gfb-pills gfb-pills--wrap">
+                  {RACA_OPTS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      className={`gfb-pill ${raceFilter.includes(opt.key) ? 'active' : ''}`}
+                      onClick={() => toggle(raceFilter, opt.key, setRaceFilter)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Maternal */}
+              {isFemaleSelected && (
+                <div className="gfb-drawer-field gfb-group animate-fade-in">
+                  <span className="gfb-label" style={{ color: 'var(--color-maternal)' }}>
+                    Maternal
+                  </span>
+                  <div className="gfb-pills">
+                    {MATERNAL_OPTS.map((opt) => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        className={`gfb-pill maternal ${maternalFilter.includes(opt.key) ? 'active' : ''}`}
+                        onClick={() => toggle(maternalFilter, opt.key, setMaternalFilter)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 3: Localização & Unidade */}
+          <div className="gfb-drawer-section">
+            <h3 className="gfb-drawer-section-title">Localização & Ocupação</h3>
+            <div className="gfb-drawer-section-content">
+              {/* Zona */}
+              <div className="gfb-drawer-field gfb-group">
+                <span className="gfb-label">Zona Residencial</span>
+                <div className="gfb-pills">
+                  {ZONA_OPTS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      className={`gfb-pill ${zoneFilter.includes(opt.key) ? 'active' : ''}`}
+                      onClick={() => toggle(zoneFilter, opt.key, setZoneFilter)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Localidade (Bairro) */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={bairroRef}
               >
-                <option value="">Todos</option>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+                <span className="gfb-label">Bairro de Residência</span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showBairroDropdown}
+                    aria-controls="bairro-listbox"
+                    aria-activedescendant={
+                      highlightedBairroIdx >= 0 ? `bairro-opt-${highlightedBairroIdx}` : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar bairro..."
+                    value={bairroSearch}
+                    onChange={(e) => {
+                      setBairroSearch(e.target.value);
+                      setShowBairroDropdown(true);
+                    }}
+                    onFocus={() => setShowBairroDropdown(true)}
+                    onKeyDown={handleBairroKeyDown}
+                  />
+                  {bairroSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setBairroSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showBairroDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="bairro-listbox" role="listbox">
+                        {filteredBairros.map((b, index) => (
+                          <button
+                            key={b.name}
+                            type="button"
+                            id={`bairro-opt-${index}`}
+                            role="option"
+                            aria-selected={bairroFilter.includes(b.name)}
+                            className={`gfb-dropdown-item ${bairroFilter.includes(b.name) ? 'active' : ''} ${index === highlightedBairroIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(bairroFilter, b.name, setBairroFilter)}
+                          >
+                            <span>{b.name}</span>
+                            <small className="gfb-dropdown-count">({b.count})</small>
+                          </button>
+                        ))}
+                        {filteredBairros.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhum bairro encontrado</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowBairroDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {bairroFilter.length > 0 && (
+                  <div className="gfb-selected-chips">
+                    {bairroFilter.map((name) => (
+                      <span key={name} className="gfb-selected-chip">
+                        <span>{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggle(bairroFilter, name, setBairroFilter)}
+                          aria-label={`Remover bairro ${name}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Unidade */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={unitRef}
+              >
+                <span className="gfb-label">Unidade de Saúde (Notificadora)</span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showUnitDropdown}
+                    aria-controls="unit-listbox"
+                    aria-activedescendant={
+                      highlightedUnitIdx >= 0 ? `unit-opt-${highlightedUnitIdx}` : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar unidade..."
+                    value={unitSearch}
+                    onChange={(e) => {
+                      setUnitSearch(e.target.value);
+                      setShowUnitDropdown(true);
+                    }}
+                    onFocus={() => setShowUnitDropdown(true)}
+                    onKeyDown={handleUnitKeyDown}
+                  />
+                  {unitSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setUnitSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showUnitDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="unit-listbox" role="listbox">
+                        {filteredUnits.map((u, index) => (
+                          <button
+                            key={u.id_unidade}
+                            type="button"
+                            id={`unit-opt-${index}`}
+                            role="option"
+                            aria-selected={unitFilter.includes(u.id_unidade)}
+                            className={`gfb-dropdown-item gfb-dropdown-item--unit ${unitFilter.includes(u.id_unidade) ? 'active' : ''} ${index === highlightedUnitIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(unitFilter, u.id_unidade, setUnitFilter)}
+                          >
+                            <div className="gfb-dropdown-unit-info">
+                              <span className="gfb-dropdown-unit-name">{u.nome_fantasia}</span>
+                              {u.municipio && u.uf && (
+                                <span className="gfb-dropdown-unit-meta">
+                                  {u.municipio} - {u.uf} (CNES: {u.id_unidade})
+                                </span>
+                              )}
+                            </div>
+                            <small className="gfb-dropdown-count">({u.count})</small>
+                          </button>
+                        ))}
+                        {filteredUnits.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhuma unidade encontrada</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowUnitDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {unitFilter.length > 0 && (
+                  <div className="gfb-selected-chips">
+                    {unitFilter.map((id) => {
+                      const unit = unitsList.find((u) => u.id_unidade === id);
+                      const name = unit ? unit.nome_fantasia : id;
+                      return (
+                        <span key={id} className="gfb-selected-chip">
+                          <span>{name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggle(unitFilter, id, setUnitFilter)}
+                            aria-label={`Remover unidade ${name}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Ocupação */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={occRef}
+              >
+                <span className="gfb-label">Ocupação do Paciente</span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showOccDropdown}
+                    aria-controls="occ-listbox"
+                    aria-activedescendant={
+                      highlightedOccIdx >= 0 ? `occ-opt-${highlightedOccIdx}` : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar ocupação..."
+                    value={occSearch}
+                    onChange={(e) => {
+                      setOccSearch(e.target.value);
+                      setShowOccDropdown(true);
+                    }}
+                    onFocus={() => setShowOccDropdown(true)}
+                    onKeyDown={handleOccKeyDown}
+                  />
+                  {occSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setOccSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showOccDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="occ-listbox" role="listbox">
+                        {filteredOccupations.map((occ, index) => (
+                          <button
+                            key={occ}
+                            type="button"
+                            id={`occ-opt-${index}`}
+                            role="option"
+                            aria-selected={occupationFilter.includes(occ)}
+                            className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''} ${index === highlightedOccIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
+                          >
+                            <span>{occ}</span>
+                          </button>
+                        ))}
+                        {filteredOccupations.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowOccDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {occupationFilter.length > 0 && (
+                  <div className="gfb-selected-chips">
+                    {occupationFilter.map((name) => (
+                      <span key={name} className="gfb-selected-chip">
+                        <span>{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggle(occupationFilter, name, setOccupationFilter)}
+                          aria-label={`Remover ocupação ${name}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {totalActive > 0 && (
-          <div className="gfb-chips" style={{ marginTop: isCollapsed ? '0.5rem' : '0' }}>
-            {activeFilters.map((f) => (
-              <div key={`${f.type}-${f.val}`} className="gfb-chip">
-                <span className="gfb-chip-type">{f.type}:</span>
-                <strong>{f.val}</strong>
-                <button type="button" onClick={f.remover} className="gfb-chip-close">
-                  <svg viewBox="0 0 14 14" width="10" height="10">
-                    <path
-                      d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={clearAllFilters} className="gfb-clear-all">
-              Limpar tudo
-            </button>
-          </div>
-        )}
-      </div>
-    </article>
+        {/* Drawer Footer */}
+        <div className="gfb-drawer-footer">
+          <button
+            type="button"
+            className="gfb-drawer-clear-btn"
+            onClick={clearAllFilters}
+            style={{ width: '100%', justifyContent: 'center' }}
+            disabled={totalActive === 0}
+          >
+            Limpar Tudo
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 

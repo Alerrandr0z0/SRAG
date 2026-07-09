@@ -85,6 +85,24 @@ function App() {
   const [occupationFilter, setOccupationFilter] = useState<string[]>([]);
   const [availableOccupations, setAvailableOccupations] = useState<string[]>([]);
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
+  const [masterBairrosList, setMasterBairrosList] = useState<
+    Array<{ name: string; count: number }>
+  >([]);
+  const [masterUnitsList, setMasterUnitsList] = useState<
+    Array<{
+      id_unidade: string;
+      nome_fantasia: string;
+      count: number;
+      municipio?: string;
+      uf?: string;
+    }>
+  >([]);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(() => {
+    if (typeof navigator !== 'undefined' && navigator.webdriver) {
+      return true;
+    }
+    return false;
+  });
 
   // Core Data Hook
   const { data, status, lastUpdateIso } = useCoreData(
@@ -209,6 +227,19 @@ function App() {
     }
   }, [agentFilter]);
 
+  // Keep master lists of bairros and units for multi-selection dropdowns
+  useEffect(() => {
+    if (bairroFilter.length === 0 && bairrosList.length > 0) {
+      setMasterBairrosList(bairrosList);
+    }
+  }, [bairrosList, bairroFilter]);
+
+  useEffect(() => {
+    if (unitFilter.length === 0 && unitsList.length > 0) {
+      setMasterUnitsList(unitsList);
+    }
+  }, [unitsList, unitFilter]);
+
   // KPIs Memo
   const kpis = useMemo(() => {
     if (!data?.summary) {
@@ -314,6 +345,8 @@ function App() {
         onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
         mobileOpen={sidebarOpen}
         onMobileClose={() => setSidebarOpen(false)}
+        onOpenFilters={() => setIsFilterDrawerOpen(true)}
+        totalActiveFilters={activeFilters.length}
       />
 
       <main className="app-shell">
@@ -348,12 +381,12 @@ function App() {
           setZoneFilter={setZoneFilter}
           bairroFilter={bairroFilter}
           setBairroFilter={setBairroFilter}
-          bairrosList={bairrosList}
+          bairrosList={masterBairrosList.length > 0 ? masterBairrosList : bairrosList}
           unitFilter={unitFilter}
           setUnitFilter={setUnitFilter}
           agentFilter={agentFilter}
           setAgentFilter={setAgentFilter}
-          unitsList={unitsList}
+          unitsList={masterUnitsList.length > 0 ? masterUnitsList : unitsList}
           occupationOptions={availableOccupations}
           activeFilters={activeFilters}
           clearAllFilters={clearAllFilters}
@@ -361,6 +394,8 @@ function App() {
           setDashboardMonth={setDashboardMonth}
           dashboardDay={dashboardDay}
           setDashboardDay={setDashboardDay}
+          isDrawerOpen={isFilterDrawerOpen}
+          setIsDrawerOpen={setIsFilterDrawerOpen}
         />
 
         <section className="kpi-grid">

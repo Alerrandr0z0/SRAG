@@ -2,9 +2,9 @@
 
 .PHONY: help setup ingest start stop status start-docker stop-docker test lint fix mutation bench update-graph \
         setup-back setup-front test-back test-front lint-back lint-front \
-        fix-back fix-front mutation-back mutation-front mutation-incr mutation-score \
+        fix-back fix-front mutation-back mutation-front         mutation-incr mutation-score \
         observability property-test property-test-back property-test-front \
-        e2e security security-back security-secrets hooks
+        e2e security security-back security-secrets skill-validate skill-validate-fix hooks fix-perms
 
 # --- Default ---
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "  property-test     Run property-based tests"
 	@echo "  e2e               Run integrated-flow E2E tests (requires make start)"
 	@echo "  lint              Run all quality checks"
+	@echo "  skill-validate     Validate .opencode/skills/ against live source code"
 	@echo "  security          Run all security scanners (Bandit + Gitleaks)"
 	@echo "  hooks             Run all pre-commit hooks on all files"
 	@echo "  mutation          Run all mutation tests (full suite, ~30min)"
@@ -29,7 +30,11 @@ help:
 
 # --- Docker Helper Variables ---
 DOCKER_RUN_BACK = docker-compose run --rm -v ./tests:/app/tests -v ./scripts:/app/scripts backend
-DOCKER_RUN_FRONT = docker run --rm --network=host -v ./frontend:/app -w /app node:22-slim
+DOCKER_RUN_FRONT = docker run --rm --network=host \
+  -u $(shell id -u):$(shell id -g) \
+  -e HOME=/tmp \
+  -v ./frontend:/app \
+  -w /app node:22-slim
 
 # --- Setup ---
 setup: setup-back setup-front
@@ -86,6 +91,12 @@ fix-back:
 fix-front:
 	$(DOCKER_RUN_FRONT) npm run fix
 
+skill-validate:
+	$(DOCKER_RUN_BACK) uv run python scripts/validate_skills.py
+
+skill-validate-fix:
+	$(DOCKER_RUN_BACK) uv run python scripts/validate_skills.py --fix
+
 security: security-back security-secrets security-deps security-frontend
 security-back:
 	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run bandit -r src/srag scripts/ -s B101
@@ -100,6 +111,11 @@ hooks:
 	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check . --fix
 	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff format .
 	@$(MAKE) graph-sync
+
+# --- Permissions ---
+# Re-claim root-owned files in frontend/ created by older Docker runs
+fix-perms:
+	docker run --rm -v $(shell pwd)/frontend/node_modules:/tmp/node_modules alpine sh -c 'find /tmp/node_modules -user 0 -exec chown $(shell id -u):$(shell id -g) {} +' 2>/dev/null; echo "done"
 
 # --- Testing ---
 test: test-back test-front

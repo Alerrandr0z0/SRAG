@@ -525,3 +525,13 @@ export interface VentilatorySupportPoint {
 }
 
 export type VentilatorySupportResponse = VentilatorySupportPoint[];
+
+export interface ClinicalTimingResponse {
+  cases_with_hospital_date: number;
+  cases_with_icu_dates: number;
+  cases_with_outcome_date: number;
+  median_days_symptom_to_hospital: number;
+  median_days_hospital_to_icu: number;
+  median_days_symptom_to_outcome: number;
+  protocol_48h_adherence_rate: number;
+}

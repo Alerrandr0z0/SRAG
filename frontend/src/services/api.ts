@@ -804,6 +804,38 @@ export const api = {
       ),
     ),
 
+  fetchClinicalTiming: (
+    p?: string[],
+    r?: string[],
+    g?: string[],
+    z?: string[],
+    b?: string[],
+    u?: string[],
+    years?: number[],
+    agents?: string[],
+    m?: string[],
+    occ?: string[],
+    months?: number[],
+    days?: number[],
+  ) =>
+    fetchJson<Epi.ClinicalTimingResponse>(
+      withFilters(
+        `${API_BASE}${API_ENDPOINTS.CLINICAL_TIMING}`,
+        p,
+        r,
+        g,
+        z,
+        b,
+        u,
+        years,
+        agents,
+        m,
+        occ,
+        months,
+        days,
+      ),
+    ),
+
   fetchVentilatorySupport: (
     p?: string[],
     r?: string[],

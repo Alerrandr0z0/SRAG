@@ -6,7 +6,7 @@ test('year filter applied persists when navigating to Citizen panel', async ({ p
 
   // Expand filter bar if collapsed
   const toggleBtn = page.locator('button[aria-label="Mostrar Filtros"]');
-  if (await toggleBtn.count() > 0) {
+  if ((await toggleBtn.count()) > 0) {
     await toggleBtn.first().click();
     await page.waitForTimeout(500);
   }
@@ -32,7 +32,7 @@ test('switching between panels preserves global filter state', async ({ page }) 
 
   // Expand filter bar if collapsed
   const toggleBtn = page.locator('button[aria-label="Mostrar Filtros"]');
-  if (await toggleBtn.count() > 0) {
+  if ((await toggleBtn.count()) > 0) {
     await toggleBtn.first().click();
     await page.waitForTimeout(500);
   }

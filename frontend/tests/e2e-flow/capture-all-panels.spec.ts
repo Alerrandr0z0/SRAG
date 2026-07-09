@@ -1,8 +1,7 @@
 import * as path from 'node:path';
 import { test } from '@playwright/test';
 
-const ARTIFACTS_DIR =
-  '/home/alerrandro/.gemini/antigravity/brain/084ff387-b19f-4562-b8c8-a7509f372036/';
+const ARTIFACTS_DIR = './screenshots/';
 
 test.describe('Capture All Panels', () => {
   test('Capture all tabs at 1440px', async ({ page }) => {

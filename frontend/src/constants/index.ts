@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   HEATMAP_SE_AGE: '/trends/heatmap_se_age',
   COMORBIDITIES_TREEMAP: '/clinical/comorbidities_treemap',
   VENTILATORY_SUPPORT: '/trends/ventilatory_support',
+  CLINICAL_TIMING: '/clinical_timing',
 };
 
 export const CHART_DEFAULTS = {
