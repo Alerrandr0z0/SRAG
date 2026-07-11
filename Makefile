@@ -52,7 +52,7 @@ cnes-lookup:
 	@echo "CNES lookup updated at data/processed/cnes_units_geo.json"
 
 start:
-	docker-compose up --build -d
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose up --build -d
 	@printf "\nServicos em execucao:\n"
 	@printf -- "- Frontend: http://localhost\n"
 	@printf -- "- Backend:  http://localhost:8000\n"

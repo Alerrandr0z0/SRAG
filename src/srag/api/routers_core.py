@@ -6,10 +6,10 @@ from typing import Any, Literal
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 from srag import __version__
-from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.dependencies import CommonFiltersDep
 from srag.api.types import (
     SummaryResponse,
     TrendsResponse,
@@ -34,7 +34,7 @@ from srag.data.analytics import (
 )
 from srag.models.forecasting import predict_next_weeks
 
-router = APIRouter()
+router = APIRouter(tags=["core"])
 
 
 @router.get("/health")
@@ -44,9 +44,10 @@ def health() -> dict[str, str]:
 
 from srag.data.analytics.filters import epi_week_year
 
+
 @router.get("/summary")
 def get_summary(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> SummaryResponse:
     df_all = get_df()
     available_years: list[int] = []
@@ -111,10 +112,10 @@ def get_summary(
 
 @router.get("/trends")
 def get_trends(
+    filters: CommonFiltersDep,
     last_n_weeks: int = 26,
     weeks_to_predict: int = 4,
     lookback_weeks: int = 0,
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> TrendsResponse:
     df_all = get_df()
     df = apply_global_filters(
@@ -162,10 +163,10 @@ def get_trends(
 
 @router.get("/virus")
 def get_virus(
+    filters: CommonFiltersDep,
     detail_level: Literal["summary", "detailed", "covid_detailed", "influenza_detailed"] = Query(
         "summary"
     ),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> list[VirusDistributionItem]:
     df = get_df()
     df = apply_global_filters(
@@ -195,7 +196,7 @@ def get_virus(
 
 @router.get("/data_completeness")
 def get_data_completeness(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     df = get_df()
     df = apply_global_filters(
@@ -217,7 +218,7 @@ def get_data_completeness(
 
 @router.get("/audit_bootstrap")
 def get_audit_bootstrap(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> AuditBootstrapResponse:
     df = get_df()
     df = apply_global_filters(

@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../services/api';
 import * as Epi from '../../types/epi';
 import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
+import { DiagnosticResilienceChart } from '../charts/DiagnosticResilienceChart';
 import EpidemicCurveChart from '../charts/EpidemicCurveChart';
 import GravityCascadeChart from '../charts/GravityCascadeChart';
 import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
 import KaplanMeierChart from '../charts/KaplanMeierChart';
 import LethalityGroupedBarChart from '../charts/LethalityGroupedBarChart';
+import { NosocomialRiskChart } from '../charts/NosocomialRiskChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
 import SeasonalTrendChart from '../charts/SeasonalTrendChart';
 import SeverityPyramidChart from '../charts/SeverityPyramidChart';
@@ -286,7 +288,7 @@ const VigilanceCfrHeatmapSection = React.memo<{ data: Epi.DashboardData | null }
   return (
     <article className="panel">
       <div className="section-header">
-        <h3 style={{ margin: 0 }}>Matriz de Letalidade Específica (Agente × Ciclo de Vida)</h3>
+        <h3 style={{ margin: 0 }}>Distribuição de Letalidade: Agente vs Faixa Etária</h3>
       </div>
       <div className="chart-wrap">
         {heatmap ? (
@@ -721,131 +723,6 @@ const Sparkline: React.FC<SparklineProps> = ({
   );
 };
 
-const VigilanceSeverityKpiSection = React.memo<{ kpis: Epi.SeverityKpisResponse | null }>(
-  ({ kpis }) => {
-    if (!kpis) return <p className="meta">Carregando indicadores de gravidade...</p>;
-    const { current, trend } = kpis;
-
-    const getTrendData = (key: keyof Epi.SeverityKpiPoint) => {
-      return trend.map((t) => t[key] as number);
-    };
-
-    const cards = [
-      {
-        label: 'Taxa de Hospitalização',
-        value: `${current.hospitalization_rate}%`,
-        trendKey: 'hospitalization_rate' as const,
-        color: '#0f766e',
-        desc: 'Pacientes internados sobre total de notificados',
-      },
-      {
-        label: 'Taxa de UTI',
-        value: `${current.uti_rate}%`,
-        trendKey: 'uti_rate' as const,
-        color: '#1d4ed8',
-        desc: 'Internados em UTI sobre total hospitalizados',
-      },
-      {
-        label: 'Suporte Ventilatório',
-        value: `${current.ventilatory_support_rate}%`,
-        trendKey: 'ventilatory_support_rate' as const,
-        color: '#ca8a04',
-        desc: 'Uso de ventilador mecânico (inv/não-inv) na UTI',
-      },
-      {
-        label: 'Letalidade Geral (CFR)',
-        value: `${current.death_rate}%`,
-        trendKey: 'death_rate' as const,
-        color: '#b91c1c',
-        desc: 'Óbitos sobre total de casos encerrados (alta/óbito)',
-      },
-      {
-        label: 'Permanência Hospitalar',
-        value: `${current.median_hospitalization_days}d`,
-        trendKey: 'median_hospitalization_days' as const,
-        color: '#7c3aed',
-        desc: 'Tempo mediano entre internação e desfecho',
-      },
-      {
-        label: 'Permanência UTI',
-        value: `${current.median_uti_days}d`,
-        trendKey: 'median_uti_days' as const,
-        color: '#0891b2',
-        desc: 'Tempo mediano de internação em UTI (entrada a saída)',
-      },
-    ];
-
-    return (
-      <div
-        className="responsive-grid-3col"
-        style={{
-          marginBottom: '2rem',
-          marginTop: '1.5rem',
-        }}
-      >
-        {cards.map((card) => {
-          const trendData = getTrendData(card.trendKey);
-          return (
-            <article
-              key={card.label}
-              className="panel"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                padding: '1.25rem',
-              }}
-            >
-              <div>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>{card.label}</p>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: '1rem',
-                    marginTop: '0.5rem',
-                  }}
-                >
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: '1.75rem',
-                      fontWeight: 600,
-                      color: 'var(--text-color)',
-                    }}
-                  >
-                    {card.value}
-                  </h2>
-                  {trendData.length > 1 && (
-                    <div
-                      style={{ marginLeft: 'auto', alignSelf: 'center' }}
-                      title="Tendência das últimas semanas"
-                    >
-                      <Sparkline data={trendData} color={card.color} />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p
-                style={{
-                  margin: '0.75rem 0 0 0',
-                  fontSize: '0.75rem',
-                  color: '#94a3b8',
-                  lineHeight: 1.3,
-                }}
-              >
-                {card.desc}
-              </p>
-            </article>
-          );
-        })}
-      </div>
-    );
-  },
-);
-
-/* ─────── Root ─────── */
-
 const VigilancePage: React.FC<VigilancePageProps> = ({
   data,
   agentFilter,
@@ -875,7 +752,6 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [virusDetail, setVirusDetail] = useState('summary');
   const [trends, setTrends] = useState<Epi.TrendsData | null>(null);
   const [virus, setVirus] = useState<Epi.VirusData[] | null>(null);
-  const [severityKpis, setSeverityKpis] = useState<Epi.SeverityKpisResponse | null>(null);
   const [seasonalTrends, setSeasonalTrends] = useState<Epi.SeasonalTrendsResponse | null>(null);
   const [severityPyramid, setSeverityPyramid] = useState<Epi.SeverityPyramidResponse | null>(null);
   const [gravityCascade, setGravityCascade] = useState<Epi.GravityCascadeResponse | null>(null);
@@ -883,6 +759,10 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [ventilatorySupport, setVentilatorySupport] =
     useState<Epi.VentilatorySupportResponse | null>(null);
   const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
+  const [diagResData, setDiagResData] = useState<Epi.DiagnosticResilienceResponse | null>(null);
+  const [diagResLoading, setDiagResLoading] = useState(false);
+  const [nosoRiskData, setNosoRiskData] = useState<Epi.NosocomialRiskResponse | null>(null);
+  const [nosoRiskLoading, setNosoRiskLoading] = useState(false);
   const lookback = '0';
 
   useEffect(() => {
@@ -973,45 +853,6 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     if (selectedAgent === 'COVID-19' && virusDetail !== 'covid_detailed')
       setVirusDetail('covid_detailed');
   }, [agentFilter, virusDetail]);
-
-  useEffect(() => {
-    let active = true;
-    api
-      .fetchSeverityKpis(
-        citizenTab,
-        raceFilter,
-        genderFilter,
-        zoneFilter,
-        bairroFilter,
-        unitFilter,
-        dashboardYear,
-        agentFilter,
-        maternalFilter,
-        occupationFilter,
-        dashboardMonth,
-        dashboardDay,
-      )
-      .then((res) => {
-        if (active) setSeverityKpis(res);
-      })
-      .catch((err) => console.error('Failed to fetch severity KPIs', err));
-    return () => {
-      active = false;
-    };
-  }, [
-    citizenTab,
-    raceFilter,
-    genderFilter,
-    zoneFilter,
-    bairroFilter,
-    unitFilter,
-    dashboardYear,
-    agentFilter,
-    maternalFilter,
-    occupationFilter,
-    dashboardMonth,
-    dashboardDay,
-  ]);
 
   useEffect(() => {
     let active = true;
@@ -1247,6 +1088,71 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     dashboardDay,
   ]);
 
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchDiagnosticResilience(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        undefined,
+      )
+      .then((data) => {
+        if (active) setDiagResData(data);
+      })
+      .catch((err) => console.error('Failed to fetch diag', err))
+      .finally(() => {
+        if (active) setDiagResLoading(false);
+      });
+
+    setNosoRiskLoading(true);
+    api
+      .fetchNosocomialRisk(
+        citizenTab,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        dashboardYear,
+        agentFilter,
+        maternalFilter,
+        occupationFilter,
+        dashboardMonth,
+        undefined,
+      )
+      .then((data) => {
+        if (active) setNosoRiskData(data);
+      })
+      .catch((err) => console.error('Failed to fetch noso', err))
+      .finally(() => {
+        if (active) setNosoRiskLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+  ]);
+
   const currentTrends = trends ?? data?.trends ?? null;
 
   return (
@@ -1268,7 +1174,6 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         onCurveWeeks={setCurveWeeks}
         onDelayWeeks={setDelayWeeks}
       />
-      <VigilanceSeverityKpiSection kpis={severityKpis} />
       <section className="responsive-grid-2col">
         <VigilanceViralProfile
           virus={virus}
@@ -1295,6 +1200,20 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
       </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceComorbiditiesSection data={comorbidities} />
+      </section>
+
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-100 bg-slate-50/50 p-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              Eficácia Diagnóstica e Controle de Infecção
+            </h2>
+          </div>
+          <div className="p-4 flex flex-col gap-6">
+            <DiagnosticResilienceChart data={diagResData} loading={diagResLoading} />
+            <NosocomialRiskChart data={nosoRiskData} loading={nosoRiskLoading} />
+          </div>
+        </div>
       </section>
     </>
   );

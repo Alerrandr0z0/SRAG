@@ -8,12 +8,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 logger = logging.getLogger(__name__)
 
 from srag.api.types import ComorbiditiesTreemapResponse
-from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.dependencies import CommonFiltersDep
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import (
     apply_global_filters,
@@ -36,13 +36,13 @@ from srag.data.analytics import (
     outcome_death_mask,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["clinical"])
 
 
 @router.get("/occupations")
 def get_occupations(
+    filters: CommonFiltersDep,
     limit: int = Query(50, ge=1, le=500),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> list[dict[str, Any]]:
     """Retorna as ocupações mais frequentes, permitindo filtragem por ano/zona."""
     df = get_df()
@@ -61,7 +61,7 @@ def get_occupations(
 
 @router.get("/clinical_flow")
 def clinical_flow(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Analisa a jornada clínica completa para o gráfico Sankey com porcentagens."""
     df = get_df()
@@ -228,7 +228,7 @@ def _compute_kde_curves(
 
 @router.get("/hospitalization_duration")
 def hospitalization_duration(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> dict[str, Any]:
     """Calcula a distribuição de dias de internação separada por cura e óbito, com KDE."""
     df = get_df()
@@ -316,7 +316,7 @@ def _normalize_flu_labels(raw_schema: dict[Any, Any]) -> dict[str, int]:
 
 @router.get("/vaccination_profile")
 def vaccination_profile(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Analisa o esquema vacinal detalhado de COVID-19 e Influenza com filtros."""
     df = get_df()
@@ -355,7 +355,7 @@ def vaccination_profile(
 
 @router.get("/citizen_bootstrap")
 def citizen_bootstrap(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Bootstrap de dados do cidadão com filtros hierárquicos e multi-seleção."""
     df = get_df()
@@ -397,7 +397,7 @@ def citizen_bootstrap(
 
 @router.get("/clinical_timing")
 def clinical_timing(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Métricas de fluxo clínico: tempo sintomas→internação, internação→UTI, adesão ao protocolo antiviral."""
     df = get_df()
@@ -421,7 +421,7 @@ def clinical_timing(
 
 @router.get("/vaccine_survival")
 def vaccine_survival(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Calcula as curvas de sobrevivência Kaplan-Meier com filtros."""
     df = get_df()
@@ -456,7 +456,7 @@ def vaccine_survival(
 
 @router.get("/clinical/comorbidities_treemap")
 def comorbidities_treemap(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> ComorbiditiesTreemapResponse:
     """Calcula a distribuição de comorbidades com letalidade (CFR) para treemap."""
     df = get_df()

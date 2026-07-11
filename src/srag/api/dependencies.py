@@ -1,6 +1,8 @@
 """API dependency injections for SRAG Mossoró."""
 
-from fastapi import HTTPException, Query
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel
 
 
@@ -54,18 +56,18 @@ def _validate_string_lists(v: list[str] | None) -> None:
 
 
 def get_common_filters(
-    profile: list[str] | None = Query(None),  # noqa: B008
-    race: list[str] | None = Query(None),  # noqa: B008
-    gender: list[str] | None = Query(None),  # noqa: B008
-    zonas: list[str] | None = Query(None),  # noqa: B008
-    bairros: list[str] | None = Query(None),  # noqa: B008
-    unidades: list[str] | None = Query(None),  # noqa: B008
-    years: list[int] | None = Query(None),  # noqa: B008
-    months: list[int] | None = Query(None),  # noqa: B008
-    days: list[int] | None = Query(None),  # noqa: B008
-    agents: list[str] | None = Query(None),  # noqa: B008
-    maternal: list[str] | None = Query(None),  # noqa: B008
-    occupations: list[str] | None = Query(None),  # noqa: B008
+    profile: Annotated[list[str] | None, Query()] = None,
+    race: Annotated[list[str] | None, Query()] = None,
+    gender: Annotated[list[str] | None, Query()] = None,
+    zonas: Annotated[list[str] | None, Query()] = None,
+    bairros: Annotated[list[str] | None, Query()] = None,
+    unidades: Annotated[list[str] | None, Query()] = None,
+    years: Annotated[list[int] | None, Query()] = None,
+    months: Annotated[list[int] | None, Query()] = None,
+    days: Annotated[list[int] | None, Query()] = None,
+    agents: Annotated[list[str] | None, Query()] = None,
+    maternal: Annotated[list[str] | None, Query()] = None,
+    occupations: Annotated[list[str] | None, Query()] = None,
 ) -> CommonFilters:
     """Dependency provider for common filters across endpoints."""
     _validate_years(years)
@@ -94,3 +96,6 @@ def get_common_filters(
         maternal=maternal,
         occupations=occupations,
     )
+
+
+CommonFiltersDep = Annotated[CommonFilters, Depends(get_common_filters)]

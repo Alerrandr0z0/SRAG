@@ -10,8 +10,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --no-install-project && \
-    rm -rf /root/.cache/uv
+RUN uv sync --no-dev --no-install-project && rm -rf /root/.cache/uv
 
 COPY --chown=appuser:appgroup src/ ./src/
 COPY --chown=appuser:appgroup data/processed/ ./data/processed/

@@ -7,9 +7,9 @@ from typing import Any, cast
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
-from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.dependencies import CommonFiltersDep
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.geospatial import (
     _norm_bairro_name,
@@ -23,15 +23,15 @@ from srag.data.analytics import (
     compute_zone_distribution,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["territory"])
 
 
 @router.get("/territory_bootstrap")
 def territory_bootstrap(
+    filters: CommonFiltersDep,
     min_cases: int = Query(5, ge=1),
     entities_min_cases: int = Query(3, ge=1),
     entities_limit: int = Query(40, ge=1, le=500),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
     df = apply_global_filters(
@@ -111,8 +111,8 @@ def territory_bootstrap(
 
 @router.get("/units")
 def get_units(
+    filters: CommonFiltersDep,
     min_cases: int = 1,
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
     df = apply_global_filters(

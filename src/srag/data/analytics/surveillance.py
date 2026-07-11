@@ -131,7 +131,7 @@ def _parse_date_safe(value: str | date | pd.Timestamp | float | None) -> date | 
     if isinstance(value, str):
         try:
             return pd.to_datetime(value, dayfirst=True, format="mixed").date()
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
     return None
 
@@ -163,7 +163,7 @@ def _parse_vacina_code(value: float | str | None) -> float:
     """Safely parse vaccination status code to float."""
     try:
         return float(value) if pd.notna(value) else np.nan
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return np.nan
 
 
@@ -1404,3 +1404,130 @@ def compute_ventilatory_support(df: pd.DataFrame) -> list[dict[str, Any]]:
         )
 
     return result
+
+
+def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
+    """Calcula a evolução dos métodos diagnósticos (Streamgraph) e a latência/volume (Scatter)."""
+    df = df.copy()
+    if df.empty or "CRITERIO" not in df.columns:
+        return {"streamgraph": [], "scatter": []}
+
+    def map_diagnostic(row: pd.Series) -> str:
+        criterio = row.get("CRITERIO")
+        pcr = row.get("PCR_RESUL")
+        antigeno = row.get("RES_AN")
+
+        if pd.isna(criterio):
+            return "Desconhecido"
+
+        c = int(criterio)
+        if c == 1:
+            if pcr == 1.0:
+                return "RT-PCR"
+            elif antigeno == 1.0:
+                return "Antígeno Rápido"
+            else:
+                return "Outros Laboratoriais"
+        elif c == 2:
+            return "Clínico-Epidemiológico"
+        elif c == 3:
+            return "Clínico"
+        elif c == 4:
+            return "Clínico-Imagem"
+        return "Desconhecido"
+
+    df["diag_method"] = df.apply(map_diagnostic, axis=1)
+
+    if "_epi_week" in df.columns:
+        df["time_key"] = df["_epi_week"]
+    else:
+        return {"streamgraph": [], "scatter": []}
+
+    df = df.dropna(subset=["time_key"])
+
+    # Streamgraph Data
+    stream = df.groupby(["time_key", "diag_method"]).size().reset_index(name="count")
+    stream_list = stream.to_dict(orient="records")
+
+    # Scatter Data (Latência: DT_NOTIFIC até DT_EVOLUCA)
+    if "DT_NOTIFIC" in df.columns and "DT_EVOLUCA" in df.columns:
+        df_valid = df.copy()
+        start_dates = pd.to_datetime(df_valid["DT_NOTIFIC"], errors="coerce")
+        end_dates = pd.to_datetime(df_valid["DT_EVOLUCA"], errors="coerce")
+
+        latency = (end_dates - start_dates).dt.days
+        df_valid["latency"] = latency
+        df_valid = df_valid.dropna(subset=["latency"])
+        df_valid = df_valid[(df_valid["latency"] >= 0) & (df_valid["latency"] <= 365)]
+
+        scatter = (
+            df_valid.groupby("diag_method")
+            .agg(avg_latency=("latency", "median"), volume=("latency", "count"))
+            .reset_index()
+        )
+        scatter_list = scatter.to_dict(orient="records")
+    else:
+        scatter_list = []
+
+    return {"streamgraph": stream_list, "scatter": scatter_list}
+
+
+def compute_nosocomial_risk(df: pd.DataFrame) -> dict[str, Any]:
+    """Calcula a incidência nosocomial temporal (Control Chart) e letalidade comparada."""
+    df = df.copy()
+    if df.empty or "NOSOCOMIAL" not in df.columns:
+        return {"control_chart": [], "lethality": {}}
+
+    if "_epi_week" in df.columns:
+        df["time_key"] = df["_epi_week"]
+    else:
+        return {"control_chart": [], "lethality": {}}
+
+    df = df.dropna(subset=["time_key"])
+
+    # Control Chart
+    monthly_stats = (
+        df.groupby("time_key")
+        .agg(
+            total_cases=("NOSOCOMIAL", "count"),
+            nosocomial_cases=("NOSOCOMIAL", lambda x: (x == 1.0).sum()),
+        )
+        .reset_index()
+    )
+
+    monthly_stats["rate_per_1000"] = (
+        monthly_stats["nosocomial_cases"] / monthly_stats["total_cases"]
+    ) * 1000
+    monthly_stats["rate_per_1000"] = monthly_stats["rate_per_1000"].fillna(0)
+
+    mean_rate = monthly_stats["rate_per_1000"].mean()
+    std_rate = monthly_stats["rate_per_1000"].std()
+    ucl = mean_rate + (2 * std_rate) if not pd.isna(std_rate) else mean_rate
+
+    chart_data = []
+    for _, r in monthly_stats.iterrows():
+        chart_data.append(
+            {
+                "time_key": r["time_key"],
+                "rate": round(r["rate_per_1000"], 2),
+                "mean": round(mean_rate, 2),
+                "ucl": round(ucl, 2),
+                "volume": int(r["nosocomial_cases"]),
+            }
+        )
+
+    # Lethality Contrast
+    df_closed = df[df["EVOLUCAO"].isin([1.0, 2.0])]
+
+    def calc_cfr(mask: pd.Series) -> float:
+        subset = df_closed[mask]
+        deaths = (subset["EVOLUCAO"] == 2.0).sum()
+        total = len(subset)
+        return round((deaths / total * 100), 2) if total > 0 else 0.0
+
+    noso_mask = df_closed["NOSOCOMIAL"] == 1.0
+    comm_mask = df_closed["NOSOCOMIAL"] == 2.0
+
+    lethality = {"nosocomial": calc_cfr(noso_mask), "community": calc_cfr(comm_mask)}
+
+    return {"control_chart": chart_data, "lethality": lethality}

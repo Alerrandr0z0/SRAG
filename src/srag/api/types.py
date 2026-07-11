@@ -281,3 +281,32 @@ class VentilatorySupportPoint(TypedDict):
 
 
 VentilatorySupportResponse = list[VentilatorySupportPoint]
+
+class DiagnosticStreamgraphItem(TypedDict):
+    time_key: str
+    diag_method: str
+    count: int
+
+class DiagnosticScatterItem(TypedDict):
+    diag_method: str
+    avg_latency: float
+    volume: int
+
+class DiagnosticResilienceResponse(TypedDict):
+    streamgraph: list[DiagnosticStreamgraphItem]
+    scatter: list[DiagnosticScatterItem]
+
+class NosocomialControlChartItem(TypedDict):
+    time_key: str
+    rate: float
+    mean: float
+    ucl: float
+    volume: int
+
+class NosocomialLethalityItem(TypedDict):
+    nosocomial: float
+    community: float
+
+class NosocomialRiskResponse(TypedDict):
+    control_chart: list[NosocomialControlChartItem]
+    lethality: NosocomialLethalityItem

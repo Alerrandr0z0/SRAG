@@ -34,6 +34,8 @@ export const API_ENDPOINTS = {
   COMORBIDITIES_TREEMAP: '/clinical/comorbidities_treemap',
   VENTILATORY_SUPPORT: '/trends/ventilatory_support',
   CLINICAL_TIMING: '/clinical_timing',
+  DIAGNOSTIC_RESILIENCE: '/diagnostic_resilience',
+  NOSOCOMIAL_RISK: '/nosocomial_risk',
 };
 
 export const CHART_DEFAULTS = {

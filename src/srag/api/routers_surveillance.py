@@ -7,7 +7,7 @@ from typing import Any, Literal, cast
 
 import pandas as pd
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ from srag.api.types import (
     EpidemicHeatmapResponse,
     VentilatorySupportResponse,
 )
-from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.dependencies import CommonFiltersDep
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import (
     apply_global_filters,
@@ -65,12 +65,12 @@ from srag.data.analytics import (
 )
 from srag.models.forecasting import predict_next_weeks
 
-router = APIRouter()
+router = APIRouter(tags=["surveillance"])
 
 
 @router.get("/laboratory_network")
 def laboratory_network(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     df = get_df()
     df = apply_global_filters(
@@ -156,11 +156,11 @@ def laboratory_network(
 
 @router.get("/context_trends")
 def context_trends(
+    filters: CommonFiltersDep,
     key: str = Query(pattern=r"^(BAIRRO::|ZONA::)"),
     last_n_weeks: int = Query(26, ge=1, le=104),
     weeks_to_predict: int = Query(4, ge=1, le=52),
     lookback_weeks: int = Query(0, ge=0),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df_all = get_df()
     df = apply_global_filters(
@@ -207,8 +207,8 @@ def context_trends(
 
 @router.get("/timeline_agg")
 def timeline_agg(
+    filters: CommonFiltersDep,
     virus: Literal["covid", "gripe"] = Query("covid"),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
     df = apply_global_filters(
@@ -234,7 +234,7 @@ def timeline_agg(
 
 @router.get("/icu_bottleneck")
 def icu_bottleneck(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> Any:
     """Calcula o tempo de espera (em dias) entre a internação e a entrada na UTI por mês."""
     try:
@@ -284,7 +284,7 @@ def icu_bottleneck(
 
 @router.get("/severity_kpis")
 def get_severity_kpis(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> SeverityKpisResponse:
     df = get_df()
     df = apply_global_filters(
@@ -307,7 +307,7 @@ def get_severity_kpis(
 
 @router.get("/trends/seasonal")
 def get_seasonal_trends(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> SeasonalTrendsResponse:
     df = get_df()
     df = apply_global_filters(
@@ -330,7 +330,7 @@ def get_seasonal_trends(
 
 @router.get("/severity_pyramid")
 def get_severity_pyramid(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> SeverityPyramidResponse:
     df = get_df()
     df = apply_global_filters(
@@ -353,7 +353,7 @@ def get_severity_pyramid(
 
 @router.get("/gravity_cascade")
 def get_gravity_cascade(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> GravityCascadeResponse:
     df = get_df()
     df = apply_global_filters(
@@ -376,7 +376,7 @@ def get_gravity_cascade(
 
 @router.get("/trends/heatmap_se_age")
 def get_heatmap_se_age(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> EpidemicHeatmapResponse:
     df = get_df()
     df = apply_global_filters(
@@ -399,7 +399,7 @@ def get_heatmap_se_age(
 
 @router.get("/trends/ventilatory_support")
 def get_ventilatory_support(
-    filters: CommonFilters = Depends(get_common_filters),
+    filters: CommonFiltersDep,
 ) -> VentilatorySupportResponse:
     """Retorna a evolução semanal do suporte ventilatório por tipo."""
     df = get_df()
@@ -418,4 +418,58 @@ def get_ventilatory_support(
         df, filters.years, filters.agents, filters.months, filters.days
     )
     res = compute_ventilatory_support(df)
+    return sanitize_data(res)
+
+
+@router.get("/diagnostic_resilience")
+def get_diagnostic_resilience(
+    filters: CommonFiltersDep,
+) -> Any:
+    """Retorna a evolução dos critérios diagnósticos e a latência de fechamento por método."""
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+
+    from srag.data.analytics.surveillance import compute_diagnostic_resilience
+
+    res = compute_diagnostic_resilience(df)
+    return sanitize_data(res)
+
+
+@router.get("/nosocomial_risk")
+def get_nosocomial_risk(
+    filters: CommonFiltersDep,
+) -> Any:
+    """Retorna o controle estatístico de SRAG hospitalar e contraste de letalidade."""
+    df = get_df()
+    df = apply_global_filters(
+        df,
+        filters.profile,
+        filters.race,
+        filters.gender,
+        filters.zonas,
+        filters.bairros,
+        filters.unidades,
+        maternal=filters.maternal,
+        occupations=filters.occupations,
+    )
+    df = apply_surveillance_filters(
+        df, filters.years, filters.agents, filters.months, filters.days
+    )
+
+    from srag.data.analytics.surveillance import compute_nosocomial_risk
+
+    res = compute_nosocomial_risk(df)
     return sanitize_data(res)

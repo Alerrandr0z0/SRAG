@@ -7,10 +7,10 @@ from typing import Any, Literal
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse
 
-from srag.api.dependencies import CommonFilters, get_common_filters
+from srag.api.dependencies import CommonFiltersDep
 from srag.api.core import get_df, apply_surveillance_filters, sanitize_data
 from srag.data.analytics import apply_global_filters
 from srag.data.geospatial import (
@@ -20,14 +20,14 @@ from srag.data.geospatial import (
     _iter_coords,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["geo"])
 
 
 @router.get("/geo/macrosector_heatpoints")
 def macrosector_heatpoints(
+    filters: CommonFiltersDep,
     zone: Literal["Urbana", "Rural", "Periurbana"] = Query("Rural"),
     min_cases: int = Query(1, ge=1),
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
     df = apply_global_filters(
@@ -54,8 +54,8 @@ def macrosector_heatpoints(
 
 @router.get("/geo/rural_heatpoints")
 def rural_heatpoints(
+    filters: CommonFiltersDep,
     min_cases: int = 1,
-    filters: CommonFilters = Depends(get_common_filters),
 ) -> Any:
     df = get_df()
     df = apply_global_filters(

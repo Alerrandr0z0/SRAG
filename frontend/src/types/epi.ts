@@ -535,3 +535,39 @@ export interface ClinicalTimingResponse {
   median_days_symptom_to_outcome: number;
   protocol_48h_adherence_rate: number;
 }
+
+// --- Novas Visões Vigilância ---
+export interface DiagnosticStreamgraphItem {
+  time_key: string;
+  diag_method: string;
+  count: number;
+}
+
+export interface DiagnosticScatterItem {
+  diag_method: string;
+  avg_latency: number;
+  volume: number;
+}
+
+export interface DiagnosticResilienceResponse {
+  streamgraph: DiagnosticStreamgraphItem[];
+  scatter: DiagnosticScatterItem[];
+}
+
+export interface NosocomialControlChartItem {
+  time_key: string;
+  rate: number;
+  mean: number;
+  ucl: number;
+  volume: number;
+}
+
+export interface NosocomialLethalityItem {
+  nosocomial: number;
+  community: number;
+}
+
+export interface NosocomialRiskResponse {
+  control_chart: NosocomialControlChartItem[];
+  lethality: NosocomialLethalityItem;
+}
