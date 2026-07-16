@@ -3,6 +3,7 @@ FROM node:22-slim AS build
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
+ARG CACHEBUST
 COPY frontend/ ./
 RUN npm run build && npm cache clean --force
 

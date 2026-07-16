@@ -1449,11 +1449,11 @@ def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
     stream = df.groupby(["time_key", "diag_method"]).size().reset_index(name="count")
     stream_list = stream.to_dict(orient="records")
 
-    # Scatter Data (Latência: DT_NOTIFIC até DT_EVOLUCA)
-    if "DT_NOTIFIC" in df.columns and "DT_EVOLUCA" in df.columns:
+    # Scatter Data (Latência: DT_NOTIFIC até DT_ENCERRA)
+    if "DT_NOTIFIC" in df.columns and "DT_ENCERRA" in df.columns:
         df_valid = df.copy()
         start_dates = pd.to_datetime(df_valid["DT_NOTIFIC"], errors="coerce")
-        end_dates = pd.to_datetime(df_valid["DT_EVOLUCA"], errors="coerce")
+        end_dates = pd.to_datetime(df_valid["DT_ENCERRA"], errors="coerce")
 
         latency = (end_dates - start_dates).dt.days
         df_valid["latency"] = latency
@@ -1502,7 +1502,8 @@ def compute_nosocomial_risk(df: pd.DataFrame) -> dict[str, Any]:
 
     mean_rate = monthly_stats["rate_per_1000"].mean()
     std_rate = monthly_stats["rate_per_1000"].std()
-    ucl = mean_rate + (2 * std_rate) if not pd.isna(std_rate) else mean_rate
+    ucl = mean_rate + (3 * std_rate) if not pd.isna(std_rate) else mean_rate
+    lcl = max(0.0, mean_rate - (3 * std_rate)) if not pd.isna(std_rate) else 0.0
 
     chart_data = []
     for _, r in monthly_stats.iterrows():
@@ -1512,6 +1513,7 @@ def compute_nosocomial_risk(df: pd.DataFrame) -> dict[str, Any]:
                 "rate": round(r["rate_per_1000"], 2),
                 "mean": round(mean_rate, 2),
                 "ucl": round(ucl, 2),
+                "lcl": round(lcl, 2),
                 "volume": int(r["nosocomial_cases"]),
             }
         )

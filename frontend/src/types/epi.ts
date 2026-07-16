@@ -559,6 +559,7 @@ export interface NosocomialControlChartItem {
   rate: number;
   mean: number;
   ucl: number;
+  lcl: number;
   volume: number;
 }
 

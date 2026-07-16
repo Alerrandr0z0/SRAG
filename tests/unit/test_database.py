@@ -16,7 +16,7 @@ from srag.data.database import (
 
 # Use a temporary file for testing instead of :memory: to avoid
 # new engines creating new empty databases.
-TEST_DB_FILE = Path("test_srag_temp.db")
+TEST_DB_FILE = Path("/tmp/test_srag_temp.db")
 TEST_DB_URL = f"sqlite:///{TEST_DB_FILE}"
 
 

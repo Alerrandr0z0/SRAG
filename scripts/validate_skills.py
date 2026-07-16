@@ -40,7 +40,10 @@ def git_last_modified(path: str | Path) -> str:
     try:
         r = subprocess.run(
             ["git", "log", "-1", "--format=%ai", "--", str(path)],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=15,
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=15,
         )
         return r.stdout.strip() if r.returncode == 0 else "unknown"
     except Exception:
@@ -51,7 +54,10 @@ def git_hash(path: str | Path) -> str:
     try:
         r = subprocess.run(
             ["git", "hash-object", str(path)],
-            capture_output=True, text=True, cwd=os.getcwd(), timeout=15,
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=15,
         )
         return r.stdout.strip()[:12] if r.returncode == 0 else "unversioned"
     except Exception:
@@ -86,8 +92,12 @@ def validate_data_etl() -> list[str]:
     text = skill_file.read_text()
 
     # -- Source freshness --
-    sources = ["scripts/ingest_data.py", "src/srag/data/database.py",
-               "src/srag/data/loader.py", "src/srag/data/references.py"]
+    sources = [
+        "scripts/ingest_data.py",
+        "src/srag/data/database.py",
+        "src/srag/data/loader.py",
+        "src/srag/data/references.py",
+    ]
     for src in sources:
         src_path = Path(os.getcwd()) / src
         if not src_path.exists():
@@ -95,10 +105,14 @@ def validate_data_etl() -> list[str]:
             continue
         last_mod = git_last_modified(src)
         skill_mod = git_last_modified(skill_file)
-        if last_mod and skill_mod and last_mod > skill_mod and "1970" not in last_mod and "1970" not in skill_mod:
-            errors.append(
-                f"{STALE} {src} modified {last_mod} (skill: {skill_mod})"
-            )
+        if (
+            last_mod
+            and skill_mod
+            and last_mod > skill_mod
+            and "1970" not in last_mod
+            and "1970" not in skill_mod
+        ):
+            errors.append(f"{STALE} {src} modified {last_mod} (skill: {skill_mod})")
 
     # -- DEATH_OUTCOMES (belongs in srag-sivep-domain, not here) --
     # Only check that the skill doesn't contain stale values
@@ -106,20 +120,20 @@ def validate_data_etl() -> list[str]:
     # -- Privacy columns --
     try:
         from srag.data.loader import SENSITIVE_FIELDS
+
         for col in sorted(SENSITIVE_FIELDS):
             if col not in text:
                 errors.append(f"{FAIL} Privacy column {col} missing from srag-data-etl docs")
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         errors.append(f"{STALE} Could not check privacy columns")
 
     # -- Mossoró codes --
     try:
         from srag.data.references import MOSSORO_IBGE_CODES
+
         for code in MOSSORO_IBGE_CODES:
             if code not in text:
-                errors.append(
-                    f"{FAIL} Mossoró IBGE code {code} missing from srag-data-etl docs"
-                )
+                errors.append(f"{FAIL} Mossoró IBGE code {code} missing from srag-data-etl docs")
     except ImportError:
         pass
 
@@ -134,9 +148,13 @@ def validate_sivep_domain() -> list[str]:
     text = skill_file.read_text()
 
     # -- Source freshness --
-    sources = ["src/srag/data/references.py", "src/srag/data/loader.py",
-               "src/srag/data/analytics/quality.py", "src/srag/api/core.py",
-               "src/srag/api/dependencies.py"]
+    sources = [
+        "src/srag/data/references.py",
+        "src/srag/data/loader.py",
+        "src/srag/data/analytics/quality.py",
+        "src/srag/api/core.py",
+        "src/srag/api/dependencies.py",
+    ]
     for src in sources:
         src_path = Path(os.getcwd()) / src
         if not src_path.exists():
@@ -144,14 +162,19 @@ def validate_sivep_domain() -> list[str]:
             continue
         last_mod = git_last_modified(src)
         skill_mod = git_last_modified(skill_file)
-        if last_mod and skill_mod and last_mod > skill_mod and "1970" not in last_mod and "1970" not in skill_mod:
-            errors.append(
-                f"{STALE} {src} modified {last_mod} (skill: {skill_mod})"
-            )
+        if (
+            last_mod
+            and skill_mod
+            and last_mod > skill_mod
+            and "1970" not in last_mod
+            and "1970" not in skill_mod
+        ):
+            errors.append(f"{STALE} {src} modified {last_mod} (skill: {skill_mod})")
 
     # -- Outcome constants --
     try:
         from srag.data.references import DEATH_OUTCOMES, VALID_OUTCOMES
+
         if "DEATH_OUTCOMES = " not in text:
             errors.append(f"{FAIL} DEATH_OUTCOMES section missing from srag-sivep-domain")
     except ImportError:
@@ -160,23 +183,27 @@ def validate_sivep_domain() -> list[str]:
     # -- Privacy columns --
     try:
         from srag.data.loader import SENSITIVE_FIELDS
+
         for col in sorted(SENSITIVE_FIELDS):
             if col not in text:
                 errors.append(f"{FAIL} Privacy column {col} missing from srag-sivep-domain")
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         errors.append(f"{STALE} Could not check privacy columns")
 
     # -- CLASSI_FIN codes --
-    expected_classi = {"1": "Influenza", "2": "Other respiratory virus",
-                       "3": "Other etiological agent", "4": "Unspecified",
-                       "5": "COVID-19"}
+    expected_classi = {
+        "1": "Influenza",
+        "2": "Other respiratory virus",
+        "3": "Other etiological agent",
+        "4": "Unspecified",
+        "5": "COVID-19",
+    }
     for code, meaning in expected_classi.items():
         if code not in text or meaning.lower() not in text.lower():
             errors.append(f"{FAIL} CLASSI_FIN {code} ({meaning}) missing from srag-sivep-domain")
 
     # -- CS_RACA codes --
-    expected_raca = {"1": "Branca", "2": "Preta", "3": "Amarela",
-                     "4": "Parda", "5": "Indígena"}
+    expected_raca = {"1": "Branca", "2": "Preta", "3": "Amarela", "4": "Parda", "5": "Indígena"}
     for code, meaning in expected_raca.items():
         if code not in text or meaning.lower() not in text.lower():
             errors.append(f"{FAIL} CS_RACA {code} ({meaning}) missing from srag-sivep-domain")
@@ -188,8 +215,13 @@ def validate_sivep_domain() -> list[str]:
             errors.append(f"{FAIL} SUPORT_VEN {code} ({meaning}) missing from srag-sivep-domain")
 
     # -- Quality blocks --
-    expected_blocks = ["Identificação", "Demografia", "Cuidado",
-                       "Diagnóstico", "Vigilância Genômica"]
+    expected_blocks = [
+        "Identificação",
+        "Demografia",
+        "Cuidado",
+        "Diagnóstico",
+        "Vigilância Genômica",
+    ]
     for block in expected_blocks:
         if block not in text:
             errors.append(f"{FAIL} Quality block '{block}' missing from srag-sivep-domain")
@@ -205,9 +237,12 @@ def validate_security_review() -> list[str]:
     text = skill_file.read_text()
 
     # -- Source freshness --
-    sources = ["src/srag/api/main.py", "src/srag/api/core.py",
-               "src/srag/data/loader.py",
-               "tests/unit/test_security.py"]
+    sources = [
+        "src/srag/api/main.py",
+        "src/srag/api/core.py",
+        "src/srag/data/loader.py",
+        "tests/unit/test_security.py",
+    ]
     for src in sources:
         src_path = Path(os.getcwd()) / src
         if not src_path.exists():
@@ -215,10 +250,14 @@ def validate_security_review() -> list[str]:
             continue
         last_mod = git_last_modified(src)
         skill_mod = git_last_modified(skill_file)
-        if last_mod and skill_mod and last_mod > skill_mod and "1970" not in last_mod and "1970" not in skill_mod:
-            errors.append(
-                f"{STALE} {src} modified {last_mod} (skill: {skill_mod})"
-            )
+        if (
+            last_mod
+            and skill_mod
+            and last_mod > skill_mod
+            and "1970" not in last_mod
+            and "1970" not in skill_mod
+        ):
+            errors.append(f"{STALE} {src} modified {last_mod} (skill: {skill_mod})")
 
     # -- CORS origins --
     try:
@@ -234,14 +273,13 @@ def validate_security_review() -> list[str]:
 
     # -- CORS methods --
     try:
-        methods = re.findall(r'"([^"]*)"',
-                             main_text.split("allow_methods")[1].split("]")[0])
+        methods = re.findall(r'"([^"]*)"', main_text.split("allow_methods")[1].split("]")[0])
         for method in methods:
             if method not in text:
                 errors.append(
                     f"{FAIL} CORS method '{method}' not documented in security-review skill"
                 )
-    except (IndexError, FileNotFoundError):
+    except IndexError, FileNotFoundError:
         pass
 
     # -- Known columns --
@@ -251,10 +289,11 @@ def validate_security_review() -> list[str]:
     # -- Privacy columns --
     try:
         from srag.data.loader import SENSITIVE_FIELDS
+
         for col in sorted(SENSITIVE_FIELDS):
             if col not in text:
                 errors.append(f"{FAIL} Privacy column {col} missing from security-review")
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         errors.append(f"{STALE} Could not check privacy columns")
 
     # -- Test file --
@@ -282,9 +321,7 @@ def update_checksum(skill_name: str) -> None:
             combined += src_path.read_bytes()
     new_cs = hashlib.sha256(combined).hexdigest()[:12]
     content = skill_file.read_text()
-    content = re.sub(
-        r"checksum: \S+", f"checksum: {new_cs}", content
-    )
+    content = re.sub(r"checksum: \S+", f"checksum: {new_cs}", content)
     skill_file.write_text(content)
     print(f"  {PASS} {skill_name} checksum → {new_cs}")
 
@@ -292,9 +329,9 @@ def update_checksum(skill_name: str) -> None:
 def main() -> None:
     fix = "--fix" in sys.argv
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(" Skill Freshness Validation")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     total = 0
     failed = 0
@@ -317,13 +354,17 @@ def main() -> None:
 
         print()
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     if failed:
-        print(f" {FAIL} {failed} failures — run `make skill-validate` after fixing source, "
-              "or `uv run python scripts/validate_skills.py --fix` to acknowledge drift.")
+        print(
+            f" {FAIL} {failed} failures — run `make skill-validate` after fixing source, "
+            "or `uv run python scripts/validate_skills.py --fix` to acknowledge drift."
+        )
         sys.exit(1)
     else:
-        print(f" {PASS} All skills validated. Run `make skill-validate` after any source change.\n")
+        print(
+            f" {PASS} All skills validated. Run `make skill-validate` after any source change.\n"
+        )
 
 
 if __name__ == "__main__":

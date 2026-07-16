@@ -14,7 +14,8 @@ help:
 	@echo "General Targets:"
 	@echo "  setup             Install all dependencies and git hooks"
 	@echo "  ingest            Run universal ingestion"
-	@echo "  start             Start all services"
+	@echo "  start             Start all services (production mode, Nginx)"
+	@echo "  dev               Start dev mode with Vite HMR (live reload) at :5173"
 	@echo "  stop              Stop all services"
 	@echo "  test              Run all tests (back + front)"
 	@echo "  property-test     Run property-based tests"
@@ -29,7 +30,12 @@ help:
 	@echo "  update-graph      Update knowledge graph (Graphify)"
 
 # --- Docker Helper Variables ---
-DOCKER_RUN_BACK = docker-compose run --rm -v ./tests:/app/tests -v ./scripts:/app/scripts backend
+DOCKER_RUN_BACK = docker-compose run --rm \
+	-v ./tests:/app/tests \
+	-v ./scripts:/app/scripts \
+	-v ./data/processed:/app/data/processed \
+	-v /tmp/duckdb_extensions:/home/appuser/.duckdb \
+	backend
 DOCKER_RUN_FRONT = docker run --rm --network=host \
   -u $(shell id -u):$(shell id -g) \
   -e HOME=/tmp \
@@ -52,20 +58,26 @@ cnes-lookup:
 	@echo "CNES lookup updated at data/processed/cnes_units_geo.json"
 
 start:
-	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose up --build -d
+	$(eval GIT_HASH := $(shell git rev-parse HEAD 2>/dev/null || echo $$(date +%s)))
+	docker-compose --profile production build --build-arg CACHEBUST=$(GIT_HASH)
+	docker-compose --profile production up -d
 	@printf "\nServicos em execucao:\n"
-	@printf -- "- Frontend: http://localhost\n"
-	@printf -- "- Backend:  http://localhost:8000\n"
+	@printf -- "- Frontend (Nginx): http://localhost\n"
+	@printf -- "- Backend:          http://localhost:8000\n"
 
 start-docker: start
 
 dev:
-	$(DOCKER_RUN_FRONT) npm run dev -- --host 0.0.0.0
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose --profile dev up --build -d
+	@printf "\nServicos em execucao (MODO DEV):\n"
+	@printf -- "- Frontend (Vite HMR): http://localhost:5173\n"
+	@printf -- "- Backend:            http://localhost:8000\n"
+	@printf "\nAlteracoes no codigo React sao refletidas automaticamente (live reload).\n"
 
 stop-docker: stop
 
 stop:
-	docker-compose down
+	docker-compose --profile production --profile dev down
 
 status:
 	docker-compose ps
@@ -73,7 +85,7 @@ status:
 # --- Quality & Security ---
 lint: lint-back lint-front
 lint-back:
-	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache RUFF_CACHE_DIR=/tmp/.ruff-cache uv run ruff check .
 	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pyright
 	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run complexipy src/srag/ --max-complexity-allowed 15
 
@@ -86,16 +98,10 @@ lint-front:
 
 fix: fix-back fix-front
 fix-back:
-	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff check . --fix --unsafe-fixes
-	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run ruff format .
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache RUFF_CACHE_DIR=/tmp/.ruff-cache uv run ruff check . --fix --unsafe-fixes
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache RUFF_CACHE_DIR=/tmp/.ruff-cache uv run ruff format .
 fix-front:
 	$(DOCKER_RUN_FRONT) npm run fix
-
-skill-validate:
-	$(DOCKER_RUN_BACK) uv run python scripts/validate_skills.py
-
-skill-validate-fix:
-	$(DOCKER_RUN_BACK) uv run python scripts/validate_skills.py --fix
 
 security: security-back security-secrets security-deps security-frontend
 security-back:
@@ -120,7 +126,7 @@ fix-perms:
 # --- Testing ---
 test: test-back test-front
 test-back:
-	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache uv run pytest tests/ --cov=src/srag --cov-report=term --cov-fail-under=80
+	$(DOCKER_RUN_BACK) env UV_CACHE_DIR=/tmp/.uv-cache COVERAGE_FILE=/tmp/.coverage HOME=/home/appuser uv run pytest tests/ --basetemp=/tmp/pytest -p no:cacheprovider --cov=src/srag --cov-report=term --cov-fail-under=80
 test-front:
 	$(DOCKER_RUN_FRONT) npm run test
 

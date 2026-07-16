@@ -359,13 +359,13 @@ _MAX_ANTIVIRAL_SAMPLES = 200
 def _resolve_antiviral_drug_label(row: pd.Series) -> str | None:
     try:
         tp_antivir = float(row.get("TP_ANTIVIR", float("nan")))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         tp_antivir = float("nan")
     if not np.isnan(tp_antivir) and int(tp_antivir) in _ANTIVIRAL_FLU_MAP:
         return _ANTIVIRAL_FLU_MAP[int(tp_antivir)]
     try:
         tipo_trat = float(row.get("TIPO_TRAT", float("nan")))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         tipo_trat = float("nan")
     if not np.isnan(tipo_trat) and int(tipo_trat) in _ANTIVIRAL_COV_MAP:
         return _ANTIVIRAL_COV_MAP[int(tipo_trat)]

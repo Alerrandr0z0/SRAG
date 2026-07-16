@@ -26,7 +26,7 @@ def get_epi_week(dt: object) -> tuple[int, int]:
     try:
         if pd.isna(dt):  # type: ignore
             return 0, 0
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0, 0
 
     # Ensure we have a datetime.date object
@@ -37,7 +37,7 @@ def get_epi_week(dt: object) -> tuple[int, int]:
         elif isinstance(dt, str):
             dt_converted = pd.to_datetime(dt)
             dt = getattr(dt_converted, "date", lambda: None)()
-    except (TypeError, ValueError, AttributeError, Exception):
+    except TypeError, ValueError, AttributeError, Exception:
         return 0, 0
 
     if dt is None or pd.isna(dt):  # type: ignore
@@ -131,9 +131,7 @@ def compute_epi_week_columns(dt_series: pd.Series) -> pd.DataFrame:
         prev_wed = prev_sun + pd.to_timedelta(3, unit="D")
         prev_year = prev_wed.dt.year
         prev_jan4 = pd.to_datetime({"year": prev_year, "month": 1, "day": 4})
-        prev_first_sun = prev_jan4 - pd.to_timedelta(
-            (prev_jan4.dt.weekday + 1) % 7, unit="D"
-        )
+        prev_first_sun = prev_jan4 - pd.to_timedelta((prev_jan4.dt.weekday + 1) % 7, unit="D")
         prev_week = ((prev_sun - prev_first_sun).dt.days // 7).astype(np.int32) + 1
         epi_year = epi_year.where(~mask_neg, prev_year)
         week_num = week_num.where(~mask_neg, prev_week)
@@ -207,9 +205,7 @@ def compute_epi_week_columns(
                 "day": 4,
             }
         )
-        prev_first_sun = prev_jan4 - pd.to_timedelta(
-            (prev_jan4.dt.weekday + 1) % 7, unit="d"
-        )
+        prev_first_sun = prev_jan4 - pd.to_timedelta((prev_jan4.dt.weekday + 1) % 7, unit="d")
         prev_week_num = ((prev_sun - prev_first_sun).dt.days // 7) + 1
         year[roll] = prev_year[roll]
         week_num[roll] = prev_week_num[roll]

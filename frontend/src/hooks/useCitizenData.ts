@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { api } from '../services/api';
-import * as Epi from '../types/epi';
 
 export function useCitizenData(
   active: boolean,
@@ -17,124 +17,13 @@ export function useCitizenData(
   months?: number[],
   days?: number[],
 ) {
-  const [profiles, setProfiles] = useState<Epi.CitizenProfile[]>([]);
-  const [pyramid, setPyramid] = useState<Epi.PyramidRow[]>([]);
-  const [raceProfile, setRaceProfile] = useState<Epi.CitizenBootstrap['race_profile']>([]);
-  const [schooling, setSchooling] = useState<Epi.CitizenBootstrap['schooling_profile']>([]);
-  const [occupation, setOccupation] = useState<Epi.CitizenBootstrap['occupation_profile']>([]);
-  const [animalContact, setAnimalContact] = useState<Epi.CitizenBootstrap['animal_contact']>([]);
-  const [traditionalCommunities, setTraditionalCommunities] = useState<
-    Epi.CitizenBootstrap['traditional_communities']
-  >([]);
-  const [symptomsSignature, setSymptomsSignature] = useState<Epi.SymptomSignature | null>(null);
-  const [riskFactors, setRiskFactors] = useState<Epi.CitizenBootstrap['risk_factors_full']>([]);
-  const [maternalProfile, setMaternalProfile] = useState<
-    Epi.CitizenBootstrap['maternal_profile'] | null
-  >(null);
-  const [vaccination, setVaccination] = useState<Epi.VaccinationProfile | null>(null);
-  const [survival, setSurvival] = useState<Epi.VaccineSurvival | null>(null);
-  const [timelineData, setTimelineData] = useState<Epi.AggregatedTimeline[]>([]);
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!active) return;
-
-    let isMounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const [bootstrap, vaccine, survivalData, timeline] = await Promise.all([
-          api.fetchCitizenBootstrap(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternalFilter,
-            occupationFilter,
-            months,
-            days,
-          ),
-          api.fetchVaccinationProfile(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternalFilter,
-            occupationFilter,
-            months,
-            days,
-          ),
-          api.fetchVaccineSurvival(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternalFilter,
-            occupationFilter,
-            months,
-            days,
-          ),
-          api.fetchTimelineAgg(
-            swimmerVirus,
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternalFilter,
-            occupationFilter,
-            months,
-            days,
-          ),
-        ]);
-
-        if (isMounted) {
-          setProfiles(bootstrap.citizen_profiles?.macro_profiles || []);
-          setPyramid(bootstrap.citizen_pyramid || []);
-          setRaceProfile(bootstrap.race_profile || []);
-          setSchooling(bootstrap.schooling_profile || []);
-          setOccupation(bootstrap.occupation_profile || []);
-          setAnimalContact(bootstrap.animal_contact || []);
-          setTraditionalCommunities(bootstrap.traditional_communities || []);
-          setSymptomsSignature(bootstrap.symptoms_signature || null);
-          setRiskFactors(bootstrap.risk_factors_full || []);
-          setMaternalProfile(bootstrap.maternal_profile || null);
-          setVaccination(vaccine);
-          setSurvival(survivalData);
-          setTimelineData(timeline);
-        }
-      } catch (error) {
-        console.error('Failed to load citizen data', error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    active,
+  const queryKey = [
+    'citizenData',
     profile,
     raceFilter,
     genderFilter,
-    swimmerVirus,
     zoneFilter,
     bairroFilter,
     unitFilter,
@@ -144,24 +33,94 @@ export function useCitizenData(
     occupationFilter,
     months,
     days,
-  ]);
+    swimmerVirus,
+  ];
+
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const [bootstrap, vaccine, survivalData, timeline] = await Promise.all([
+        api.fetchCitizenBootstrap(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternalFilter,
+          occupationFilter,
+          months,
+          days,
+        ),
+        api.fetchVaccinationProfile(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternalFilter,
+          occupationFilter,
+          months,
+          days,
+        ),
+        api.fetchVaccineSurvival(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternalFilter,
+          occupationFilter,
+          months,
+          days,
+        ),
+        api.fetchTimelineAgg(
+          swimmerVirus,
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternalFilter,
+          occupationFilter,
+          months,
+          days,
+        ),
+      ]);
+
+      return { bootstrap, vaccine, survivalData, timeline };
+    },
+    enabled: active,
+    staleTime: 5 * 60 * 1000,
+  });
 
   return {
-    profiles,
-    pyramid,
-    raceProfile,
-    schooling,
-    occupation,
-    animalContact,
-    traditionalCommunities,
-    symptomsSignature,
-    riskFactors,
-    maternalProfile,
-    vaccination,
-    survival,
-    timelineData,
+    profiles: data?.bootstrap.citizen_profiles?.macro_profiles || [],
+    pyramid: data?.bootstrap.citizen_pyramid || [],
+    raceProfile: data?.bootstrap.race_profile || [],
+    schooling: data?.bootstrap.schooling_profile || [],
+    occupation: data?.bootstrap.occupation_profile || [],
+    animalContact: data?.bootstrap.animal_contact || [],
+    traditionalCommunities: data?.bootstrap.traditional_communities || [],
+    symptomsSignature: data?.bootstrap.symptoms_signature || null,
+    riskFactors: data?.bootstrap.risk_factors_full || [],
+    maternalProfile: data?.bootstrap.maternal_profile || null,
+    vaccination: data?.vaccine || null,
+    survival: data?.survivalData || null,
+    timelineData: data?.timeline || [],
     swimmerVirus,
     setSwimmerVirus,
-    loading,
+    loading: isLoading && active,
   };
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useVigilanceExtraData } from '../../hooks/useVigilanceExtraData';
 import { api } from '../../services/api';
 import * as Epi from '../../types/epi';
 import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
@@ -697,7 +698,7 @@ interface SparklineProps {
   color?: string;
 }
 
-const Sparkline: React.FC<SparklineProps> = ({
+const _Sparkline: React.FC<SparklineProps> = ({
   data,
   width = 120,
   height = 30,
@@ -759,10 +760,20 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [ventilatorySupport, setVentilatorySupport] =
     useState<Epi.VentilatorySupportResponse | null>(null);
   const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
-  const [diagResData, setDiagResData] = useState<Epi.DiagnosticResilienceResponse | null>(null);
-  const [diagResLoading, setDiagResLoading] = useState(false);
-  const [nosoRiskData, setNosoRiskData] = useState<Epi.NosocomialRiskResponse | null>(null);
-  const [nosoRiskLoading, setNosoRiskLoading] = useState(false);
+  const { diagResData, diagResLoading, nosoRiskData, nosoRiskLoading } = useVigilanceExtraData(
+    true,
+    citizenTab,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    dashboardYear,
+    agentFilter,
+    maternalFilter,
+    occupationFilter,
+    dashboardMonth,
+  );
   const lookback = '0';
 
   useEffect(() => {
@@ -1086,71 +1097,6 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     occupationFilter,
     dashboardMonth,
     dashboardDay,
-  ]);
-
-  useEffect(() => {
-    let active = true;
-    api
-      .fetchDiagnosticResilience(
-        citizenTab,
-        raceFilter,
-        genderFilter,
-        zoneFilter,
-        bairroFilter,
-        unitFilter,
-        dashboardYear,
-        agentFilter,
-        maternalFilter,
-        occupationFilter,
-        dashboardMonth,
-        undefined,
-      )
-      .then((data) => {
-        if (active) setDiagResData(data);
-      })
-      .catch((err) => console.error('Failed to fetch diag', err))
-      .finally(() => {
-        if (active) setDiagResLoading(false);
-      });
-
-    setNosoRiskLoading(true);
-    api
-      .fetchNosocomialRisk(
-        citizenTab,
-        raceFilter,
-        genderFilter,
-        zoneFilter,
-        bairroFilter,
-        unitFilter,
-        dashboardYear,
-        agentFilter,
-        maternalFilter,
-        occupationFilter,
-        dashboardMonth,
-        undefined,
-      )
-      .then((data) => {
-        if (active) setNosoRiskData(data);
-      })
-      .catch((err) => console.error('Failed to fetch noso', err))
-      .finally(() => {
-        if (active) setNosoRiskLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    citizenTab,
-    raceFilter,
-    genderFilter,
-    zoneFilter,
-    bairroFilter,
-    unitFilter,
-    dashboardYear,
-    agentFilter,
-    maternalFilter,
-    occupationFilter,
-    dashboardMonth,
   ]);
 
   const currentTrends = trends ?? data?.trends ?? null;

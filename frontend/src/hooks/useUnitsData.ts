@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
-import * as Epi from '../types/epi';
 
 export function useUnitsData(
   active: boolean,
@@ -18,106 +17,8 @@ export function useUnitsData(
   _months?: number[],
   _days?: number[],
 ) {
-  const [units, setUnits] = useState<Epi.UnitStats[]>([]);
-  const [clinicalFlow, setClinicalFlow] = useState<Epi.ClinicalFlow>({ nodes: [], links: [] });
-  const [hospitalization, setHospitalization] = useState<Epi.HospitalizationDurationData | null>(
-    null,
-  );
-  const [timelineData, setTimelineData] = useState<Epi.AggregatedTimeline[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        if (active) {
-          const [unitsData, flowData, hospData, timeline] = await Promise.all([
-            api.fetchUnits(
-              profile,
-              raceFilter,
-              genderFilter,
-              zoneFilter,
-              bairroFilter,
-              unitFilter,
-              years,
-              agents,
-              maternal,
-              occupations,
-            ),
-            api.fetchClinicalFlow(
-              profile,
-              raceFilter,
-              genderFilter,
-              zoneFilter,
-              bairroFilter,
-              unitFilter,
-              years,
-              agents,
-              maternal,
-              occupations,
-            ),
-            api.fetchHospitalizationDuration(
-              profile,
-              raceFilter,
-              genderFilter,
-              zoneFilter,
-              bairroFilter,
-              unitFilter,
-              years,
-              agents,
-              maternal,
-              occupations,
-            ),
-            api.fetchTimelineAgg(
-              swimmerVirus,
-              profile,
-              raceFilter,
-              genderFilter,
-              zoneFilter,
-              bairroFilter,
-              unitFilter,
-              years,
-              agents,
-              maternal,
-              occupations,
-            ),
-          ]);
-
-          if (isMounted) {
-            setUnits(unitsData);
-            setClinicalFlow(flowData);
-            setHospitalization(hospData);
-            setTimelineData(timeline);
-          }
-        } else {
-          const unitsData = await api.fetchUnits(
-            profile,
-            raceFilter,
-            genderFilter,
-            zoneFilter,
-            bairroFilter,
-            unitFilter,
-            years,
-            agents,
-            maternal,
-            occupations,
-          );
-          if (isMounted) {
-            setUnits(unitsData);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load units data', error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [
+  const queryKey = [
+    'unitsData',
     active,
     swimmerVirus,
     profile,
@@ -130,7 +31,88 @@ export function useUnitsData(
     agents,
     maternal,
     occupations,
-  ]);
+  ];
 
-  return { units, clinicalFlow, hospitalization, timelineData, loading };
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (active) {
+        const [unitsData, flowData, hospData, timeline] = await Promise.all([
+          api.fetchUnits(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchClinicalFlow(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchHospitalizationDuration(
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+          api.fetchTimelineAgg(
+            swimmerVirus,
+            profile,
+            raceFilter,
+            genderFilter,
+            zoneFilter,
+            bairroFilter,
+            unitFilter,
+            years,
+            agents,
+            maternal,
+            occupations,
+          ),
+        ]);
+        return { unitsData, flowData, hospData, timeline };
+      } else {
+        const unitsData = await api.fetchUnits(
+          profile,
+          raceFilter,
+          genderFilter,
+          zoneFilter,
+          bairroFilter,
+          unitFilter,
+          years,
+          agents,
+          maternal,
+          occupations,
+        );
+        return { unitsData, flowData: { nodes: [], links: [] }, hospData: null, timeline: [] };
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    units: data?.unitsData || [],
+    clinicalFlow: data?.flowData || { nodes: [], links: [] },
+    hospitalization: data?.hospData || null,
+    timelineData: data?.timeline || [],
+    loading: isLoading,
+  };
 }

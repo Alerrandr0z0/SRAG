@@ -13,7 +13,6 @@ const LethalityGroupedBarChart: React.FC<LethalityGroupedBarChartProps> = ({
   xLabels,
   yLabels,
   matrix,
-  valueName = 'Letalidade (CFR %)',
 }) => {
   const theme = useThemeMode();
 
@@ -39,7 +38,7 @@ const LethalityGroupedBarChart: React.FC<LethalityGroupedBarChartProps> = ({
     return {
       tooltip: {
         position: 'top',
-        formatter: (params: any) => {
+        formatter: (params: { value: number[] }) => {
           const xName = xLabels[params.value[0]];
           const yName = yLabels[params.value[1]];
           const val = params.value[2];

@@ -3,12 +3,14 @@
 import hashlib
 import logging
 import os
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, Date, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger("SRAG-Database")
 

@@ -6,7 +6,7 @@ existing integration tests (which use a single happy-path fixture).
 
 import json
 from datetime import UTC, datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -14,6 +14,9 @@ from fastapi.testclient import TestClient
 
 from srag.api.main import _cache, app
 from srag.data.geospatial import build_macrosector_heatpoints, build_rural_heatpoints
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 client = TestClient(app)
 
