@@ -1449,11 +1449,11 @@ def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
     stream = df.groupby(["time_key", "diag_method"]).size().reset_index(name="count")
     stream_list = stream.to_dict(orient="records")
 
-    # Scatter Data (Latência: DT_NOTIFIC até DT_ENCERRA)
-    if "DT_NOTIFIC" in df.columns and "DT_ENCERRA" in df.columns:
+    # Scatter Data (Latência: DT_NOTIFIC até DT_EVOLUCA)
+    if "DT_NOTIFIC" in df.columns and "DT_EVOLUCA" in df.columns:
         df_valid = df.copy()
         start_dates = pd.to_datetime(df_valid["DT_NOTIFIC"], errors="coerce")
-        end_dates = pd.to_datetime(df_valid["DT_ENCERRA"], errors="coerce")
+        end_dates = pd.to_datetime(df_valid["DT_EVOLUCA"], errors="coerce")
 
         latency = (end_dates - start_dates).dt.days
         df_valid["latency"] = latency

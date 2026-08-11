@@ -682,7 +682,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         <article className="panel">
           <RankTable
             title="Desempenho por Laboratório"
-            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Conclusão de exames = percentual de amostras recebidas com resultado final reportado."
+            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Latência mediana = tempo mediano em dias entre a coleta e a liberação do resultado do RT-PCR. Conclusão de exames = percentual de amostras recebidas com resultado final reportado."
             searchPlaceholder="Buscar laboratório..."
             columns={[
               { key: 'laboratorio', label: 'Laboratório' },

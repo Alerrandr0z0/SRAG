@@ -8,6 +8,96 @@ import pandas as pd
 from srag.data.cnes_lookup import lookup_unit_name
 from srag.utils.epi_weeks import compute_epi_week_columns
 
+AUDITED_FIELDS = [
+    ("Data da Notificação", "DT_NOTIFIC", []),
+    ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
+    ("Sexo", "CS_SEXO", ["I"]),
+    ("Idade Normalizada", "NU_IDADE_N", []),
+    ("Tipo de Idade", "TP_IDADE", []),
+    ("Município de Notificação", "ID_MUNICIP", []),
+    ("Unidade Notificadora", "ID_UNIDADE", []),
+    ("Raça/Cor", "CS_RACA", [9]),
+    ("Escolaridade", "CS_ESCOL_N", [9]),
+    ("Ocupação", "PAC_DSCBO", [9, "9"]),
+    ("Zona", "CS_ZONA", [9]),
+    ("Bairro", "NM_BAIRRO", []),
+    ("Município de Residência", "ID_MN_RESI", []),
+    ("Internação Hospitalar", "HOSPITAL", [9]),
+    ("Data de Internação", "DT_INTERNA", []),
+    ("UTI", "UTI", [9]),
+    ("Entrada em UTI", "DT_ENTUTI", []),
+    ("Suporte Ventilatório", "SUPORT_VEN", [9]),
+    ("Evolução", "EVOLUCAO", [9]),
+    ("Data de Evolução", "DT_EVOLUCA", []),
+    ("Classificação Final", "CLASSI_FIN", [9]),
+    ("Critério de Confirmação", "CRITERIO", [9]),
+    ("Amostra Coletada", "AMOSTRA", [9]),
+    ("Data de Coleta", "DT_COLETA", []),
+    ("Tipo de Amostra", "TP_AMOSTRA", [9]),
+    ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
+    ("Resultado Antígeno", "RES_AN", [9]),
+    ("Data do PCR", "DT_PCR", []),
+    ("Laboratório", "LAB_AN", []),
+    ("Co-detecção", "CO_DETEC", [9]),
+    ("Cadeia de Surto", "SURTO_SG", [9]),
+    ("Variante (OMS)", "VG_OMS", [9]),
+    ("Linhagem", "VG_LIN", []),
+    ("Método Lab.", "VG_MET", [9]),
+    ("Possível Reinfecção", "VG_REINF", [9]),
+    ("Gestante", "CS_GESTANT", [9]),
+    ("Puérpera", "PUERPERA", [9]),
+]
+
+AUDIT_BLOCKS = {
+    "Identificação": [
+        "DT_NOTIFIC",
+        "DT_SIN_PRI",
+        "CS_SEXO",
+        "NU_IDADE_N",
+        "TP_IDADE",
+        "ID_MUNICIP",
+        "ID_UNIDADE",
+    ],
+    "Demografia": [
+        "CS_RACA",
+        "CS_ESCOL_N",
+        "PAC_DSCBO",
+        "CS_ZONA",
+        "NM_BAIRRO",
+        "ID_MN_RESI",
+        "CS_GESTANT",
+        "PUERPERA",
+    ],
+    "Cuidado": [
+        "HOSPITAL",
+        "DT_INTERNA",
+        "UTI",
+        "DT_ENTUTI",
+        "SUPORT_VEN",
+        "EVOLUCAO",
+        "DT_EVOLUCA",
+        "CLASSI_FIN",
+        "CRITERIO",
+    ],
+    "Diagnóstico": [
+        "AMOSTRA",
+        "DT_COLETA",
+        "TP_AMOSTRA",
+        "PCR_RESUL",
+        "RES_AN",
+        "DT_PCR",
+        "LAB_AN",
+    ],
+    "Vigilância Genômica": [
+        "CO_DETEC",
+        "SURTO_SG",
+        "VG_OMS",
+        "VG_LIN",
+        "VG_MET",
+        "VG_REINF",
+    ],
+}
+
 
 def _ensure_epi_week(df: pd.DataFrame) -> pd.DataFrame:
     """Add pre-computed epi_week columns if missing (e.g. when called from tests)."""
@@ -21,9 +111,35 @@ def _empty_datetime_series(index: pd.Index) -> pd.Series:
     return pd.Series(index=index, dtype="datetime64[ns]")
 
 
+def _normalize_lab_name(name: str) -> str:
+    name = str(name).strip().upper()
+    if not name or name in ["SEM LABORATÓRIO", "SEM LAB", "NÃO INFORMADO", "NAN", "NONE", "NULL"]:
+        return "SEM LABORATÓRIO"
+    if "PAGUE MENOS" in name:
+        return "FARMÁCIA PAGUE MENOS"
+    if any(
+        x in name
+        for x in ["ANALISYS", "ANALYSIS", "ANALYSES", "ANALISA", "ANALISE", "ANALISES"]
+    ):
+        if "ULTRA" in name:
+            return "ULTRANÁLISES LABORATÓRIO CLÍNICO"
+        if "CENTRA" in name:
+            return "CENTRANÁLISES"
+        return "LABORATÓRIO ANALISYS"
+    if "GLOBO" in name or "DROGAGLOBO" in name:
+        return "DROGARIA GLOBO"
+    if "PLASMA" in name:
+        return "PLASMA DIAGNÓSTICOS"
+    if "CEPAC" in name:
+        return "CEPAC"
+    if "RAFAEL FERNANDES" in name:
+        return "HOSPITAL RAFAEL FERNANDES"
+    return name
+
+
 def _prepare_laboratory_quality_frame(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    out["LAB_AN"] = out["LAB_AN"].fillna("Sem laboratório").astype(str).str.strip().str.upper()
+    out["LAB_AN"] = out["LAB_AN"].fillna("SEM LABORATÓRIO").apply(_normalize_lab_name)
 
     dt_coleta = _empty_datetime_series(out.index)
     if "DT_COLETA" in out:
@@ -33,17 +149,8 @@ def _prepare_laboratory_quality_frame(df: pd.DataFrame) -> pd.DataFrame:
     if "DT_PCR" in out:
         dt_pcr = pd.to_datetime(out["DT_PCR"], errors="coerce")
 
-    dt_res_an = _empty_datetime_series(out.index)
-    if "DT_RES_AN" in out:
-        dt_res_an = pd.to_datetime(out["DT_RES_AN"], errors="coerce")
-
-    turnaround_candidates = pd.DataFrame(
-        {
-            "pcr": (dt_pcr - dt_coleta).dt.days,
-            "an": (dt_res_an - dt_coleta).dt.days,
-        }
-    )
-    out["turnaround_days"] = turnaround_candidates.min(axis=1)
+    # turnaround_days based exclusively on PCR
+    out["turnaround_days"] = (dt_pcr - dt_coleta).dt.days
     out.loc[(out["turnaround_days"] < 0) | (out["turnaround_days"] > 30), "turnaround_days"] = (
         np.nan
     )
@@ -51,47 +158,7 @@ def _prepare_laboratory_quality_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _mark_validity_columns(out: pd.DataFrame) -> pd.DataFrame:
-    fields_to_audit = [
-        ("Data da Notificação", "DT_NOTIFIC", []),
-        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
-        ("Sexo", "CS_SEXO", ["I"]),
-        ("Idade Normalizada", "NU_IDADE_N", []),
-        ("Tipo de Idade", "TP_IDADE", []),
-        ("Município de Notificação", "ID_MUNICIP", []),
-        ("Unidade Notificadora", "ID_UNIDADE", []),
-        ("Raça/Cor", "CS_RACA", [9]),
-        ("Escolaridade", "CS_ESCOL_N", [9]),
-        ("Ocupação", "PAC_DSCBO", [9, "9"]),
-        ("Zona", "CS_ZONA", [9]),
-        ("Bairro", "NM_BAIRRO", []),
-        ("Município de Residência", "ID_MN_RESI", []),
-        ("Internação Hospitalar", "HOSPITAL", [9]),
-        ("Data de Internação", "DT_INTERNA", []),
-        ("UTI", "UTI", [9]),
-        ("Entrada em UTI", "DT_ENTUTI", []),
-        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
-        ("Evolução", "EVOLUCAO", [9]),
-        ("Data de Evolução", "DT_EVOLUCA", []),
-        ("Classificação Final", "CLASSI_FIN", [9]),
-        ("Critério de Confirmação", "CRITERIO", [9]),
-        ("Amostra Coletada", "AMOSTRA", [9]),
-        ("Data de Coleta", "DT_COLETA", []),
-        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
-        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
-        ("Resultado Antígeno", "RES_AN", [9]),
-        ("Data do PCR", "DT_PCR", []),
-        ("Laboratório", "LAB_AN", []),
-        ("Co-detecção", "CO_DETEC", [9]),
-        ("Cadeia de Surto", "SURTO_SG", [9]),
-        ("Variante (OMS)", "VG_OMS", [9]),
-        ("Linhagem", "VG_LIN", []),
-        ("Método Lab.", "VG_MET", [9]),
-        ("Possível Reinfecção", "VG_REINF", [9]),
-        ("Gestante", "CS_GESTANT", [9]),
-        ("Puérpera", "PUERPERA", [9]),
-    ]
-
-    for _, col, ignore_vals in fields_to_audit:
+    for _, col, ignore_vals in AUDITED_FIELDS:
         valid_col = f"valid_{col}"
         if col in out.columns:
             series = out[col]
@@ -99,6 +166,10 @@ def _mark_validity_columns(out: pd.DataFrame) -> pd.DataFrame:
             if ignore_vals:
                 ignores = ignore_vals + [str(v) for v in ignore_vals]
                 is_valid = is_valid & ~series.isin(ignores)
+            if col == "LAB_AN":
+                is_valid = is_valid & ~series.astype(str).str.upper().str.strip().isin(
+                    ["SEM LABORATÓRIO", "SEM LAB", "NÃO INFORMADO"]
+                )
             if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
                 is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
                 is_valid = is_valid | ~is_female
@@ -110,58 +181,8 @@ def _mark_validity_columns(out: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_block_scores(out: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
-    blocks = {
-        "Identificação": [
-            "DT_NOTIFIC",
-            "DT_SIN_PRI",
-            "CS_SEXO",
-            "NU_IDADE_N",
-            "TP_IDADE",
-            "ID_MUNICIP",
-            "ID_UNIDADE",
-        ],
-        "Demografia": [
-            "CS_RACA",
-            "CS_ESCOL_N",
-            "PAC_DSCBO",
-            "CS_ZONA",
-            "NM_BAIRRO",
-            "ID_MN_RESI",
-            "CS_GESTANT",
-            "PUERPERA",
-        ],
-        "Cuidado": [
-            "HOSPITAL",
-            "DT_INTERNA",
-            "UTI",
-            "DT_ENTUTI",
-            "SUPORT_VEN",
-            "EVOLUCAO",
-            "DT_EVOLUCA",
-            "CLASSI_FIN",
-            "CRITERIO",
-        ],
-        "Diagnóstico": [
-            "AMOSTRA",
-            "DT_COLETA",
-            "TP_AMOSTRA",
-            "PCR_RESUL",
-            "RES_AN",
-            "DT_PCR",
-            "LAB_AN",
-        ],
-        "Vigilância Genômica": [
-            "CO_DETEC",
-            "SURTO_SG",
-            "VG_OMS",
-            "VG_LIN",
-            "VG_MET",
-            "VG_REINF",
-        ],
-    }
-
     block_cols: list[str] = []
-    for block_name, cols in blocks.items():
+    for block_name, cols in AUDIT_BLOCKS.items():
         block_col = f"block_score_{block_name}"
         block_cols.append(block_col)
         valid_cols = [f"valid_{col}" for col in cols]
@@ -578,140 +599,36 @@ def compute_quality_by_unit(df: pd.DataFrame) -> list[dict[str, Any]]:
     out = df.copy()
     out["ID_UNIDADE"] = out["ID_UNIDADE"].fillna("Nao informado").astype(str).str.strip()
 
-    fields_to_audit = [
-        # Label, Column, Ignore values
-        ("Data da Notificação", "DT_NOTIFIC", []),
-        ("Data dos Primeiros Sintomas", "DT_SIN_PRI", []),
-        ("Sexo", "CS_SEXO", ["I"]),
-        ("Idade Normalizada", "NU_IDADE_N", []),
-        ("Tipo de Idade", "TP_IDADE", []),
-        ("Município de Notificação", "ID_MUNICIP", []),
-        ("Unidade Notificadora", "ID_UNIDADE", []),
-        ("Raça/Cor", "CS_RACA", [9]),
-        ("Escolaridade", "CS_ESCOL_N", [9]),
-        ("Ocupação", "PAC_DSCBO", [9, "9"]),
-        ("Zona", "CS_ZONA", [9]),
-        ("Bairro", "NM_BAIRRO", []),
-        ("Município de Residência", "ID_MN_RESI", []),
-        ("Internação Hospitalar", "HOSPITAL", [9]),
-        ("Data de Internação", "DT_INTERNA", []),
-        ("UTI", "UTI", [9]),
-        ("Entrada em UTI", "DT_ENTUTI", []),
-        ("Suporte Ventilatório", "SUPORT_VEN", [9]),
-        ("Evolução", "EVOLUCAO", [9]),
-        ("Data de Evolução", "DT_EVOLUCA", []),
-        ("Classificação Final", "CLASSI_FIN", [9]),
-        ("Critério de Confirmação", "CRITERIO", [9]),
-        ("Amostra Coletada", "AMOSTRA", [9]),
-        ("Data de Coleta", "DT_COLETA", []),
-        ("Tipo de Amostra", "TP_AMOSTRA", [9]),
-        ("Resultado PCR", "PCR_RESUL", [9, 4, 5]),
-        ("Resultado Antígeno", "RES_AN", [9]),
-        ("Data do PCR", "DT_PCR", []),
-        ("Laboratório", "LAB_AN", []),
-        ("Co-detecção", "CO_DETEC", [9]),
-        ("Cadeia de Surto", "SURTO_SG", [9]),
-        ("Variante (OMS)", "VG_OMS", [9]),
-        ("Linhagem", "VG_LIN", []),
-        ("Método Lab.", "VG_MET", [9]),
-        ("Possível Reinfecção", "VG_REINF", [9]),
-    ]
+    # Reuse mark validity and add block scores helper logic to keep things clean!
+    out = _mark_validity_columns(out)
+    out, _block_cols = _add_block_scores(out)
 
-    blocks = {
-        "Identificação": [
-            "DT_NOTIFIC",
-            "DT_SIN_PRI",
-            "CS_SEXO",
-            "NU_IDADE_N",
-            "TP_IDADE",
-            "ID_MUNICIP",
-            "ID_UNIDADE",
-        ],
-        "Demografia": [
-            "CS_RACA",
-            "CS_ESCOL_N",
-            "PAC_DSCBO",
-            "CS_ZONA",
-            "NM_BAIRRO",
-            "ID_MN_RESI",
-        ],
-        "Cuidado": [
-            "HOSPITAL",
-            "DT_INTERNA",
-            "UTI",
-            "DT_ENTUTI",
-            "SUPORT_VEN",
-            "EVOLUCAO",
-            "DT_EVOLUCA",
-            "CLASSI_FIN",
-            "CRITERIO",
-        ],
-        "Diagnóstico": [
-            "AMOSTRA",
-            "DT_COLETA",
-            "TP_AMOSTRA",
-            "PCR_RESUL",
-            "RES_AN",
-            "DT_PCR",
-            "LAB_AN",
-        ],
-        "Vigilância Genômica": [
-            "CO_DETEC",
-            "SURTO_SG",
-            "VG_OMS",
-            "VG_LIN",
-            "VG_MET",
-            "VG_REINF",
-        ],
-    }
-
-    # Pre-calculate boolean validity for each field
-    for _, col, ignore_vals in fields_to_audit:
-        valid_col = f"valid_{col}"
-        if col in out.columns:
-            series = out[col]
-            is_valid = series.notna() & (series.astype(str).str.strip() != "")
-            if ignore_vals:
-                ignores = ignore_vals + [str(v) for v in ignore_vals]
-                is_valid = is_valid & ~series.isin(ignores)
-
-            # Gestante e Puérpera: apenas para mulheres
-            if col in ["CS_GESTANT", "PUERPERA"] and "CS_SEXO" in out.columns:
-                is_female = out["CS_SEXO"].astype(str).str.strip().str.upper() == "F"
-                is_valid = is_valid | ~is_female
-
-            out[valid_col] = is_valid
-        else:
-            out[valid_col] = False
-
-    # Block scores per row
-    block_cols = []
-    for block_name, cols in blocks.items():
-        block_col = f"block_score_{block_name}"
-        block_cols.append(block_col)
-        valid_cols = [f"valid_{col}" for col in cols]
-        out[block_col] = out[valid_cols].mean(axis=1) * 100
-
-    # Row global score: mean of block scores
-    out["row_score"] = out[block_cols].mean(axis=1)
+    # Let's count occurrences per unit
+    unit_counts = out["ID_UNIDADE"].value_counts().reset_index(name="total")
 
     # Group by unit
-    valid_cols = [f"valid_{col}" for _, col, _ in fields_to_audit]
+    valid_cols = [f"valid_{col}" for _, col, _ in AUDITED_FIELDS]
     agg_dict: dict[str, Any] = {col: "mean" for col in valid_cols}
     agg_dict["row_score"] = "mean"
 
     unit_grouped = out.groupby("ID_UNIDADE").agg(agg_dict).reset_index()
     unit_grouped = unit_grouped.rename(columns={"ID_UNIDADE": "id_unidade", "row_score": "score"})
 
-    # Let's count occurrences per unit
-    unit_counts = out["ID_UNIDADE"].value_counts().reset_index(name="total")
     unit_grouped = unit_grouped.merge(
         unit_counts, left_on="id_unidade", right_on="ID_UNIDADE"
     ).drop(columns=["ID_UNIDADE"])
 
-    # Compute worst field and worst rate for each unit
-    field_labels = {f"valid_{col}": label for label, col, _ in fields_to_audit}
-    val_df = unit_grouped[valid_cols] * 100
+    # Dynamic worst field filtering:
+    # 1. Compute global completeness for all audited fields in df
+    global_completeness = out[valid_cols].mean() * 100
+    # 2. Keep columns with at least 1.0% global completeness
+    active_audit_cols = global_completeness[global_completeness >= 1.0].index.tolist()
+    if not active_audit_cols:
+        # Fallback to all if somehow none are >= 1%
+        active_audit_cols = valid_cols
+
+    field_labels = {f"valid_{col}": label for label, col, _ in AUDITED_FIELDS}
+    val_df = unit_grouped[active_audit_cols] * 100
 
     worst_col = val_df.idxmin(axis=1)
     worst_rate = val_df.min(axis=1)

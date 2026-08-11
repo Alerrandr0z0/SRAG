@@ -1149,17 +1149,15 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
       </section>
 
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-              Eficácia Diagnóstica e Controle de Infecção
-            </h2>
+        <article className="panel">
+          <div className="section-header">
+            <h3 style={{ margin: 0 }}>Eficácia Diagnóstica e Controle de Infecção</h3>
           </div>
-          <div className="p-4 flex flex-col gap-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
             <DiagnosticResilienceChart data={diagResData} loading={diagResLoading} />
             <NosocomialRiskChart data={nosoRiskData} loading={nosoRiskLoading} />
           </div>
-        </div>
+        </article>
       </section>
     </>
   );
