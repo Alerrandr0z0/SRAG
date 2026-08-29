@@ -209,11 +209,6 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
   const totalInconsistencies = inconsistencies.reduce((acc, inc) => acc + inc.count, 0);
   const qualTitle = qualMode === 'unidade' ? 'Qualidade por Unidade' : 'Qualidade por Localidade';
 
-  const qualSubtitle =
-    qualMode === 'unidade'
-      ? 'Completude global e principal gargalo por unidade notificadora'
-      : 'Completude global agregada por localidade';
-
   const qualPlaceholder =
     qualMode === 'unidade' ? 'Filtrar por unidade ou CNES...' : 'Filtrar por localidade...';
 
@@ -955,7 +950,6 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
       <article className="panel" style={{ boxShadow: 'none' }}>
         <RankTable
           title={qualTitle}
-          subtitle={qualSubtitle}
           searchPlaceholder={qualPlaceholder}
           columns={qualColumns}
           rows={qualRows}

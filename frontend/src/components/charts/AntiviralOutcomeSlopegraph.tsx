@@ -71,12 +71,12 @@ const AntiviralOutcomeSlopegraph: React.FC<AntiviralOutcomeSlopegraphProps> = ({
       },
       legend: {
         data: ['Cura', 'Óbito', 'Margem (cura−óbito)'],
-        top: 0,
+        bottom: 0,
         textStyle: { color: textColor, fontSize: 11 },
         itemWidth: 14,
         itemHeight: 8,
       },
-      grid: { left: '4%', right: '4%', bottom: '12%', top: '14%', containLabel: true },
+      grid: { left: '4%', right: '4%', bottom: '18%', top: '6%', containLabel: true },
       xAxis: {
         type: 'category',
         data: cats,

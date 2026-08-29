@@ -210,13 +210,13 @@ function App() {
   }, [unitsData.units]);
 
   useEffect(() => {
-    if (panel === 'cidadao') {
+    if (panel === 'cidadao' || isFilterDrawerOpen) {
       api
         .fetchOccupations(dashboardYear, zoneFilter, bairroFilter, agentFilter)
         .then((res) => setAvailableOccupations(res.map((o) => o.label)))
         .catch((err) => console.error('Failed to fetch occupations', err));
     }
-  }, [panel, dashboardYear, zoneFilter, bairroFilter, agentFilter]);
+  }, [panel, isFilterDrawerOpen, dashboardYear, zoneFilter, bairroFilter, agentFilter]);
 
   useEffect(() => {
     const selectedAgent = agentFilter[0];

@@ -123,7 +123,6 @@ const UnitsPanel: React.FC<UnitsPanelProps> = ({
       <article className="panel" style={{ boxShadow: 'none' }}>
         <RankTable
           title="Unidades notificadoras"
-          subtitle="Top 10 com busca e paginação"
           searchPlaceholder="Buscar unidade"
           columns={[
             { key: 'unidade', label: 'Unidade' },

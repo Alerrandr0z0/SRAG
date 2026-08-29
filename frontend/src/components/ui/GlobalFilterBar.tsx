@@ -151,6 +151,37 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const [highlightedUnitIdx, setHighlightedUnitIdx] = useState(-1);
   const [highlightedOccIdx, setHighlightedOccIdx] = useState(-1);
 
+  // Calculate dynamic maximum days for selected month(s) and year(s)
+  const maxDays = useMemo(() => {
+    if (dashboardMonth.length === 0) {
+      return 31;
+    }
+
+    let maxVal = 28;
+    for (const m of dashboardMonth) {
+      if (m === 2) {
+        const hasLeapYearSelected =
+          dashboardYear.length === 0 ||
+          dashboardYear.some((y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0);
+        const febDays = hasLeapYearSelected ? 29 : 28;
+        if (febDays > maxVal) maxVal = febDays;
+      } else if ([4, 6, 9, 11].includes(m)) {
+        if (30 > maxVal) maxVal = 30;
+      } else {
+        if (31 > maxVal) maxVal = 31;
+      }
+    }
+    return maxVal;
+  }, [dashboardMonth, dashboardYear]);
+
+  // Adjust selected days if they exceed the maximum days allowed for the selected months/years
+  useEffect(() => {
+    const invalidDays = dashboardDay.filter((d) => d > maxDays);
+    if (invalidDays.length > 0) {
+      setDashboardDay(dashboardDay.filter((d) => d <= maxDays));
+    }
+  }, [maxDays, dashboardDay, setDashboardDay]);
+
   // Lock body scroll when drawer is open
   useEffect(() => {
     if (isDrawerOpen) {
@@ -193,6 +224,31 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Automatic scroll adjustment when search dropdowns open
+  useEffect(() => {
+    if (showBairroDropdown && bairroRef.current) {
+      setTimeout(() => {
+        bairroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [showBairroDropdown]);
+
+  useEffect(() => {
+    if (showUnitDropdown && unitRef.current) {
+      setTimeout(() => {
+        unitRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [showUnitDropdown]);
+
+  useEffect(() => {
+    if (showOccDropdown && occRef.current) {
+      setTimeout(() => {
+        occRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [showOccDropdown]);
 
   // Reset highlight indices when lists change or close
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on change
@@ -406,67 +462,98 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               {/* Ano */}
               <div className="gfb-drawer-field gfb-group">
                 <span className="gfb-label">Ano</span>
-                <select
-                  className="gfb-select"
-                  value={dashboardYear[0] ? String(dashboardYear[0]) : ''}
-                  onChange={(e) => setDashboardYear(e.target.value ? [Number(e.target.value)] : [])}
-                >
-                  <option value="">Todos</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                <div className="gfb-pills gfb-pills--scrollable">
+                  {years.map((y) => {
+                    const active = dashboardYear.includes(y);
+                    return (
+                      <button
+                        key={y}
+                        type="button"
+                        className={`gfb-pill ${active ? 'active' : ''}`}
+                        onClick={() => {
+                          const next = active
+                            ? dashboardYear.filter((item) => item !== y)
+                            : [...dashboardYear, y];
+                          setDashboardYear(next);
+                        }}
+                      >
+                        {y}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Mês */}
               <div className="gfb-drawer-field gfb-group">
                 <span className="gfb-label">Mês</span>
-                <select
-                  className="gfb-select"
-                  value={dashboardMonth[0] ? String(dashboardMonth[0]) : ''}
-                  onChange={(e) =>
-                    setDashboardMonth(e.target.value ? [Number(e.target.value)] : [])
-                  }
-                >
-                  <option value="">Todos</option>
+                <div className="gfb-pills gfb-pills--wrap">
                   {[
-                    [1, 'Janeiro'],
-                    [2, 'Fevereiro'],
-                    [3, 'Março'],
-                    [4, 'Abril'],
-                    [5, 'Maio'],
-                    [6, 'Junho'],
-                    [7, 'Julho'],
-                    [8, 'Agosto'],
-                    [9, 'Setembro'],
-                    [10, 'Outubro'],
-                    [11, 'Novembro'],
-                    [12, 'Dezembro'],
-                  ].map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                    [1, 'Jan'],
+                    [2, 'Fev'],
+                    [3, 'Mar'],
+                    [4, 'Abr'],
+                    [5, 'Mai'],
+                    [6, 'Jun'],
+                    [7, 'Jul'],
+                    [8, 'Ago'],
+                    [9, 'Set'],
+                    [10, 'Out'],
+                    [11, 'Nov'],
+                    [12, 'Dez'],
+                  ].map(([v, l]) => {
+                    const m = Number(v);
+                    const active = dashboardMonth.includes(m);
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`gfb-pill ${active ? 'active' : ''}`}
+                        onClick={() => {
+                          const next = active
+                            ? dashboardMonth.filter((item) => item !== m)
+                            : [...dashboardMonth, m];
+                          setDashboardMonth(next);
+                        }}
+                      >
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Dia */}
               <div className="gfb-drawer-field gfb-group">
                 <span className="gfb-label">Dia do Mês</span>
-                <select
-                  className="gfb-select"
-                  value={dashboardDay[0] ? String(dashboardDay[0]) : ''}
-                  onChange={(e) => setDashboardDay(e.target.value ? [Number(e.target.value)] : [])}
-                >
-                  <option value="">Todos</option>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                <div className="gfb-pills gfb-pills--wrap" style={{ gap: '6px' }}>
+                  {Array.from({ length: maxDays }, (_, i) => i + 1).map((d) => {
+                    const active = dashboardDay.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        className={`gfb-pill ${active ? 'active' : ''}`}
+                        style={{
+                          minWidth: '28px',
+                          height: '28px',
+                          padding: 0,
+                          flex: '0 0 auto',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                        onClick={() => {
+                          const next = active
+                            ? dashboardDay.filter((item) => item !== d)
+                            : [...dashboardDay, d];
+                          setDashboardDay(next);
+                        }}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Agente Etiológico */}
@@ -539,7 +626,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
               {/* Raça */}
               <div className="gfb-drawer-field gfb-group">
                 <span className="gfb-label">Raça</span>
-                <div className="gfb-pills gfb-pills--wrap">
+                <div className="gfb-pills gfb-pills--scrollable">
                   {RACA_OPTS.map((opt) => (
                     <button
                       key={opt.key}
@@ -665,22 +752,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                     </div>
                   )}
                 </div>
-                {bairroFilter.length > 0 && (
-                  <div className="gfb-selected-chips">
-                    {bairroFilter.map((name) => (
-                      <span key={name} className="gfb-selected-chip">
-                        <span>{name}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggle(bairroFilter, name, setBairroFilter)}
-                          aria-label={`Remover bairro ${name}`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {showBairroDropdown && <div style={{ height: '240px' }} />}
               </div>
 
               {/* Unidade */}
@@ -758,26 +830,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                     </div>
                   )}
                 </div>
-                {unitFilter.length > 0 && (
-                  <div className="gfb-selected-chips">
-                    {unitFilter.map((id) => {
-                      const unit = unitsList.find((u) => u.id_unidade === id);
-                      const name = unit ? unit.nome_fantasia : id;
-                      return (
-                        <span key={id} className="gfb-selected-chip">
-                          <span>{name}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggle(unitFilter, id, setUnitFilter)}
-                            aria-label={`Remover unidade ${name}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                {showUnitDropdown && <div style={{ height: '240px' }} />}
               </div>
 
               {/* Ocupação */}
@@ -847,22 +900,7 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                     </div>
                   )}
                 </div>
-                {occupationFilter.length > 0 && (
-                  <div className="gfb-selected-chips">
-                    {occupationFilter.map((name) => (
-                      <span key={name} className="gfb-selected-chip">
-                        <span>{name}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggle(occupationFilter, name, setOccupationFilter)}
-                          aria-label={`Remover ocupação ${name}`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {showOccDropdown && <div style={{ height: '240px' }} />}
               </div>
             </div>
           </div>

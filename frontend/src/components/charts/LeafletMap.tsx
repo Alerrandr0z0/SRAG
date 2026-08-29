@@ -113,9 +113,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       await import('leaflet/dist/leaflet.css');
       if (cancelled || !mapRef.current) return;
 
-      const lightTiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      const darkTiles = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      const tileUrl = theme === 'dark' ? darkTiles : lightTiles;
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       if (!mapInstance.current) {
         mapInstance.current = L.map(mapRef.current, {
@@ -124,7 +122,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         }).setView([-5.18, -37.34], 12);
 
         tileLayerRef.current = L.tileLayer(tileUrl, {
-          attribution: theme === 'dark' ? '&copy; CartoDB' : '&copy; OpenStreetMap',
+          attribution: '&copy; OpenStreetMap contributors',
         }).addTo(mapInstance.current);
       } else {
         tileLayerRef.current?.setUrl(tileUrl);

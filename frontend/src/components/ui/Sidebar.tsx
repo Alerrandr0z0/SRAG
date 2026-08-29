@@ -260,20 +260,22 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
             </span>
-            <span
-              className="nav-label sidebar-nav-label"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-              }}
-            >
-              <span>Filtros</span>
-              {totalActiveFilters > 0 && (
-                <span className="sb-filter-badge">{totalActiveFilters}</span>
-              )}
-            </span>
+            {!collapsed && (
+              <span
+                className="nav-label sidebar-nav-label"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}
+              >
+                <span>Filtros</span>
+                {totalActiveFilters > 0 && (
+                  <span className="sb-filter-badge">{totalActiveFilters}</span>
+                )}
+              </span>
+            )}
             {collapsed && totalActiveFilters > 0 && (
               <span className="sb-filter-badge sb-filter-badge--collapsed">
                 {totalActiveFilters}

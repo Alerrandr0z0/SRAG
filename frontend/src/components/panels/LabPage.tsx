@@ -682,7 +682,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         <article className="panel">
           <RankTable
             title="Desempenho por Laboratório"
-            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Latência mediana = tempo mediano em dias entre a coleta e a liberação do resultado do RT-PCR. Conclusão de exames = percentual de amostras recebidas com resultado final reportado."
+            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Latência mediana = tempo mediano em dias entre a coleta e a liberação do resultado do RT-PCR. Conclusão de exames = percentual de amostras recebidas com resultado final reportado. Alerta combinado prioriza score, latência e cobertura."
             searchPlaceholder="Buscar laboratório..."
             columns={[
               { key: 'laboratorio', label: 'Laboratório' },
@@ -694,11 +694,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
             ]}
             rows={labRows}
             initialPageSize={10}
-          >
-            <span className="meta" style={{ margin: 0 }}>
-              Alerta combinado prioriza score, latência e cobertura.
-            </span>
-          </RankTable>
+          />
         </article>
       </section>
 
@@ -1330,10 +1326,12 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           >
             {/* Left KDE Chart */}
             <div
+              className="card-box"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
+                height: '100%',
               }}
             >
               <div
@@ -1342,7 +1340,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                   fontSize: '11px',
                   fontWeight: 600,
                   textTransform: 'uppercase',
-                  marginBottom: '8px',
+                  marginBottom: '12px',
                   letterSpacing: '0.05em',
                   color: 'var(--text-main)',
                 }}
@@ -1351,7 +1349,7 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
               </div>
               <div
                 className="chart-wrap"
-                style={{ minHeight: '360px', height: '360px', width: '100%' }}
+                style={{ minHeight: '420px', height: '420px', width: '100%' }}
               >
                 {latencyPerDrug.length > 0 ? (
                   <TherapeuticKdeChart

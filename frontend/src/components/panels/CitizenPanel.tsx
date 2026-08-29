@@ -49,12 +49,44 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
 
   const topSchooling = [...schooling].sort((a, b) => b.count - a.count)[0]?.label || 'N/A';
 
-  // Risk factors use .factor instead of .label
+  // Risk factors use .factor instead of .label. Filter out non-semantic categories.
   const topRisk =
-    [...riskFactors].sort((a, b) => (b.count as number) - (a.count as number))[0]?.factor || 'N/A';
+    [...riskFactors]
+      .filter(
+        (r) =>
+          r.factor &&
+          ![
+            'Outros fatores',
+            'Outros',
+            'Outro',
+            'Não Informado',
+            'NÃO INFORMADO',
+            'Ignorado',
+          ].includes(r.factor),
+      )
+      .sort((a, b) => (b.count as number) - (a.count as number))[0]?.factor || 'N/A';
 
-  const sortedAnimalContact = [...animalContact].sort((a, b) => b.count - a.count);
+  // Filter out non-semantic categories for species
+  const sortedAnimalContact = [...animalContact]
+    .filter(
+      (a) =>
+        a.label &&
+        !['Sem Contato', 'Sem contato', 'Não Informado', 'NÃO INFORMADO', 'Ignorado'].includes(
+          a.label,
+        ),
+    )
+    .sort((a, b) => b.count - a.count);
   const topAnimal = sortedAnimalContact[0]?.label || 'N/A';
+
+  // Get the main occupation, filtering out non-semantic categories
+  const sortedOccupation = [...occupation]
+    .filter(
+      (o) =>
+        o.label &&
+        !['OUTROS', 'Outros', 'Não Informado', 'NÃO INFORMADO', 'Ignorado'].includes(o.label),
+    )
+    .sort((a, b) => b.count - a.count);
+  const topOccupation = sortedOccupation[0]?.label || 'N/A';
 
   const noAnimalContactItem = animalContact.find((a) => a.label === 'Sem Contato');
   const totalAnimalContact = animalContact.reduce((acc, curr) => acc + curr.count, 0);
@@ -62,6 +94,28 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
     totalAnimalContact > 0 && noAnimalContactItem
       ? `${((noAnimalContactItem.count / totalAnimalContact) * 100).toFixed(1)}%`
       : '0%';
+
+  const formatKpiValue = (val: string) => {
+    if (!val || val === 'N/A') return 'N/A';
+    return val
+      .toLowerCase()
+      .split(' ')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  };
+
+  const getFontSize = (text: string) => {
+    if (!text) return '22px';
+    if (text.length > 20) return '14px';
+    if (text.length > 15) return '17px';
+    if (text.length > 11) return '19px';
+    return '22px';
+  };
+
+  const formattedAnimal = formatKpiValue(topAnimal);
+  const formattedSchooling = formatKpiValue(topSchooling);
+  const formattedRisk = formatKpiValue(topRisk);
+  const formattedOccupation = formatKpiValue(topOccupation);
 
   return (
     <div className="stack">
@@ -132,8 +186,9 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
         }}
       >
         <article
-          className="panel"
+          className="panel kpi-tooltip-wrapper"
           style={{
+            position: 'relative',
             background: 'var(--bg-status)',
             borderRadius: '12px',
             padding: '14px 16px',
@@ -161,13 +216,25 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
             ></span>
             Principal espécie
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>
-            {topAnimal}
+          <h2
+            style={{
+              fontSize: getFontSize(formattedAnimal),
+              fontWeight: 500,
+              color: 'var(--text-main)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {formattedAnimal}
           </h2>
+          <div className="kpi-tooltip-content">{formattedAnimal}</div>
         </article>
         <article
-          className="panel"
+          className="panel kpi-tooltip-wrapper"
           style={{
+            position: 'relative',
             background: 'var(--bg-status)',
             borderRadius: '12px',
             padding: '14px 16px',
@@ -195,13 +262,25 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
             ></span>
             Maior escolaridade
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>
-            {topSchooling}
+          <h2
+            style={{
+              fontSize: getFontSize(formattedSchooling),
+              fontWeight: 500,
+              color: 'var(--text-main)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {formattedSchooling}
           </h2>
+          <div className="kpi-tooltip-content">{formattedSchooling}</div>
         </article>
         <article
-          className="panel"
+          className="panel kpi-tooltip-wrapper"
           style={{
+            position: 'relative',
             background: 'var(--bg-status)',
             borderRadius: '12px',
             padding: '14px 16px',
@@ -229,13 +308,25 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
             ></span>
             Principal fator
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>
-            {topRisk}
+          <h2
+            style={{
+              fontSize: getFontSize(formattedRisk),
+              fontWeight: 500,
+              color: 'var(--text-main)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {formattedRisk}
           </h2>
+          <div className="kpi-tooltip-content">{formattedRisk}</div>
         </article>
         <article
-          className="panel"
+          className="panel kpi-tooltip-wrapper"
           style={{
+            position: 'relative',
             background: 'var(--bg-status)',
             borderRadius: '12px',
             padding: '14px 16px',
@@ -263,9 +354,66 @@ const CitizenPanel: React.FC<CitizenPanelProps> = ({
             ></span>
             Sem contato animal
           </p>
-          <h2 style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-main)', margin: 0 }}>
+          <h2
+            style={{
+              fontSize: '22px',
+              fontWeight: 500,
+              color: 'var(--text-main)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {noAnimalPct}
           </h2>
+          <div className="kpi-tooltip-content">{noAnimalPct}</div>
+        </article>
+        <article
+          className="panel kpi-tooltip-wrapper"
+          style={{
+            position: 'relative',
+            background: 'var(--bg-status)',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              margin: '0 0 6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                marginRight: '6px',
+                background: '#8B5CF6',
+              }}
+            ></span>
+            Principal ocupação
+          </p>
+          <h2
+            style={{
+              fontSize: getFontSize(formattedOccupation),
+              fontWeight: 500,
+              color: 'var(--text-main)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {formattedOccupation}
+          </h2>
+          <div className="kpi-tooltip-content">{formattedOccupation}</div>
         </article>
       </div>
 

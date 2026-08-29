@@ -110,7 +110,6 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
       <article className="panel" style={{ boxShadow: 'none' }}>
         <RankTable
           title="Localidades notificadas"
-          subtitle="Top 10 com busca e paginação"
           searchPlaceholder="Buscar localidade"
           columns={[
             { key: 'bairro', label: 'Localidade' },

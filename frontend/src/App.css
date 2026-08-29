@@ -146,13 +146,11 @@ body,
 
 .sidebar-header {
   padding: 2rem 1.5rem;
-}
-
-.sidebar-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  position: relative;
 }
 
 .sidebar-collapse-toggle {
@@ -298,8 +296,9 @@ body,
 
 .sidebar--collapsed .toggle-overlay {
   position: absolute;
-  top: -1px;
-  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: -12px;
   z-index: 10;
   width: 24px;
   height: 24px;
@@ -610,7 +609,7 @@ h1 {
 
 .citizen-kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -2163,6 +2162,34 @@ select {
   flex-wrap: wrap;
 }
 
+.gfb-pills--scrollable {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  padding-bottom: 5px;
+}
+
+.gfb-pills--scrollable::-webkit-scrollbar {
+  height: 4px;
+}
+
+.gfb-pills--scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gfb-pills--scrollable::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 2px;
+}
+
+.gfb-pills--scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.gfb-pills--scrollable .gfb-pill {
+  flex: 0 0 auto;
+}
+
 .gfb-pill {
   flex: 1;
   text-align: center;
@@ -2939,4 +2966,121 @@ select {
     height: 1px;
     margin: 0 auto;
   }
+}
+
+/* Leaflet Dark Mode Tiles Filter */
+[data-theme="dark"] .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+/* Tooltip for RankTable header information */
+.rank-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rank-tooltip-trigger {
+  background: transparent;
+  border: none;
+  padding: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 150ms ease;
+}
+
+.rank-tooltip-trigger:hover {
+  color: var(--primary-teal);
+}
+
+.rank-tooltip-content {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  font-size: 11px;
+  line-height: 1.4;
+  width: 280px;
+  z-index: 100;
+  transition:
+    opacity 200ms ease,
+    visibility 200ms ease;
+  pointer-events: none;
+  white-space: normal;
+  font-weight: 500;
+}
+
+.rank-tooltip-content::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--bg-sidebar) transparent transparent transparent;
+}
+
+.rank-tooltip-wrapper:hover .rank-tooltip-content {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Tooltip for KPI cards in Citizen panel */
+.kpi-tooltip-wrapper {
+  position: relative;
+}
+
+.kpi-tooltip-content {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 105%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+  line-height: 1.3;
+  width: max-content;
+  max-width: 200px;
+  z-index: 1000;
+  transition:
+    opacity 150ms ease,
+    visibility 150ms ease;
+  pointer-events: none;
+  white-space: normal;
+  text-align: center;
+  font-weight: 500;
+}
+
+.kpi-tooltip-content::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--border-subtle) transparent transparent transparent;
+}
+
+.kpi-tooltip-wrapper:hover .kpi-tooltip-content {
+  visibility: visible;
+  opacity: 1;
 }

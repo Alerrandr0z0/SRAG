@@ -113,10 +113,10 @@ export function DiagnosticResilienceChart({ data, loading }: Props) {
 
   return (
     <div className="responsive-grid-2col">
-      <div className="chart-wrap" style={{ height: '350px', minHeight: '300px' }}>
+      <div className="panel" style={{ height: '350px', minHeight: '300px', position: 'relative' }}>
         <canvas ref={canvasArea} />
       </div>
-      <div className="chart-wrap" style={{ height: '350px', minHeight: '300px' }}>
+      <div className="panel" style={{ height: '350px', minHeight: '300px', position: 'relative' }}>
         <canvas ref={canvasScatter} />
       </div>
     </div>
