@@ -14,6 +14,8 @@ export function useUnitsData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  schooling?: string[],
+  riskFactors?: string[],
   _months?: number[],
   _days?: number[],
 ) {
@@ -31,6 +33,8 @@ export function useUnitsData(
     agents,
     maternal,
     occupations,
+    schooling,
+    riskFactors,
   ];
 
   const { data, isLoading } = useQuery({
@@ -49,6 +53,10 @@ export function useUnitsData(
             agents,
             maternal,
             occupations,
+            schooling,
+            riskFactors,
+            _months,
+            _days,
           ),
           api.fetchClinicalFlow(
             profile,
@@ -61,6 +69,10 @@ export function useUnitsData(
             agents,
             maternal,
             occupations,
+            schooling,
+            riskFactors,
+            _months,
+            _days,
           ),
           api.fetchHospitalizationDuration(
             profile,
@@ -73,6 +85,10 @@ export function useUnitsData(
             agents,
             maternal,
             occupations,
+            schooling,
+            riskFactors,
+            _months,
+            _days,
           ),
           api.fetchTimelineAgg(
             swimmerVirus,
@@ -86,6 +102,10 @@ export function useUnitsData(
             agents,
             maternal,
             occupations,
+            schooling,
+            riskFactors,
+            _months,
+            _days,
           ),
         ]);
         return { unitsData, flowData, hospData, timeline };
@@ -101,6 +121,10 @@ export function useUnitsData(
           agents,
           maternal,
           occupations,
+          schooling,
+          riskFactors,
+          _months,
+          _days,
         );
         return { unitsData, flowData: { nodes: [], links: [] }, hospData: null, timeline: [] };
       }

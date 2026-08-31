@@ -48,8 +48,8 @@ export function DiagnosticResilienceChart({ data, loading }: Props) {
     const latencyValues = list.map((p) => p.avg_latency ?? 0);
     const cfrRates = list.map((p) => p.death_rate ?? 0);
 
-    const xMax = Math.min(60, Math.ceil(Math.max(...latencyValues) + 4));
-    const yMax = Math.min(100, Math.ceil(Math.max(...cfrRates) + 10));
+    const xMax = Math.min(60, Math.ceil(Math.max(...latencyValues) + 1.5));
+    const yMax = Math.min(100, Math.ceil(Math.max(...cfrRates) + 4));
 
     const medianLatency = median(latencyValues) ?? 0;
     const medianDeath = median(cfrRates) ?? 0;
@@ -95,11 +95,11 @@ export function DiagnosticResilienceChart({ data, loading }: Props) {
           `;
         },
       },
-      grid: { left: 10, right: 15, bottom: 35, top: 45, containLabel: true },
+      grid: { left: 10, right: 14, bottom: 28, top: 32, containLabel: true },
       xAxis: {
         name: 'Latência Mediana (dias)',
         nameLocation: 'middle',
-        nameGap: 24,
+        nameGap: 18,
         nameTextStyle: { color: textColor, fontSize: 10 },
         type: 'value',
         min: 0,
@@ -111,10 +111,10 @@ export function DiagnosticResilienceChart({ data, loading }: Props) {
       yAxis: {
         name: 'Letalidade (CFR %)',
         nameLocation: 'end',
-        nameGap: 10,
+        nameGap: 8,
         nameTextStyle: { color: textColor, fontSize: 10, align: 'left' },
         type: 'value',
-        min: -2,
+        min: 0,
         max: yMax === 0 ? 10 : yMax,
         axisLine: { lineStyle: { color: axisColor } },
         axisLabel: { color: textColor, formatter: '{value}%', fontSize: 10 },
@@ -253,8 +253,35 @@ export function DiagnosticResilienceChart({ data, loading }: Props) {
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>
-        Eficácia Diagnóstica vs. Letalidade (CFR)
+      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span>Eficácia Diagnóstica vs. Letalidade (CFR)</span>
+        <div className="rank-tooltip-wrapper">
+          <button
+            type="button"
+            className="rank-tooltip-trigger"
+            aria-label="Informações sobre o gráfico"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          <div className="rank-tooltip-content rank-tooltip-content--align-right" style={{ width: '320px' }}>
+            Este quadrante correlaciona a qualidade epidemiológica (eixo X) com a severidade clínica dos desfechos (eixo Y):<br/><br/>
+            • <b>Eficácia Diagnóstica (Eixo X):</b> Percentual de casos com agente etiológico identificado. Baixa eficácia (esquerda) significa excesso de casos rotulados como 'SRAG Não Especificada' (cegueira epidemiológica).<br/><br/>
+            • <b>Letalidade - CFR (Eixo Y):</b> Proporção de óbitos entre os casos confirmados. Zonas de <b>Alto Risco (Quadrante Superior Esquerdo)</b> representam o pior cenário: alta letalidade combinada a um baixo esclarecimento diagnóstico, indicando subnotificação grave ou falhas severas na assistência clínica em tempo oportuno.
+          </div>
+        </div>
       </div>
       <div ref={volcanoRef.chartRef} style={{ flex: 1, minHeight: 0 }} />
       <div

@@ -83,6 +83,8 @@ def laboratory_network(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -173,6 +175,8 @@ def context_trends(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -221,6 +225,8 @@ def timeline_agg(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -249,6 +255,8 @@ def icu_bottleneck(
             filters.unidades,
             maternal=filters.maternal,
             occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
         )
         df = apply_surveillance_filters(
             df, filters.years, filters.agents, filters.months, filters.days
@@ -297,6 +305,8 @@ def get_severity_kpis(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -320,6 +330,8 @@ def get_seasonal_trends(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -343,6 +355,8 @@ def get_severity_pyramid(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -366,6 +380,8 @@ def get_gravity_cascade(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -389,6 +405,8 @@ def get_heatmap_se_age(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -413,6 +431,8 @@ def get_ventilatory_support(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -437,6 +457,8 @@ def get_diagnostic_resilience(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -464,6 +486,8 @@ def get_nosocomial_risk(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days

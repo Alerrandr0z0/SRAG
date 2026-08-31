@@ -2118,6 +2118,26 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gfb-field-badge {
+  background: var(--primary-teal);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 /* ── Unified inputs & selects ────────────────── */
@@ -3042,6 +3062,29 @@ select {
   border-width: 5px;
   border-style: solid;
   border-color: var(--bg-sidebar) transparent transparent transparent;
+}
+
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--align-right {
+  left: auto;
+  right: -6px;
+  transform: none;
+}
+
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--align-right::after {
+  left: auto;
+  right: 14px;
+  margin-left: 0;
+}
+
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--below {
+  top: 125%;
+  bottom: auto;
+}
+
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--below::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--bg-sidebar) transparent;
 }
 
 .rank-tooltip-wrapper:hover .rank-tooltip-content {

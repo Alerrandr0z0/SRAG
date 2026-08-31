@@ -682,7 +682,16 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         <article className="panel">
           <RankTable
             title="Desempenho por Laboratório"
-            subtitle="Score de qualidade = completude média das variáveis do bloco de diagnóstico (amostra, coleta, data, resultado). Latência mediana = tempo mediano em dias entre a coleta e a liberação do resultado do RT-PCR. Conclusão de exames = percentual de amostras recebidas com resultado final reportado. Alerta combinado prioriza score, latência e cobertura."
+            subtitle={
+              <>
+                Ranqueamento da qualidade operacional dos laboratórios responsáveis pelo diagnóstico laboratorial:<br/><br/>
+                • <b>Score de qualidade:</b> média de completude das quatro variáveis do bloco diagnóstico — amostra, data de coleta, data de resultado e resultado final. Formalmente, Score = (Σ completude<sub>i</sub> ÷ 4) × 100, em escala 0–100%. Ordena preenchimento e rastreabilidade e prioriza a classificação da tabela (desempate por latência e conclusão). Escores baixos sinalizam subregistro ou fluxo fragmentado.<br/><br/>
+                • <b>Latência mediana:</b> mediana em dias entre coleta e liberação do RT-PCR; valores elevados indicam gargalo.<br/><br/>
+                • <b>Conclusão de exames:</b> percentual de amostras com resultado final reportado; baixa indica represamento.<br/><br/>
+                • <b>Sinal de alerta:</b> classificação combinada (score, latência e cobertura) para priorização de supervisão.
+              </>
+            }
+            subtitlePosition="bottom"
             searchPlaceholder="Buscar laboratório..."
             columns={[
               { key: 'laboratorio', label: 'Laboratório' },
@@ -703,9 +712,6 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           <div className="section-header">
             <div className="stack" style={{ gap: 4 }}>
               <h3 style={{ margin: 0 }}>Performance Diagnóstica</h3>
-              <p className="meta" style={{ margin: 0 }}>
-                Da coleta da amostra ao resultado laboratorial
-              </p>
             </div>
           </div>
 
@@ -1133,10 +1139,6 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           <div className="section-header">
             <div className="stack" style={{ gap: 4 }}>
               <h3 style={{ margin: 0 }}>Latência ao tratamento e desfecho clínico</h3>
-              <p className="meta" style={{ margin: 0 }}>
-                Distribuição de latência (sintomas → antiviral) e desfecho clínico por janela
-                terapêutica
-              </p>
             </div>
             {antiviralTypes.length > 0 && (
               <div className="filters" style={{ fontSize: '12px', color: '#64748b', gap: 12 }}>
@@ -1335,17 +1337,44 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
               }}
             >
               <div
-                className="meta"
                 style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
+                  fontSize: '12px',
+                  fontWeight: 700,
                   marginBottom: '12px',
-                  letterSpacing: '0.05em',
-                  color: 'var(--text-main)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                Oportunidade terapêutica
+                <span>Oportunidade terapêutica</span>
+                <span className="rank-tooltip-wrapper">
+                  <button
+                    type="button"
+                    className="rank-tooltip-trigger"
+                    aria-label="Informações sobre o gráfico"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </button>
+                  <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
+                    Distribuição temporal entre início de sintomas e início do antiviral, por fármaco:<br/><br/>
+                    • <b>Densidade por fármaco (KDE normalizada):</b> cada curva representa um antiviral; o pico indica a latência mais frequente e a largura da cauda revela variabilidade operacional.<br/><br/>
+                    • <b>Meta 2 dias (linha tracejada vermelha):</b> limite considerado oportuno. Picos à esquerda da meta indicam entrega oportuna; picos à direita e caudas longas sinalizam atraso sistêmico e perda de janela terapêutica.
+                  </div>
+                </span>
               </div>
               <div
                 className="chart-wrap"
@@ -1385,17 +1414,44 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                 }}
               >
                 <div
-                  className="meta"
                   style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
+                    fontSize: '12px',
+                    fontWeight: 700,
                     marginBottom: '8px',
-                    letterSpacing: '0.05em',
-                    color: 'var(--text-main)',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
-                  Impacto clínico do antiviral
+                  <span>Impacto clínico do antiviral</span>
+                  <span className="rank-tooltip-wrapper">
+                    <button
+                      type="button"
+                      className="rank-tooltip-trigger"
+                      aria-label="Informações sobre o gráfico"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                    </button>
+                    <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
+                      Evolução das taxas de desfecho por janela de tempo entre sintomas e antiviral:<br/><br/>
+                      • <b>Cura (linha verde) e Óbito (linha vermelha):</b> proporções por janela terapêutica. Declínio da cura e elevação do óbito nas janelas tardias evidenciam perda de efetividade com o atraso.<br/><br/>
+                      • <b>Margem cura−óbito (tracejada petróleo com área):</b> benefício líquido. Estreitamento ou inversão sinaliza janela onde o efeito clínico se atenua e orienta antecipação na atenção primária.
+                    </div>
+                  </span>
                 </div>
                 <div
                   className="chart-wrap"
@@ -1541,10 +1597,43 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
         <article className="panel">
           <div className="section-header">
             <div className="stack" style={{ gap: 4 }}>
-              <h3 style={{ margin: 0 }}>Imagem e Gravidade</h3>
-              <p className="meta" style={{ margin: 0 }}>
-                Cruzamento entre modalidade de imagem, internação em UTI e letalidade
-              </p>
+              <h3
+                style={{
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>Imagem e Gravidade</span>
+                <span className="rank-tooltip-wrapper">
+                  <button
+                    type="button"
+                    className="rank-tooltip-trigger"
+                    aria-label="Informações sobre o gráfico"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </button>
+                  <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
+                    Relação entre achados de imagem e gravidade clínica, com escala compartilhada entre Raio-X e Tomografia:<br/><br/>
+                    • <b>UTI (eixo X) e Letalidade - CFR (eixo Y):</b> proporção de casos com o achado que evoluíram para UTI e para óbito. Tamanho da bolha proporcional ao volume de casos.<br/><br/>
+                    • <b>Quadrantes e Alto Risco (área avermelhada superior direita):</b> medianas tracejadas particionam o espaço; achados acima da mediana em ambos os eixos concentram maior severidade. Quadrante inferior esquerdo associa-se a menor risco. Maior dispersão vertical na tomografia indica melhor discriminação de risco.
+                  </div>
+                </span>
+              </h3>
             </div>
           </div>
           <div style={{ marginTop: '0.5rem' }}>

@@ -13,6 +13,8 @@ export function useAuditData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  schooling?: string[],
+  riskFactors?: string[],
   _months?: number[],
   _days?: number[],
 ) {
@@ -28,6 +30,8 @@ export function useAuditData(
     agents,
     maternal,
     occupations,
+    schooling,
+    riskFactors,
   ];
 
   const { data, isLoading } = useQuery({
@@ -44,6 +48,10 @@ export function useAuditData(
         agents,
         maternal,
         occupations,
+        schooling,
+        riskFactors,
+        _months,
+        _days,
       ),
     enabled: active,
     staleTime: 5 * 60 * 1000,

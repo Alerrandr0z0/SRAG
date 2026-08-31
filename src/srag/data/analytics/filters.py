@@ -140,6 +140,75 @@ def _filter_by_occupations(df: pd.DataFrame, occupations: list[str] | None) -> p
     return df[df["PAC_DSCBO"].fillna("").astype(str).str.upper().str.strip().isin(occ_norm)]
 
 
+def _filter_by_schooling(df: pd.DataFrame, schooling: list[str] | None) -> pd.DataFrame:
+    """Filter by schooling (CS_ESCOL_N codes 0,1,2,3,4,5,9)."""
+    if not schooling:
+        return df
+    if "CS_ESCOL_N" not in df.columns:
+        return df
+    label_to_code: dict[str, int] = {
+        "Sem escolaridade": 0,
+        "Fundamental I": 1,
+        "Fundamental II": 2,
+        "Médio": 3,
+        "Superior": 4,
+        "Não se aplica": 5,
+        "Ignorado": 9,
+    }
+    codes: list[int] = []
+    for label in schooling:
+        norm = str(label).strip()
+        if norm in label_to_code:
+            codes.append(label_to_code[norm])
+        elif norm.isdigit() and int(norm) in label_to_code.values():
+            codes.append(int(norm))
+    if not codes:
+        return df
+    s = pd.to_numeric(df["CS_ESCOL_N"], errors="coerce")
+    return df[s.isin(codes)]
+
+
+_RISK_FACTOR_COLS: dict[str, str] = {
+    "Puérpera": "PUERPERA",
+    "Cardiopatia": "CARDIOPATI",
+    "Doença hematológica": "HEMATOLOGI",
+    "Síndrome de Down": "SIND_DOWN",
+    "Doença hepática": "HEPATICA",
+    "Asma": "ASMA",
+    "Diabetes": "DIABETES",
+    "Doença neurológica": "NEUROLOGIC",
+    "Pneumopatia": "PNEUMOPATI",
+    "Imunodepressão": "IMUNODEPRE",
+    "Doença renal": "RENAL",
+    "Obesidade": "OBESIDADE",
+    "Tabagismo": "TABAG",
+    "Outros fatores": "OUT_MORBI",
+}
+
+
+def _filter_by_risk_factors(df: pd.DataFrame, risk_factors: list[str] | None) -> pd.DataFrame:
+    """Filter by risk factors / comorbidities (OR logic: any selected ==1)."""
+    if not risk_factors:
+        return df
+    cols: list[str] = []
+    for label in risk_factors:
+        norm = str(label).strip()
+        if norm in _RISK_FACTOR_COLS:
+            cols.append(_RISK_FACTOR_COLS[norm])
+        elif norm.upper() in _RISK_FACTOR_COLS.values():
+            cols.append(norm.upper())
+        elif norm in _RISK_FACTOR_COLS.values():
+            cols.append(norm)
+    cols = [c for c in cols if c in df.columns]
+    if not cols:
+        return df
+    mask = pd.Series(False, index=df.index)
+    for col in cols:
+        s = pd.to_numeric(df[col], errors="coerce")
+        mask |= s == 1
+    return df[mask]
+
+
 def _filter_by_location(
     df: pd.DataFrame,
     zonas: list[str] | None,
@@ -178,6 +247,8 @@ def apply_global_filters(
     years: list[int] | None = None,
     maternal: list[str] | None = None,
     occupations: list[str] | None = None,
+    schooling: list[str] | None = None,
+    risk_factors: list[str] | None = None,
 ) -> pd.DataFrame:
     """Apply hierarchy of filters with support for multi-selection."""
     if df.empty:
@@ -192,6 +263,8 @@ def apply_global_filters(
     u_list = [u for u in (unidades or []) if u]
     m_list = [m for m in (maternal or []) if m]
     o_list = [o for o in (occupations or []) if o]
+    s_list = [s for s in (schooling or []) if s]
+    rf_list = [r for r in (risk_factors or []) if r]
 
     out = df.copy()
     out = _filter_by_years(out, years)
@@ -200,6 +273,8 @@ def apply_global_filters(
     out, m_list = _filter_by_genders_and_maternal(out, g_list, m_list)
     out = _filter_by_maternal(out, m_list)
     out = _filter_by_occupations(out, o_list)
+    out = _filter_by_schooling(out, s_list)
+    out = _filter_by_risk_factors(out, rf_list)
     out = _filter_by_location(out, z_list, b_list, u_list)
 
     return out

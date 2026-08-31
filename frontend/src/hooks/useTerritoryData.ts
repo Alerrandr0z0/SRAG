@@ -14,6 +14,8 @@ export function useTerritoryData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  schooling?: string[],
+  riskFactors?: string[],
   _months?: number[],
   _days?: number[],
 ) {
@@ -30,6 +32,8 @@ export function useTerritoryData(
       agents,
       maternal,
       occupations,
+      schooling,
+      riskFactors,
     ],
     queryFn: () =>
       api.fetchTerritoryBootstrap(
@@ -43,6 +47,10 @@ export function useTerritoryData(
         agents,
         maternal,
         occupations,
+        schooling,
+        riskFactors,
+        _months,
+        _days,
       ),
     staleTime: 5 * 60 * 1000,
   });

@@ -13,6 +13,9 @@ interface AuditPanelProps {
   qualityByBairro: Epi.BairroQualityScore[];
   inconsistencies: Epi.LogicalInconsistency[];
   timelinessFlow: Epi.TimelinessFlow;
+  schoolingFilter?: string[];
+  occupationFilter?: string[];
+  riskFilter?: string[];
 }
 
 const getScoreColor = (score: number, isDark = false) => {
@@ -134,6 +137,9 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
   qualityByBairro,
   inconsistencies,
   timelinessFlow,
+  schoolingFilter = [],
+  occupationFilter = [],
+  riskFilter = [],
 }) => {
   const theme = useThemeMode();
   const isDark = theme === 'dark';
@@ -544,43 +550,68 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
               </div>
 
               <div className="stack" style={{ gap: '1rem', flex: 1 }}>
-                {group.fields.map((field) => (
-                  <div key={field.field}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        marginBottom: '4px',
-                        fontSize: '11px',
-                      }}
-                    >
-                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                        {field.field}
-                      </span>
-                      <span style={{ fontWeight: 700, color: getScoreColor(field.rate, isDark) }}>
-                        {field.rate}%
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        height: '6px',
-                        background: 'var(--bg-pill)',
-                        borderRadius: '3px',
-                        overflow: 'hidden',
-                      }}
-                    >
+                {group.fields.map((field) => {
+                  const isSchoolingFiltered =
+                    field.field === 'Escolaridade' && schoolingFilter.length > 0;
+                  const isOccupationFiltered =
+                    field.field === 'Ocupação' && occupationFilter.length > 0;
+                  const isPuerperaFiltered =
+                    field.field === 'Puérpera' && riskFilter.includes('Puérpera');
+                  const isFiltered =
+                    isSchoolingFiltered || isOccupationFiltered || isPuerperaFiltered;
+
+                  return (
+                    <div key={field.field}>
                       <div
                         style={{
-                          height: '100%',
-                          width: `${Math.min(field.rate, 100)}%`,
-                          background: getScoreColor(field.rate, isDark),
-                          borderRadius: '3px',
-                          transition: 'width 0.5s ease',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: '4px',
+                          fontSize: '11px',
                         }}
-                      />
+                      >
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                          {field.field}{' '}
+                          {isFiltered && (
+                            <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>
+                              (Campo Filtrado)
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: isFiltered
+                              ? 'var(--text-muted)'
+                              : getScoreColor(field.rate, isDark),
+                          }}
+                        >
+                          {isFiltered ? 'N/A' : `${field.rate}%`}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          height: '6px',
+                          background: 'var(--bg-pill)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            width: isFiltered ? '0%' : `${Math.min(field.rate, 100)}%`,
+                            background: isFiltered
+                              ? 'var(--border-subtle)'
+                              : getScoreColor(field.rate, isDark),
+                            borderRadius: '3px',
+                            transition: 'width 0.5s ease',
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </article>
           ))}

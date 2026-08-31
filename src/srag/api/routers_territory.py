@@ -44,6 +44,8 @@ def territory_bootstrap(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -125,6 +127,8 @@ def get_units(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days

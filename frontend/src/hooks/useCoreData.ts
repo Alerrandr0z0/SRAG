@@ -25,6 +25,8 @@ export function useCoreData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  schooling?: string[],
+  riskFactors?: string[],
   _months?: number[],
   _days?: number[],
 ) {
@@ -43,6 +45,8 @@ export function useCoreData(
     agents,
     maternal,
     occupations,
+    schooling,
+    riskFactors,
   ];
 
   const { data, isLoading, isError, dataUpdatedAt } = useQuery<CoreDataState>({
@@ -60,6 +64,10 @@ export function useCoreData(
           agents,
           maternal,
           occupations,
+          schooling,
+          riskFactors,
+          _months,
+          _days,
         ),
         api.fetchTrends(
           weeksWindow,
@@ -74,6 +82,10 @@ export function useCoreData(
           agents,
           maternal,
           occupations,
+          schooling,
+          riskFactors,
+          _months,
+          _days,
         ),
         api.fetchVirus(
           virusDetail,
@@ -87,6 +99,10 @@ export function useCoreData(
           agents,
           maternal,
           occupations,
+          schooling,
+          riskFactors,
+          _months,
+          _days,
         ),
         api.fetchLaboratoryNetwork(
           profile,
@@ -99,6 +115,10 @@ export function useCoreData(
           agents,
           maternal,
           occupations,
+          schooling,
+          riskFactors,
+          _months,
+          _days,
         ),
       ]);
       return { summary, trends, virus, laboratoryNetwork: lab };

@@ -26,6 +26,10 @@ interface GlobalFilterBarProps {
   setMaternalFilter: (m: string[]) => void;
   occupationFilter: string[];
   setOccupationFilter: (o: string[]) => void;
+  schoolingFilter: string[];
+  setSchoolingFilter: (s: string[]) => void;
+  riskFilter: string[];
+  setRiskFilter: (r: string[]) => void;
 
   zoneFilter: string[];
   setZoneFilter: (z: string[]) => void;
@@ -96,6 +100,33 @@ const AGENT_OPTS: FilterOption[] = [
   { key: 'Influenza', label: 'Influenza' },
 ];
 
+const ESCOLARIDADE_OPTS: FilterOption[] = [
+  { key: 'Sem escolaridade', label: 'Sem escolaridade' },
+  { key: 'Fundamental I', label: 'Fundamental I' },
+  { key: 'Fundamental II', label: 'Fundamental II' },
+  { key: 'Médio', label: 'Médio' },
+  { key: 'Superior', label: 'Superior' },
+  { key: 'Não se aplica', label: 'Não se aplica' },
+  { key: 'Ignorado', label: 'Ignorado' },
+];
+
+const RISK_FACTOR_OPTS: FilterOption[] = [
+  { key: 'Cardiopatia', label: 'Cardiopatia' },
+  { key: 'Diabetes', label: 'Diabetes' },
+  { key: 'Obesidade', label: 'Obesidade' },
+  { key: 'Asma', label: 'Asma' },
+  { key: 'Doença renal', label: 'Doença renal' },
+  { key: 'Pneumopatia', label: 'Pneumopatia' },
+  { key: 'Imunodepressão', label: 'Imunodepressão' },
+  { key: 'Doença neurológica', label: 'Doença neurológica' },
+  { key: 'Doença hematológica', label: 'Doença hematológica' },
+  { key: 'Doença hepática', label: 'Doença hepática' },
+  { key: 'Síndrome de Down', label: 'Síndrome de Down' },
+  { key: 'Puérpera', label: 'Puérpera' },
+  { key: 'Tabagismo', label: 'Tabagismo' },
+  { key: 'Outros fatores', label: 'Outros fatores' },
+];
+
 const toggle = (list: string[], key: string, setter: (v: string[]) => void) => {
   setter(list.includes(key) ? list.filter((i) => i !== key) : [...list, key]);
 };
@@ -114,6 +145,10 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   setMaternalFilter,
   occupationFilter,
   setOccupationFilter,
+  schoolingFilter,
+  setSchoolingFilter,
+  riskFilter,
+  setRiskFilter,
   zoneFilter,
   setZoneFilter,
   bairroFilter,
@@ -136,6 +171,10 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
 }) => {
   const [occSearch, setOccSearch] = useState('');
   const [showOccDropdown, setShowOccDropdown] = useState(false);
+  const [schoolingSearch, setSchoolingSearch] = useState('');
+  const [showSchoolingDropdown, setShowSchoolingDropdown] = useState(false);
+  const [riskSearch, setRiskSearch] = useState('');
+  const [showRiskDropdown, setShowRiskDropdown] = useState(false);
   const [bairroSearch, setBairroSearch] = useState('');
   const [showBairroDropdown, setShowBairroDropdown] = useState(false);
   const [unitSearch, setUnitSearch] = useState('');
@@ -143,6 +182,8 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const isFemaleSelected = genderFilter.includes('F');
 
   const occRef = useRef<HTMLDivElement>(null);
+  const schoolingRef = useRef<HTMLDivElement>(null);
+  const riskRef = useRef<HTMLDivElement>(null);
   const bairroRef = useRef<HTMLDivElement>(null);
   const unitRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +191,8 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
   const [highlightedBairroIdx, setHighlightedBairroIdx] = useState(-1);
   const [highlightedUnitIdx, setHighlightedUnitIdx] = useState(-1);
   const [highlightedOccIdx, setHighlightedOccIdx] = useState(-1);
+  const [highlightedSchoolingIdx, setHighlightedSchoolingIdx] = useState(-1);
+  const [highlightedRiskIdx, setHighlightedRiskIdx] = useState(-1);
 
   // Calculate dynamic maximum days for selected month(s) and year(s)
   const maxDays = useMemo(() => {
@@ -218,6 +261,12 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
       if (occRef.current && !occRef.current.contains(event.target as Node)) {
         setShowOccDropdown(false);
       }
+      if (schoolingRef.current && !schoolingRef.current.contains(event.target as Node)) {
+        setShowSchoolingDropdown(false);
+      }
+      if (riskRef.current && !riskRef.current.contains(event.target as Node)) {
+        setShowRiskDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -250,6 +299,22 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
     }
   }, [showOccDropdown]);
 
+  useEffect(() => {
+    if (showSchoolingDropdown && schoolingRef.current) {
+      setTimeout(() => {
+        schoolingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [showSchoolingDropdown]);
+
+  useEffect(() => {
+    if (showRiskDropdown && riskRef.current) {
+      setTimeout(() => {
+        riskRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [showRiskDropdown]);
+
   // Reset highlight indices when lists change or close
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on change
   useEffect(() => {
@@ -266,6 +331,16 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
     setHighlightedOccIdx(-1);
   }, [occSearch, showOccDropdown]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on change
+  useEffect(() => {
+    setHighlightedSchoolingIdx(-1);
+  }, [schoolingSearch, showSchoolingDropdown]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on change
+  useEffect(() => {
+    setHighlightedRiskIdx(-1);
+  }, [riskSearch, showRiskDropdown]);
+
   const filteredOccupations = useMemo(() => {
     const search = occSearch.toLowerCase();
     const filtered = occupationOptions.filter((o) => o.toLowerCase().includes(search));
@@ -274,6 +349,30 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
       20,
     );
   }, [occupationOptions, occSearch, occupationFilter]);
+
+  const filteredSchooling = useMemo(() => {
+    const search = schoolingSearch.toLowerCase();
+    const filtered = ESCOLARIDADE_OPTS.filter((o) => o.label.toLowerCase().includes(search));
+    const withSelected = [
+      ...(schoolingFilter
+        .map((k) => ESCOLARIDADE_OPTS.find((o) => o.key === k))
+        .filter(Boolean) as FilterOption[]),
+      ...filtered.filter((o) => !schoolingFilter.includes(o.key)),
+    ];
+    return withSelected.slice(0, 20);
+  }, [schoolingSearch, schoolingFilter]);
+
+  const filteredRiskFactors = useMemo(() => {
+    const search = riskSearch.toLowerCase();
+    const filtered = RISK_FACTOR_OPTS.filter((o) => o.label.toLowerCase().includes(search));
+    const withSelected = [
+      ...(riskFilter
+        .map((k) => RISK_FACTOR_OPTS.find((o) => o.key === k))
+        .filter(Boolean) as FilterOption[]),
+      ...filtered.filter((o) => !riskFilter.includes(o.key)),
+    ];
+    return withSelected.slice(0, 20);
+  }, [riskSearch, riskFilter]);
 
   const filteredBairros = useMemo(() => {
     const search = bairroSearch.toLowerCase();
@@ -387,6 +486,66 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
       if (highlightedOccIdx >= 0 && highlightedOccIdx < listLength) {
         const item = filteredOccupations[highlightedOccIdx];
         toggle(occupationFilter, item, setOccupationFilter);
+      }
+    }
+  };
+
+  const handleSchoolingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSchoolingDropdown) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        setShowSchoolingDropdown(true);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    const listLength = filteredSchooling.length;
+    if (listLength === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedSchoolingIdx((prev) => (prev + 1) % listLength);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedSchoolingIdx((prev) => (prev - 1 + listLength) % listLength);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowSchoolingDropdown(false);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedSchoolingIdx >= 0 && highlightedSchoolingIdx < listLength) {
+        const item = filteredSchooling[highlightedSchoolingIdx];
+        toggle(schoolingFilter, item.key, setSchoolingFilter);
+      }
+    }
+  };
+
+  const handleRiskKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showRiskDropdown) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        setShowRiskDropdown(true);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    const listLength = filteredRiskFactors.length;
+    if (listLength === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedRiskIdx((prev) => (prev + 1) % listLength);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedRiskIdx((prev) => (prev - 1 + listLength) % listLength);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowRiskDropdown(false);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedRiskIdx >= 0 && highlightedRiskIdx < listLength) {
+        const item = filteredRiskFactors[highlightedRiskIdx];
+        toggle(riskFilter, item.key, setRiskFilter);
       }
     }
   };
@@ -660,12 +819,235 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                   </div>
                 </div>
               )}
+              {/* Ocupação */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={occRef}
+              >
+                <span className="gfb-label">
+                  Ocupação do Paciente
+                  {occupationFilter.length > 0 && (
+                    <span className="gfb-field-badge">{occupationFilter.length}</span>
+                  )}
+                </span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showOccDropdown}
+                    aria-controls="occ-listbox"
+                    aria-activedescendant={
+                      highlightedOccIdx >= 0 ? `occ-opt-${highlightedOccIdx}` : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar ocupação..."
+                    value={occSearch}
+                    onChange={(e) => {
+                      setOccSearch(e.target.value);
+                      setShowOccDropdown(true);
+                    }}
+                    onFocus={() => setShowOccDropdown(true)}
+                    onKeyDown={handleOccKeyDown}
+                  />
+                  {occSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setOccSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showOccDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="occ-listbox" role="listbox">
+                        {filteredOccupations.map((occ, index) => (
+                          <button
+                            key={occ}
+                            type="button"
+                            id={`occ-opt-${index}`}
+                            role="option"
+                            aria-selected={occupationFilter.includes(occ)}
+                            className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''} ${index === highlightedOccIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
+                          >
+                            <span>{occ}</span>
+                          </button>
+                        ))}
+                        {filteredOccupations.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowOccDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {showOccDropdown && <div style={{ height: '240px' }} />}
+              </div>
+              {/* Escolaridade */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={schoolingRef}
+              >
+                <span className="gfb-label">
+                  Escolaridade
+                  {schoolingFilter.length > 0 && (
+                    <span className="gfb-field-badge">{schoolingFilter.length}</span>
+                  )}
+                </span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showSchoolingDropdown}
+                    aria-controls="schooling-listbox"
+                    aria-activedescendant={
+                      highlightedSchoolingIdx >= 0
+                        ? `schooling-opt-${highlightedSchoolingIdx}`
+                        : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar escolaridade..."
+                    value={schoolingSearch}
+                    onChange={(e) => {
+                      setSchoolingSearch(e.target.value);
+                      setShowSchoolingDropdown(true);
+                    }}
+                    onFocus={() => setShowSchoolingDropdown(true)}
+                    onKeyDown={handleSchoolingKeyDown}
+                  />
+                  {schoolingSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setSchoolingSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showSchoolingDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="schooling-listbox" role="listbox">
+                        {filteredSchooling.map((opt, index) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            id={`schooling-opt-${index}`}
+                            role="option"
+                            aria-selected={schoolingFilter.includes(opt.key)}
+                            className={`gfb-dropdown-item ${schoolingFilter.includes(opt.key) ? 'active' : ''} ${index === highlightedSchoolingIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(schoolingFilter, opt.key, setSchoolingFilter)}
+                          >
+                            <span>{opt.label}</span>
+                          </button>
+                        ))}
+                        {filteredSchooling.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhuma escolaridade encontrada</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowSchoolingDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {showSchoolingDropdown && <div style={{ height: '240px' }} />}
+              </div>
+
+              {/* Fatores de Risco */}
+              <div
+                className="gfb-drawer-field gfb-group"
+                style={{ position: 'relative' }}
+                ref={riskRef}
+              >
+                <span className="gfb-label">
+                  Fatores de Risco
+                  {riskFilter.length > 0 && <span className="gfb-field-badge">{riskFilter.length}</span>}
+                </span>
+                <div className="gfb-combobox-wrapper">
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showRiskDropdown}
+                    aria-controls="risk-listbox"
+                    aria-activedescendant={
+                      highlightedRiskIdx >= 0 ? `risk-opt-${highlightedRiskIdx}` : undefined
+                    }
+                    className="gfb-input"
+                    placeholder="Buscar fator de risco..."
+                    value={riskSearch}
+                    onChange={(e) => {
+                      setRiskSearch(e.target.value);
+                      setShowRiskDropdown(true);
+                    }}
+                    onFocus={() => setShowRiskDropdown(true)}
+                    onKeyDown={handleRiskKeyDown}
+                  />
+                  {riskSearch && (
+                    <button
+                      type="button"
+                      className="gfb-input-clear"
+                      onClick={() => setRiskSearch('')}
+                      aria-label="Limpar busca"
+                    >
+                      ×
+                    </button>
+                  )}
+                  {showRiskDropdown && (
+                    <div className="gfb-dropdown">
+                      <div className="gfb-dropdown-list" id="risk-listbox" role="listbox">
+                        {filteredRiskFactors.map((opt, index) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            id={`risk-opt-${index}`}
+                            role="option"
+                            aria-selected={riskFilter.includes(opt.key)}
+                            className={`gfb-dropdown-item ${riskFilter.includes(opt.key) ? 'active' : ''} ${index === highlightedRiskIdx ? 'highlighted' : ''}`}
+                            onClick={() => toggle(riskFilter, opt.key, setRiskFilter)}
+                          >
+                            <span>{opt.label}</span>
+                          </button>
+                        ))}
+                        {filteredRiskFactors.length === 0 && (
+                          <p className="gfb-dropdown-empty">Nenhum fator encontrado</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="gfb-dropdown-close"
+                        onClick={() => setShowRiskDropdown(false)}
+                      >
+                        Concluído
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {showRiskDropdown && <div style={{ height: '240px' }} />}
+              </div>
             </div>
           </div>
 
           {/* Section 3: Localização & Unidade */}
           <div className="gfb-drawer-section">
-            <h3 className="gfb-drawer-section-title">Localização & Ocupação</h3>
+            <h3 className="gfb-drawer-section-title">Localização & Unidade</h3>
             <div className="gfb-drawer-section-content">
               {/* Zona */}
               <div className="gfb-drawer-field gfb-group">
@@ -690,7 +1072,12 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 style={{ position: 'relative' }}
                 ref={bairroRef}
               >
-                <span className="gfb-label">Bairro de Residência</span>
+                <span className="gfb-label">
+                  Bairro de Residência
+                  {bairroFilter.length > 0 && (
+                    <span className="gfb-field-badge">{bairroFilter.length}</span>
+                  )}
+                </span>
                 <div className="gfb-combobox-wrapper">
                   <input
                     type="text"
@@ -761,7 +1148,10 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                 style={{ position: 'relative' }}
                 ref={unitRef}
               >
-                <span className="gfb-label">Unidade de Saúde (Notificadora)</span>
+                <span className="gfb-label">
+                  Unidade de Saúde (Notificadora)
+                  {unitFilter.length > 0 && <span className="gfb-field-badge">{unitFilter.length}</span>}
+                </span>
                 <div className="gfb-combobox-wrapper">
                   <input
                     type="text"
@@ -831,76 +1221,6 @@ const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
                   )}
                 </div>
                 {showUnitDropdown && <div style={{ height: '240px' }} />}
-              </div>
-
-              {/* Ocupação */}
-              <div
-                className="gfb-drawer-field gfb-group"
-                style={{ position: 'relative' }}
-                ref={occRef}
-              >
-                <span className="gfb-label">Ocupação do Paciente</span>
-                <div className="gfb-combobox-wrapper">
-                  <input
-                    type="text"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-expanded={showOccDropdown}
-                    aria-controls="occ-listbox"
-                    aria-activedescendant={
-                      highlightedOccIdx >= 0 ? `occ-opt-${highlightedOccIdx}` : undefined
-                    }
-                    className="gfb-input"
-                    placeholder="Buscar ocupação..."
-                    value={occSearch}
-                    onChange={(e) => {
-                      setOccSearch(e.target.value);
-                      setShowOccDropdown(true);
-                    }}
-                    onFocus={() => setShowOccDropdown(true)}
-                    onKeyDown={handleOccKeyDown}
-                  />
-                  {occSearch && (
-                    <button
-                      type="button"
-                      className="gfb-input-clear"
-                      onClick={() => setOccSearch('')}
-                      aria-label="Limpar busca"
-                    >
-                      ×
-                    </button>
-                  )}
-                  {showOccDropdown && (
-                    <div className="gfb-dropdown">
-                      <div className="gfb-dropdown-list" id="occ-listbox" role="listbox">
-                        {filteredOccupations.map((occ, index) => (
-                          <button
-                            key={occ}
-                            type="button"
-                            id={`occ-opt-${index}`}
-                            role="option"
-                            aria-selected={occupationFilter.includes(occ)}
-                            className={`gfb-dropdown-item ${occupationFilter.includes(occ) ? 'active' : ''} ${index === highlightedOccIdx ? 'highlighted' : ''}`}
-                            onClick={() => toggle(occupationFilter, occ, setOccupationFilter)}
-                          >
-                            <span>{occ}</span>
-                          </button>
-                        ))}
-                        {filteredOccupations.length === 0 && (
-                          <p className="gfb-dropdown-empty">Nenhuma ocupação encontrada</p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="gfb-dropdown-close"
-                        onClick={() => setShowOccDropdown(false)}
-                      >
-                        Concluído
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {showOccDropdown && <div style={{ height: '240px' }} />}
               </div>
             </div>
           </div>

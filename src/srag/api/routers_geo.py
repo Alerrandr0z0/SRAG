@@ -40,6 +40,8 @@ def macrosector_heatpoints(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -68,6 +70,8 @@ def rural_heatpoints(
         filters.unidades,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days

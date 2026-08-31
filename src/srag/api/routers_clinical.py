@@ -76,6 +76,8 @@ def clinical_flow(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -243,6 +245,8 @@ def hospitalization_duration(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -331,6 +335,8 @@ def vaccination_profile(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -370,6 +376,8 @@ def citizen_bootstrap(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df_filtered = apply_surveillance_filters(
         df_filtered, filters.years, filters.agents, filters.months, filters.days
@@ -412,6 +420,8 @@ def clinical_timing(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -436,6 +446,8 @@ def vaccine_survival(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days
@@ -471,6 +483,8 @@ def comorbidities_treemap(
         years=filters.years,
         maternal=filters.maternal,
         occupations=filters.occupations,
+        schooling=filters.schooling,
+        risk_factors=filters.risk_factors,
     )
     df = apply_surveillance_filters(
         df, filters.years, filters.agents, filters.months, filters.days

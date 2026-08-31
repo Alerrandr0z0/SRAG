@@ -209,8 +209,35 @@ export function NosocomialRiskChart({ data, diagData, loading }: Props) {
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>
-        Dinâmica Temporal: Capacidade de Testagem e Risco Nosocomial
+      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span>Dinâmica Temporal: Capacidade de Testagem e Risco Nosocomial</span>
+        <div className="rank-tooltip-wrapper">
+          <button
+            type="button"
+            className="rank-tooltip-trigger"
+            aria-label="Informações sobre o gráfico"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
+            Este gráfico investiga a segurança interna dos serviços de saúde e a qualidade diagnóstica ao longo do tempo:<br/><br/>
+            • <b>Capacidade de Testagem (Barras):</b> Representa o volume absoluto e o tipo de método laboratorial utilizado. Níveis baixos ou ausência de métodos moleculares rápidos (PCR) sugerem subnotificação sistemática e atraso no encerramento de surtos.<br/><br/>
+            • <b>Risco Nosocomial (Linhas/Canais):</b> Mostra a proporção de infecções contraídas por pacientes já internados por outras causas. Picos recorrentes ou ultrapassagem do Limite Superior de Controle (LSC) sinalizam falhas agudas em protocolos de isolamento e controle de infecção hospitalar.
+          </div>
+        </div>
       </div>
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <canvas ref={canvasControl} />

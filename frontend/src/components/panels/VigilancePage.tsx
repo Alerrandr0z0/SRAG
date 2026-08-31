@@ -27,6 +27,8 @@ interface VigilancePageProps {
   dashboardYear: number[];
   maternalFilter: string[];
   occupationFilter: string[];
+  schoolingFilter?: string[];
+  riskFilter?: string[];
   dashboardMonth: number[];
   dashboardDay: number[];
 }
@@ -328,7 +330,36 @@ const VigilanceSeverityPyramidSection = React.memo<{
 }>(({ severityData, lethalityData }) => (
   <article className="panel" style={{ height: '380px', display: 'flex', flexDirection: 'column' }}>
     <div className="section-header">
-      <h3 style={{ margin: 0 }}>Gravidade e Letalidade (CFR) por Faixa Etária</h3>
+      <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span>Gravidade e Letalidade (CFR) por Faixa Etária</span>
+        <span className="rank-tooltip-wrapper">
+          <button
+            type="button"
+            className="rank-tooltip-trigger"
+            aria-label="Informações sobre o gráfico"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+          <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
+            Distribuição etária da gravidade e da letalidade:<br/><br/>
+            • <b>Volume (barras empilhadas, eixo esquerdo):</b> total de casos na faixa, segmentado em Óbito, UTI em sobreviventes e Enfermaria/Não Internado.<br/><br/>
+            • <b>Letalidade por agente (linhas, eixo direito):</b> CFR % na faixa etária para cada vírus. Leitura cruzada: barras mostram carga, linhas mostram risco relativo por idade.
+          </div>
+        </span>
+      </h3>
     </div>
     <div className="chart-wrap chart-wrap--tall" style={{ flex: 1, minHeight: 0 }}>
       <SeverityPyramidChart severityData={severityData} lethalityData={lethalityData} />
@@ -622,6 +653,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   dashboardYear,
   maternalFilter,
   occupationFilter,
+  schoolingFilter = [],
+  riskFilter = [],
   dashboardMonth,
   dashboardDay,
 }) => {
@@ -658,7 +691,10 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
+    dashboardDay,
   );
   const lookback = '0';
 
@@ -677,6 +713,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -698,6 +736,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -718,6 +758,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -739,6 +781,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -765,6 +809,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -786,6 +832,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -804,6 +852,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -825,6 +875,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -843,6 +895,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -864,6 +918,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -882,6 +938,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -903,6 +961,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -921,6 +981,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -942,6 +1004,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -960,6 +1024,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         agentFilter,
         maternalFilter,
         occupationFilter,
+        schoolingFilter,
+        riskFilter,
         dashboardMonth,
         dashboardDay,
       )
@@ -981,6 +1047,8 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   ]);
@@ -1029,9 +1097,14 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         <DiagnosticResilienceChart data={diagResData} loading={diagResLoading} />
       </section>
 
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceComorbiditiesSection data={comorbidities} />
-      </section>
+      {riskFilter.length === 0 && (
+        <section
+          className="secondary-grid"
+          style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}
+        >
+          <VigilanceComorbiditiesSection data={comorbidities} />
+        </section>
+      )}
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceIcuBottleneckSection data={icuBottleneck} dashboardYear={dashboardYear} />
       </section>

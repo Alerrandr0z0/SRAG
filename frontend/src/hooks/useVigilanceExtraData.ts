@@ -13,7 +13,10 @@ export function useVigilanceExtraData(
   agents?: string[],
   maternal?: string[],
   occupations?: string[],
+  schooling?: string[],
+  riskFactors?: string[],
   months?: number[],
+  days?: number[],
 ) {
   const queryKey = [
     'vigilanceExtra',
@@ -27,7 +30,10 @@ export function useVigilanceExtraData(
     agents,
     maternal,
     occupations,
+    schooling,
+    riskFactors,
     months,
+    days,
   ];
 
   const diagQuery = useQuery({
@@ -44,8 +50,10 @@ export function useVigilanceExtraData(
         agents,
         maternal,
         occupations,
+        schooling,
+        riskFactors,
         months,
-        undefined,
+        days,
       ),
     enabled: active,
     staleTime: 5 * 60 * 1000,
@@ -65,8 +73,10 @@ export function useVigilanceExtraData(
         agents,
         maternal,
         occupations,
+        schooling,
+        riskFactors,
         months,
-        undefined,
+        days,
       ),
     enabled: active,
     staleTime: 5 * 60 * 1000,

@@ -72,6 +72,8 @@ describe('useCitizenData', () => {
       [],
       undefined,
       undefined,
+      undefined,
+      undefined,
     );
   });
 });

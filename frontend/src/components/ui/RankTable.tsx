@@ -13,7 +13,8 @@ export interface RankTableRow {
 
 interface RankTableProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
+  subtitlePosition?: 'top' | 'bottom';
   searchPlaceholder: string;
   columns: RankTableColumn[];
   rows: RankTableRow[];
@@ -25,6 +26,7 @@ interface RankTableProps {
 const RankTable: React.FC<RankTableProps> = ({
   title,
   subtitle,
+  subtitlePosition = 'top',
   searchPlaceholder,
   columns,
   rows,
@@ -78,7 +80,12 @@ const RankTable: React.FC<RankTableProps> = ({
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
                 </button>
-                <div className="rank-tooltip-content">{subtitle}</div>
+                <div
+                  className={`rank-tooltip-content${subtitlePosition === 'bottom' ? ' rank-tooltip-content--below' : ''}`}
+                  style={{ width: '340px' }}
+                >
+                  {subtitle}
+                </div>
               </div>
             )}
           </div>

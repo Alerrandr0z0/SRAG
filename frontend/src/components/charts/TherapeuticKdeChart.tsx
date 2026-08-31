@@ -184,20 +184,23 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
         selectedMode: true,
       },
       grid: {
-        left: '3%',
+        left: '5%',
         right: '4%',
-        bottom: '12%',
-        top: 35,
+        bottom: '18%',
+        top: 18,
         containLabel: true,
       },
       xAxis: {
         type: 'category',
         data: xAxisData,
         name: xLabel,
+        nameLocation: 'middle',
+        nameGap: 26,
         nameTextStyle: { color: textColor, fontSize: 10 },
         axisLabel: {
           color: textColor,
-          fontSize: 10,
+          fontSize: 9,
+          interval: 5,
           formatter: (v: string) => `${v}${unit}`,
         },
         axisLine: { lineStyle: { color: axisColor } },
@@ -206,6 +209,7 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
       yAxis: {
         type: 'value',
         show: true,
+        max: 1.05,
         axisLabel: {
           color: textColor,
           fontSize: 9,
@@ -213,7 +217,9 @@ const TherapeuticKdeChart: React.FC<TherapeuticKdeChartProps> = ({
         },
         splitLine: { lineStyle: { color: axisColor, type: 'dashed' } },
         name: 'Densidade relativa',
-        nameTextStyle: { color: textColor, fontSize: 9 },
+        nameLocation: 'middle',
+        nameGap: 28,
+        nameTextStyle: { color: textColor, fontSize: 10 },
       },
       series: seriesData.map((s) => ({
         ...s,

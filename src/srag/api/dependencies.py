@@ -21,6 +21,8 @@ class CommonFilters(BaseModel):
     agents: list[str] | None = None
     maternal: list[str] | None = None
     occupations: list[str] | None = None
+    schooling: list[str] | None = None
+    risk_factors: list[str] | None = None
 
 
 def _validate_years(years: list[int] | None) -> None:
@@ -68,6 +70,8 @@ def get_common_filters(
     agents: Annotated[list[str] | None, Query()] = None,
     maternal: Annotated[list[str] | None, Query()] = None,
     occupations: Annotated[list[str] | None, Query()] = None,
+    schooling: Annotated[list[str] | None, Query()] = None,
+    risk_factors: Annotated[list[str] | None, Query()] = None,
 ) -> CommonFilters:
     """Dependency provider for common filters across endpoints."""
     _validate_years(years)
@@ -82,6 +86,8 @@ def get_common_filters(
     _validate_string_lists(agents)
     _validate_string_lists(maternal)
     _validate_string_lists(occupations)
+    _validate_string_lists(schooling)
+    _validate_string_lists(risk_factors)
     return CommonFilters(
         profile=profile,
         race=race,
@@ -95,6 +101,8 @@ def get_common_filters(
         agents=agents,
         maternal=maternal,
         occupations=occupations,
+        schooling=schooling,
+        risk_factors=risk_factors,
     )
 
 

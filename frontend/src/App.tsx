@@ -83,6 +83,8 @@ function App() {
   const [agentFilter, setAgentFilter] = useState<string[]>([]);
   const [maternalFilter, setMaternalFilter] = useState<string[]>([]);
   const [occupationFilter, setOccupationFilter] = useState<string[]>([]);
+  const [schoolingFilter, setSchoolingFilter] = useState<string[]>([]);
+  const [riskFilter, setRiskFilter] = useState<string[]>([]);
   const [availableOccupations, setAvailableOccupations] = useState<string[]>([]);
   const [swimmerVirus, setSwimmerVirus] = useState<'covid' | 'gripe'>('covid');
   const [masterBairrosList, setMasterBairrosList] = useState<
@@ -119,6 +121,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   );
@@ -137,6 +141,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   );
@@ -153,6 +159,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   );
@@ -168,6 +176,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   );
@@ -183,6 +193,8 @@ function App() {
     agentFilter,
     maternalFilter,
     occupationFilter,
+    schoolingFilter,
+    riskFilter,
     dashboardMonth,
     dashboardDay,
   );
@@ -306,6 +318,16 @@ function App() {
       val: f,
       remover: () => setOccupationFilter(occupationFilter.filter((i) => i !== f)),
     })),
+    ...schoolingFilter.map((f) => ({
+      type: 'Escolaridade',
+      val: f,
+      remover: () => setSchoolingFilter(schoolingFilter.filter((i) => i !== f)),
+    })),
+    ...riskFilter.map((f) => ({
+      type: 'Risco',
+      val: f,
+      remover: () => setRiskFilter(riskFilter.filter((i) => i !== f)),
+    })),
     ...dashboardMonth.map((f) => ({
       type: 'Mês',
       val: String(f),
@@ -328,6 +350,8 @@ function App() {
     setAgentFilter([]);
     setMaternalFilter([]);
     setOccupationFilter([]);
+    setSchoolingFilter([]);
+    setRiskFilter([]);
     setDashboardMonth([]);
     setDashboardDay([]);
   };
@@ -377,6 +401,10 @@ function App() {
           setMaternalFilter={setMaternalFilter}
           occupationFilter={occupationFilter}
           setOccupationFilter={setOccupationFilter}
+          schoolingFilter={schoolingFilter}
+          setSchoolingFilter={setSchoolingFilter}
+          riskFilter={riskFilter}
+          setRiskFilter={setRiskFilter}
           zoneFilter={zoneFilter}
           setZoneFilter={setZoneFilter}
           bairroFilter={bairroFilter}
@@ -500,6 +528,8 @@ function App() {
                 dashboardYear={dashboardYear}
                 maternalFilter={maternalFilter}
                 occupationFilter={occupationFilter}
+                schoolingFilter={schoolingFilter}
+                riskFilter={riskFilter}
                 dashboardMonth={dashboardMonth}
                 dashboardDay={dashboardDay}
               />
@@ -518,6 +548,9 @@ function App() {
                 qualityByBairro={auditData.qualityByBairro}
                 inconsistencies={auditData.inconsistencies}
                 timelinessFlow={auditData.timelinessFlow}
+                schoolingFilter={schoolingFilter}
+                occupationFilter={occupationFilter}
+                riskFilter={riskFilter}
               />
             )}
           </section>
