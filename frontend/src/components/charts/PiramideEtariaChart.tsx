@@ -8,15 +8,17 @@ interface PiramideEtariaProps {
 }
 
 const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ data = [] }) => {
-  const maleValues = data.map((r) => Number(r.male || 0));
-  const femaleValues = data.map((r) => Number(r.female || 0));
+  // Reverse data to display youngest age bands at the bottom of the pyramid
+  const reversedData = [...data].reverse();
+  const maleValues = reversedData.map((r) => Number(r.male || 0));
+  const femaleValues = reversedData.map((r) => Number(r.female || 0));
   const maxAbs = Math.max(1, ...maleValues, ...femaleValues) * 1.1;
 
   const { canvasRef } = useChartJs(
     () => ({
       type: 'bar',
       data: {
-        labels: data.map((r) => r.age_band || 'N/A'),
+        labels: reversedData.map((r) => r.age_band || 'N/A'),
         datasets: [
           {
             label: 'Masculino',
@@ -50,13 +52,22 @@ const PiramideEtariaChart: React.FC<PiramideEtariaProps> = ({ data = [] }) => {
           x: {
             min: -maxAbs,
             max: maxAbs,
-            ticks: { callback: (value: string | number) => Math.abs(Number(value)) },
+            ticks: {
+              callback: (value: string | number) => {
+                const num = Number(value);
+                // Force X-axis labels to render only as whole numbers (integers)
+                if (num % 1 === 0) {
+                  return Math.abs(num).toString();
+                }
+                return '';
+              },
+            },
           },
           y: { stacked: true },
         },
       },
     }),
-    [data, maxAbs, maleValues, femaleValues],
+    [reversedData, maxAbs, maleValues, femaleValues],
   );
 
   return <canvas ref={canvasRef} />;

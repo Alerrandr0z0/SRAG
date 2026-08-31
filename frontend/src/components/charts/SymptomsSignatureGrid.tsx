@@ -167,8 +167,8 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
               if (Array.isArray(cell) && cell.length >= 2) {
                 const prevalence = cell[0];
                 const count = cell[1];
-                // Dynamic cell label text contrast
-                const cellTextColor = prevalence > 40 ? '#ffffff' : '#1e293b';
+                // Dynamic cell label text contrast (white text for dark backgrounds >70%, dark text for light/medium backgrounds)
+                const cellTextColor = prevalence > 70 ? '#ffffff' : '#1e293b';
                 plotData.push({
                   value: [xIdx, yIdx, prevalence, count],
                   label: {
@@ -243,14 +243,15 @@ const SymptomsSignatureGrid: React.FC<Props> = ({ signature, selectedAgent = '' 
       },
       visualMap: {
         min: 0,
-        max: globalMax,
+        max: 100, // Normalized to 0% - 100% scale for prevalence percentage
+        dimension: 2, // Explicitly target prevalence (index 2 of the value array) instead of count
         calculable: true,
         orient: 'horizontal',
         left: 'center',
         bottom: '2%',
         inRange: { color: COLORS.HEATMAP },
         precision: 0,
-        text: ['+Freq', '-Freq'],
+        text: ['100%', '0%'],
         textStyle: { fontSize: 10, color: axisColor },
         itemWidth: 15,
         itemHeight: 150,
