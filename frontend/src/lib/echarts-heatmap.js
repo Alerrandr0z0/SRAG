@@ -1,6 +1,7 @@
 import {
   BarChart,
   BoxplotChart,
+  CustomChart,
   EffectScatterChart,
   HeatmapChart,
   LineChart,
@@ -56,6 +57,7 @@ echarts.use([
   ScatterChart,
   EffectScatterChart,
   TreemapChart,
+  CustomChart,
   CanvasRenderer,
 ]);
 

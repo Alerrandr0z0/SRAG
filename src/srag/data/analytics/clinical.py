@@ -172,8 +172,34 @@ def compute_risk_factors_full_profile(df: pd.DataFrame) -> list[dict[str, int | 
     return out
 
 
+def _odds_ratio_with_ci(
+    a: int, b: int, c: int, d: int
+) -> tuple[float, float, float]:
+    """Compute Odds Ratio and Woolf 95% CI from a 2x2 table.
+
+    Cells: a=exposed+dead, b=exposed+alive, c=unexposed+dead, d=unexposed+alive.
+    Applies Haldane correction (+0.5) when any cell is zero.
+    Returns (OR, ci_lower, ci_upper).
+    """
+    import math
+
+    aa, bb, cc, dd = float(a), float(b), float(c), float(d)
+    if a == 0 or b == 0 or c == 0 or d == 0:
+        aa, bb, cc, dd = aa + 0.5, bb + 0.5, cc + 0.5, dd + 0.5
+
+    if cc * bb == 0:
+        return (0.0, 0.0, 0.0)
+
+    odds = (aa * dd) / (bb * cc)
+    se = math.sqrt(1 / aa + 1 / bb + 1 / cc + 1 / dd)
+    ln_or = math.log(odds)
+    ci_lo = math.exp(ln_or - 1.96 * se)
+    ci_hi = math.exp(ln_or + 1.96 * se)
+    return (round(odds, 3), round(ci_lo, 3), round(ci_hi, 3))
+
+
 def compute_comorbidities_treemap(df: pd.DataFrame) -> list[dict[str, Any]]:
-    """Aggregate SIVEP risk-factors with frequencies and lethality (CFR)."""
+    """Aggregate SIVEP risk-factors with frequencies, CFR, OR and 95% CI."""
     if df.empty:
         return []
 
@@ -194,7 +220,7 @@ def compute_comorbidities_treemap(df: pd.DataFrame) -> list[dict[str, Any]]:
         ("OUT_MORBI", "Outros fatores"),
     ]
 
-    out = []
+    out: list[dict[str, Any]] = []
     from srag.data.analytics.filters import outcome_death_mask, outcome_valid_mask
 
     resolved_mask = (
@@ -208,37 +234,60 @@ def compute_comorbidities_treemap(df: pd.DataFrame) -> list[dict[str, Any]]:
         else pd.Series(False, index=df.index)
     )
 
+    total_resolved = int(resolved_mask.sum())
+    total_deaths = int(death_mask.sum())
+
+    _null = {
+        "name": "",
+        "value": 0,
+        "deaths": 0,
+        "lethality": 0.0,
+        "prevalence": 0.0,
+        "odds_ratio": 0.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.0,
+    }
+
     for col, label in risk_fields:
         if col not in df.columns:
-            out.append(
-                {
-                    "name": label,
-                    "value": 0,
-                    "deaths": 0,
-                    "lethality": 0.0,
-                }
-            )
+            out.append({**_null, "name": label})
             continue
 
         s = pd.to_numeric(df[col], errors="coerce")
         factor_mask = s == 1
 
         count = int(factor_mask.sum())
-        resolved_count = int((factor_mask & resolved_mask).sum())
-        deaths = int((factor_mask & death_mask).sum())
+        resolved_with = int((factor_mask & resolved_mask).sum())
+        deaths_with = int((factor_mask & death_mask).sum())
 
-        lethality = round((deaths / resolved_count) * 100, 2) if resolved_count > 0 else 0.0
+        lethality = (
+            round((deaths_with / resolved_with) * 100, 2) if resolved_with > 0 else 0.0
+        )
+        prevalence = (
+            round((count / len(df)) * 100, 2) if len(df) > 0 else 0.0
+        )
+
+        # 2x2 table for OR (among resolved cases only)
+        a = deaths_with
+        b = resolved_with - deaths_with
+        c = total_deaths - deaths_with
+        d = (total_resolved - resolved_with) - c
+        odds_ratio, ci_lower, ci_upper = _odds_ratio_with_ci(a, b, c, d)
 
         out.append(
             {
                 "name": label,
                 "value": count,
-                "deaths": deaths,
+                "deaths": deaths_with,
                 "lethality": lethality,
+                "prevalence": prevalence,
+                "odds_ratio": odds_ratio,
+                "ci_lower": ci_lower,
+                "ci_upper": ci_upper,
             }
         )
 
-    out.sort(key=lambda x: x["value"], reverse=True)
+    out.sort(key=lambda x: x["odds_ratio"], reverse=True)
     return out
 
 

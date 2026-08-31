@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from lifelines import KaplanMeierFitter
 
-from srag.data.analytics.filters import outcome_death_mask
+from srag.data.analytics.filters import outcome_death_mask, outcome_valid_mask
 from srag.utils.epi_weeks import compute_epi_week_columns
 
 
@@ -1406,6 +1406,26 @@ def compute_ventilatory_support(df: pd.DataFrame) -> list[dict[str, Any]]:
     return result
 
 
+def _build_scatter_item(name: str, group: pd.DataFrame) -> dict[str, Any]:
+    vol = len(group)
+    resolved = int(group["is_resolved"].sum())
+    deaths = int(group["is_death"].sum())
+    utis = int(group["is_uti"].sum())
+
+    death_rate = round(float((deaths / resolved) * 100), 2) if resolved > 0 else 0.0
+    uti_rate = round(float((utis / vol) * 100), 2) if vol > 0 else 0.0
+
+    return {
+        "diag_method": name,
+        "avg_latency": float(group["latency"].median()) if vol > 0 else 0.0,
+        "volume": vol,
+        "uti_count": utis,
+        "uti_rate": uti_rate,
+        "death_count": deaths,
+        "death_rate": death_rate,
+    }
+
+
 def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
     """Calcula a evolução dos métodos diagnósticos (Streamgraph) e a latência/volume (Scatter)."""
     df = df.copy()
@@ -1439,7 +1459,7 @@ def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
     df["diag_method"] = df.apply(map_diagnostic, axis=1)
 
     if "_epi_week" in df.columns:
-        df["time_key"] = df["_epi_week"]
+        df["time_key"] = df["_epi_week"].str.split("-").str[1]
     else:
         return {"streamgraph": [], "scatter": []}
 
@@ -1460,14 +1480,26 @@ def compute_diagnostic_resilience(df: pd.DataFrame) -> dict[str, Any]:
         df_valid = df_valid.dropna(subset=["latency"])
         df_valid = df_valid[(df_valid["latency"] >= 0) & (df_valid["latency"] <= 365)]
 
-        scatter = (
-            df_valid.groupby("diag_method")
-            .agg(avg_latency=("latency", "median"), volume=("latency", "count"))
-            .reset_index()
-        )
-        scatter_list = scatter.to_dict(orient="records")
+        df_valid["is_uti"] = (df_valid["UTI"] == 1).astype(int)
+        df_valid["is_death"] = outcome_death_mask(df_valid["EVOLUCAO"]).astype(int)
+        df_valid["is_resolved"] = outcome_valid_mask(df_valid["EVOLUCAO"]).astype(int)
+
+        grouped = df_valid.groupby("diag_method")
+        scatter_list = [_build_scatter_item(name, group) for name, group in grouped]
+
+        # Adiciona também Infecção Nosocomial se a coluna NOSOCOMIAL estiver presente
+        if "NOSOCOMIAL" in df_valid.columns:
+            df_noso = df_valid[df_valid["NOSOCOMIAL"] == 1.0]
+            if not df_noso.empty:
+                scatter_list.append(_build_scatter_item("Infecção Nosocomial", df_noso))
+
+            df_comm = df_valid[df_valid["NOSOCOMIAL"] == 2.0]
+            if not df_comm.empty:
+                scatter_list.append(_build_scatter_item("Infecção Comunitária", df_comm))
     else:
         scatter_list = []
+
+    return {"streamgraph": stream_list, "scatter": scatter_list}
 
     return {"streamgraph": stream_list, "scatter": scatter_list}
 
@@ -1479,7 +1511,7 @@ def compute_nosocomial_risk(df: pd.DataFrame) -> dict[str, Any]:
         return {"control_chart": [], "lethality": {}}
 
     if "_epi_week" in df.columns:
-        df["time_key"] = df["_epi_week"]
+        df["time_key"] = df["_epi_week"].str.split("-").str[1]
     else:
         return {"control_chart": [], "lethality": {}}
 

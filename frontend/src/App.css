@@ -2623,6 +2623,18 @@ select {
   gap: 1rem;
 }
 
+.vigilance-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.3fr) minmax(0, 1.8fr) minmax(0, 0.9fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .vigilance-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .responsive-grid-split {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

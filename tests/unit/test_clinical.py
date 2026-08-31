@@ -641,11 +641,19 @@ class TestComorbiditiesTreemap:
         assert obesidade["value"] == 2
         assert obesidade["deaths"] == 1
         assert obesidade["lethality"] == 50.0
+        assert obesidade["prevalence"] == 66.67
+        assert obesidade["odds_ratio"] == 3.0
+        assert isinstance(obesidade["ci_lower"], float)
+        assert isinstance(obesidade["ci_upper"], float)
 
         diabetes = next(r for r in res if r["name"] == "Diabetes")
         assert diabetes["value"] == 2
         assert diabetes["deaths"] == 1
         assert diabetes["lethality"] == 50.0
+        assert diabetes["prevalence"] == 66.67
+        assert diabetes["odds_ratio"] == 3.0
+        assert isinstance(diabetes["ci_lower"], float)
+        assert isinstance(diabetes["ci_upper"], float)
 
 
 class TestTreatmentWindowOutcomes:

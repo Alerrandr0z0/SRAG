@@ -1,20 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useThemeMode } from '../../hooks/useThemeMode';
 import { useVigilanceExtraData } from '../../hooks/useVigilanceExtraData';
 import { api } from '../../services/api';
 import * as Epi from '../../types/epi';
 import ComorbiditiesTreemapChart from '../charts/ComorbiditiesTreemapChart';
 import { DiagnosticResilienceChart } from '../charts/DiagnosticResilienceChart';
 import EpidemicCurveChart from '../charts/EpidemicCurveChart';
-import GravityCascadeChart from '../charts/GravityCascadeChart';
 import IcuRidgelinePlot from '../charts/IcuRidgelinePlot';
-import KaplanMeierChart from '../charts/KaplanMeierChart';
-import LethalityGroupedBarChart from '../charts/LethalityGroupedBarChart';
 import { NosocomialRiskChart } from '../charts/NosocomialRiskChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
-import SeasonalTrendChart from '../charts/SeasonalTrendChart';
 import SeverityPyramidChart from '../charts/SeverityPyramidChart';
 import TrendChart from '../charts/TrendChart';
-import VentilatorySupportChart from '../charts/VentilatorySupportChart';
 import VirusProfileChart from '../charts/VirusProfileChart';
 
 /* ─────── Props ─────── */
@@ -254,202 +250,91 @@ interface ViralSectionProps {
   onVirusDetail: (v: string) => void;
 }
 const VigilanceViralProfile = React.memo<ViralSectionProps>(
-  ({ virus, virusDetail, agentFilter, onVirusDetail }) => (
-    <article className="panel viral-profile-panel">
-      <div className="section-header">
-        <h3>Perfil viral</h3>
-        <select
-          value={virusDetail}
-          onChange={(e) => onVirusDetail(e.target.value)}
-          onFocus={() => {
-            if (agentFilter[0] && virusDetail === 'summary') {
-              onVirusDetail(
-                agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed',
-              );
-            }
+  ({ virus, virusDetail, agentFilter, onVirusDetail }) => {
+    const theme = useThemeMode();
+    const isDark = theme === 'dark';
+    const borderColor = isDark ? 'rgba(148, 163, 184, 0.18)' : 'var(--border-subtle)';
+    const cardBg = isDark ? 'var(--bg-status)' : 'var(--bg-status)';
+
+    return (
+      <article
+        className="panel viral-profile-panel"
+        style={{
+          background: cardBg,
+          border: `0.5px solid ${borderColor}`,
+          borderRadius: 8,
+          padding: '12px',
+          height: '380px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            marginBottom: '8px',
           }}
         >
-          {!agentFilter[0] && <option value="summary">Resumido</option>}
-          {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
-          {agentFilter[0] !== 'Influenza' && (
-            <option value="covid_detailed">Detalhado COVID-19</option>
-          )}
-          {agentFilter[0] !== 'COVID-19' && (
-            <option value="influenza_detailed">Detalhado Influenza</option>
-          )}
-        </select>
-      </div>
-      <div className="chart-wrap">{virus && <VirusProfileChart data={virus} />}</div>
-    </article>
-  ),
+          <h3
+            style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}
+          >
+            Perfil viral
+          </h3>
+          <select
+            value={virusDetail}
+            onChange={(e) => onVirusDetail(e.target.value)}
+            style={{
+              width: '100%',
+              fontSize: '10px',
+              padding: '2px 4px',
+              height: '22px',
+            }}
+            onFocus={() => {
+              if (agentFilter[0] && virusDetail === 'summary') {
+                onVirusDetail(
+                  agentFilter[0] === 'Influenza' ? 'influenza_detailed' : 'covid_detailed',
+                );
+              }
+            }}
+          >
+            {!agentFilter[0] && <option value="summary">Resumido</option>}
+            {!agentFilter[0] && <option value="detailed">Detalhado (Geral)</option>}
+            {agentFilter[0] !== 'Influenza' && (
+              <option value="covid_detailed">Detalhado COVID-19</option>
+            )}
+            {agentFilter[0] !== 'COVID-19' && (
+              <option value="influenza_detailed">Detalhado Influenza</option>
+            )}
+          </select>
+        </div>
+        <div className="chart-wrap" style={{ flex: 1, minHeight: 0 }}>
+          {virus && <VirusProfileChart data={virus} />}
+        </div>
+      </article>
+    );
+  },
 );
 
-const VigilanceCfrHeatmapSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => {
-  const heatmap = data?.laboratoryNetwork?.agent_lethality_heatmap;
-  return (
-    <article className="panel">
-      <div className="section-header">
-        <h3 style={{ margin: 0 }}>Distribuição de Letalidade: Agente vs Faixa Etária</h3>
-      </div>
-      <div className="chart-wrap">
-        {heatmap ? (
-          <LethalityGroupedBarChart
-            xLabels={heatmap.age_bands}
-            yLabels={heatmap.agents}
-            matrix={heatmap.matrix}
-          />
-        ) : (
-          <p className="meta">Aguardando dados de letalidade...</p>
-        )}
-      </div>
-    </article>
-  );
-});
-
-const VigilanceKmSection = React.memo<{ data: Epi.DashboardData | null }>(({ data }) => (
-  <article className="panel">
+const VigilanceSeverityPyramidSection = React.memo<{
+  severityData: Epi.SeverityPyramidResponse | null;
+  lethalityData: {
+    age_bands: string[];
+    agents: string[];
+    matrix: number[][];
+  } | null;
+}>(({ severityData, lethalityData }) => (
+  <article className="panel" style={{ height: '380px', display: 'flex', flexDirection: 'column' }}>
     <div className="section-header">
-      <div className="stack" style={{ gap: 4 }}>
-        <h3 style={{ margin: 0 }}>Tempo até Infecção Pós-Vacina</h3>
-      </div>
+      <h3 style={{ margin: 0 }}>Gravidade e Letalidade (CFR) por Faixa Etária</h3>
     </div>
-    <div className="chart-wrap chart-wrap--tall">
-      {data?.laboratoryNetwork?.vaccine_survival && (
-        <KaplanMeierChart survivalData={data.laboratoryNetwork.vaccine_survival} />
-      )}
+    <div className="chart-wrap chart-wrap--tall" style={{ flex: 1, minHeight: 0 }}>
+      <SeverityPyramidChart severityData={severityData} lethalityData={lethalityData} />
     </div>
   </article>
 ));
-
-const VigilanceSeasonalSection = React.memo<{ data: Epi.SeasonalTrendsResponse | null }>(
-  ({ data }) => (
-    <section style={{ marginTop: '1rem' }}>
-      <div className="section-header" style={{ marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0 }}>Sazonalidade Interanual (Casos por SE)</h3>
-      </div>
-      <div
-        style={{
-          height: '320px',
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <SeasonalTrendChart data={data} />
-      </div>
-    </section>
-  ),
-);
-
-const VigilanceSeverityPyramidSection = React.memo<{ data: Epi.SeverityPyramidResponse | null }>(
-  ({ data }) => (
-    <article className="panel">
-      <div className="section-header">
-        <h3 style={{ margin: 0 }}>Pirâmide de Gravidade por Faixa Etária</h3>
-      </div>
-      <div className="chart-wrap chart-wrap--tall">
-        <SeverityPyramidChart data={data} />
-      </div>
-    </article>
-  ),
-);
-
-const VigilanceTemporalSection = React.memo<{
-  cascade: Epi.GravityCascadeResponse | null;
-  ventilatory: Epi.VentilatorySupportResponse | null;
-}>(({ cascade, ventilatory }) => {
-  const [temporalMode, setTemporalMode] = useState<'cascade' | 'ventilatory'>('cascade');
-  const [axisMode, setAxisMode] = useState<'volume' | 'rate' | 'percentage'>('volume');
-
-  return (
-    <article className="panel">
-      <div className="section-header">
-        <div className="stack" style={{ gap: 4 }}>
-          <h3 style={{ margin: 0 }}>Dinâmica Temporal</h3>
-          <div className="vigilance-history-stats">
-            <span>
-              {temporalMode === 'cascade'
-                ? 'Notificados → Hospitalizados → UTI → Óbitos'
-                : 'Invasivo · Não-Invasivo · Sem Suporte · Ignorado'}
-            </span>
-          </div>
-        </div>
-        <div className="filters vigilance-history-controls">
-          <div className="pill-group">
-            <button
-              type="button"
-              className={`pill-btn ${temporalMode === 'cascade' ? 'active' : ''}`}
-              onClick={() => {
-                setTemporalMode('cascade');
-                setAxisMode('volume');
-              }}
-            >
-              Cascata de Gravidade
-            </button>
-            <button
-              type="button"
-              className={`pill-btn ${temporalMode === 'ventilatory' ? 'active' : ''}`}
-              onClick={() => {
-                setTemporalMode('ventilatory');
-                setAxisMode('volume');
-              }}
-            >
-              Suporte Ventilatório
-            </button>
-          </div>
-          {temporalMode === 'cascade' && (
-            <div className="pill-group">
-              <button
-                type="button"
-                className={`pill-btn ${axisMode === 'volume' ? 'active' : ''}`}
-                onClick={() => setAxisMode('volume')}
-              >
-                Volumes
-              </button>
-              <button
-                type="button"
-                className={`pill-btn ${axisMode === 'rate' ? 'active' : ''}`}
-                onClick={() => setAxisMode('rate')}
-              >
-                Taxas Clínicas
-              </button>
-            </div>
-          )}
-          {temporalMode === 'ventilatory' && (
-            <div className="pill-group">
-              <button
-                type="button"
-                className={`pill-btn ${axisMode === 'volume' ? 'active' : ''}`}
-                onClick={() => setAxisMode('volume')}
-              >
-                Absoluto
-              </button>
-              <button
-                type="button"
-                className={`pill-btn ${axisMode === 'percentage' ? 'active' : ''}`}
-                onClick={() => setAxisMode('percentage')}
-              >
-                Proporção (%)
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
-        {temporalMode === 'cascade' && (
-          <GravityCascadeChart data={cascade} mode={axisMode === 'rate' ? 'rate' : 'volume'} />
-        )}
-        {temporalMode === 'ventilatory' && (
-          <VentilatorySupportChart
-            data={ventilatory}
-            mode={axisMode === 'percentage' ? 'percentage' : 'volume'}
-          />
-        )}
-      </div>
-    </article>
-  );
-});
 
 const VigilanceIcuBottleneckSection = React.memo<{
   data: Epi.IcuBottleneckRecord[];
@@ -621,70 +506,71 @@ const VigilanceIcuBottleneckSection = React.memo<{
 
 const VigilanceComorbiditiesSection = React.memo<{ data: Epi.ComorbiditiesTreemapResponse | null }>(
   ({ data }) => {
-    const [metric, setMetric] = useState<'cases' | 'lethality' | 'deaths'>('cases');
-    const [topN, setTopN] = useState(14);
-    const total = data?.length ?? 0;
-
     return (
-      <article className="panel">
-        <div className="section-header">
+      <article
+        className="panel"
+        style={{ height: '380px', display: 'flex', flexDirection: 'column' }}
+      >
+        <div
+          className="section-header"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
           <div className="stack" style={{ gap: 4 }}>
-            <h3 style={{ margin: 0 }}>Prevalência e Letalidade por Comorbidade</h3>
-            <div className="vigilance-history-stats">
-              <span>
-                Tamanho:{' '}
-                <b>
-                  {metric === 'lethality'
-                    ? 'Letalidade (CFR)'
-                    : metric === 'deaths'
-                      ? 'Óbitos'
-                      : 'Casos'}
-                </b>{' '}
-                · Cor: Letalidade (clara→escura)
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ margin: 0 }}>Associação de Comorbidades com o Óbito (Odds Ratio)</h3>
+              <div
+                className="kpi-tooltip-wrapper"
+                style={{ display: 'inline-block', cursor: 'help' }}
+              >
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    border: '1px solid var(--text-muted)',
+                    color: 'var(--text-muted)',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  ?
+                </span>
+                <div
+                  className="kpi-tooltip-content"
+                  style={{
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '280px',
+                    maxWidth: '280px',
+                    textAlign: 'left',
+                    bottom: '120%',
+                  }}
+                >
+                  <p style={{ margin: '0 0 6px 0' }}>
+                    <strong>Métrica (Odds Ratio):</strong> Mede a chance de óbito de notificados com
+                    a comorbidade comparada a pacientes sem ela. Valores &gt; 1.0 com limites do
+                    Intervalo de Confiança de 95% (linhas horizontais) acima de 1.0 indicam risco
+                    significativamente aumentado.
+                  </p>
+                  <p style={{ margin: '0 0 6px 0' }}>
+                    <strong>Ordenação:</strong> Comorbidades ordenadas por magnitude de risco
+                    decrescente (do maior risco no topo para o maior fator protetor na base).
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Escala Logarítmica (Eixo X):</strong> Utiliza uma escala logarítmica
+                    para representar com clareza variações de risco pequenas (0.1 a 1) e grandes (1
+                    a 50) no mesmo espaço visual.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="filters vigilance-history-controls">
-            <div className="pill-group">
-              <button
-                type="button"
-                className={`pill-btn ${metric === 'cases' ? 'active' : ''}`}
-                onClick={() => setMetric('cases')}
-              >
-                Casos
-              </button>
-              <button
-                type="button"
-                className={`pill-btn ${metric === 'lethality' ? 'active' : ''}`}
-                onClick={() => setMetric('lethality')}
-              >
-                Letalidade
-              </button>
-              <button
-                type="button"
-                className={`pill-btn ${metric === 'deaths' ? 'active' : ''}`}
-                onClick={() => setMetric('deaths')}
-              >
-                Óbitos
-              </button>
-            </div>
-            <select
-              value={topN}
-              onChange={(e) => setTopN(Number(e.target.value))}
-              title="Limitar ao top N comorbidades pela métrica selecionada"
-            >
-              {[5, 8, 12, total]
-                .filter((n, i, arr) => n > 0 && arr.indexOf(n) === i)
-                .map((n) => (
-                  <option key={n} value={n}>
-                    Top {n}
-                  </option>
-                ))}
-            </select>
           </div>
         </div>
-        <div className="chart-wrap chart-wrap--tall" style={{ minHeight: '340px' }}>
-          <ComorbiditiesTreemapChart data={data} metric={metric} topN={topN} />
+        <div className="chart-wrap chart-wrap--tall" style={{ flex: 1, minHeight: 0 }}>
+          <ComorbiditiesTreemapChart data={data} />
         </div>
       </article>
     );
@@ -753,11 +639,11 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
   const [virusDetail, setVirusDetail] = useState('summary');
   const [trends, setTrends] = useState<Epi.TrendsData | null>(null);
   const [virus, setVirus] = useState<Epi.VirusData[] | null>(null);
-  const [seasonalTrends, setSeasonalTrends] = useState<Epi.SeasonalTrendsResponse | null>(null);
+  const [_seasonalTrends, setSeasonalTrends] = useState<Epi.SeasonalTrendsResponse | null>(null);
   const [severityPyramid, setSeverityPyramid] = useState<Epi.SeverityPyramidResponse | null>(null);
-  const [gravityCascade, setGravityCascade] = useState<Epi.GravityCascadeResponse | null>(null);
+  const [_gravityCascade, setGravityCascade] = useState<Epi.GravityCascadeResponse | null>(null);
   const [comorbidities, setComorbidities] = useState<Epi.ComorbiditiesTreemapResponse | null>(null);
-  const [ventilatorySupport, setVentilatorySupport] =
+  const [_ventilatorySupport, setVentilatorySupport] =
     useState<Epi.VentilatorySupportResponse | null>(null);
   const [icuBottleneck, setIcuBottleneck] = useState<Epi.IcuBottleneckRecord[]>([]);
   const { diagResData, diagResLoading, nosoRiskData, nosoRiskLoading } = useVigilanceExtraData(
@@ -1120,44 +1006,34 @@ const VigilancePage: React.FC<VigilancePageProps> = ({
         onCurveWeeks={setCurveWeeks}
         onDelayWeeks={setDelayWeeks}
       />
-      <section className="responsive-grid-2col">
+      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
+        <VigilanceSeverityPyramidSection
+          severityData={severityPyramid}
+          lethalityData={data?.laboratoryNetwork?.agent_lethality_heatmap ?? null}
+        />
+      </section>
+
+      <section
+        className="vigilance-top-grid"
+        style={{
+          marginTop: '2rem',
+        }}
+      >
         <VigilanceViralProfile
           virus={virus}
           virusDetail={virusDetail}
           agentFilter={agentFilter}
           onVirusDetail={setVirusDetail}
         />
-        <VigilanceCfrHeatmapSection data={data} />
+        <NosocomialRiskChart data={nosoRiskData} diagData={diagResData} loading={nosoRiskLoading} />
+        <DiagnosticResilienceChart data={diagResData} loading={diagResLoading} />
       </section>
 
-      <VigilanceSeasonalSection data={seasonalTrends} />
-
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceSeverityPyramidSection data={severityPyramid} />
-      </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceIcuBottleneckSection data={icuBottleneck} dashboardYear={dashboardYear} />
-      </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceTemporalSection cascade={gravityCascade} ventilatory={ventilatorySupport} />
-      </section>
-      <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <VigilanceKmSection data={data} />
-      </section>
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
         <VigilanceComorbiditiesSection data={comorbidities} />
       </section>
-
       <section className="secondary-grid" style={{ gridTemplateColumns: '1fr', marginTop: '2rem' }}>
-        <article className="panel">
-          <div className="section-header">
-            <h3 style={{ margin: 0 }}>Eficácia Diagnóstica e Controle de Infecção</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
-            <DiagnosticResilienceChart data={diagResData} loading={diagResLoading} />
-            <NosocomialRiskChart data={nosoRiskData} loading={nosoRiskLoading} />
-          </div>
-        </article>
+        <VigilanceIcuBottleneckSection data={icuBottleneck} dashboardYear={dashboardYear} />
       </section>
     </>
   );

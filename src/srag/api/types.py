@@ -259,12 +259,16 @@ class EpidemicHeatmapResponse(TypedDict):
 
 
 class ComorbiditiesTreemapItem(TypedDict):
-    """A comorbidity item for treemap visualization."""
+    """A comorbidity item with OR, 95% CI and prevalence for forest-plot."""
 
     name: str
     value: int
     deaths: int
     lethality: float
+    prevalence: float
+    odds_ratio: float
+    ci_lower: float
+    ci_upper: float
 
 
 ComorbiditiesTreemapResponse = list[ComorbiditiesTreemapItem]
@@ -284,18 +288,25 @@ VentilatorySupportResponse = list[VentilatorySupportPoint]
 
 
 class DiagnosticStreamgraphItem(TypedDict):
+    """Item of diagnostic streamgraph serialization."""
     time_key: str
     diag_method: str
     count: int
 
 
 class DiagnosticScatterItem(TypedDict):
+    """Item of diagnostic scatter serialization."""
     diag_method: str
     avg_latency: float
     volume: int
+    uti_count: int
+    uti_rate: float
+    death_count: int
+    death_rate: float
 
 
 class DiagnosticResilienceResponse(TypedDict):
+    """Diagnostic resilience response serialization."""
     streamgraph: list[DiagnosticStreamgraphItem]
     scatter: list[DiagnosticScatterItem]
 

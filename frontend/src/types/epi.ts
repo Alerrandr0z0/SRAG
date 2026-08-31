@@ -512,6 +512,10 @@ export interface ComorbiditiesTreemapItem {
   value: number;
   deaths: number;
   lethality: number;
+  prevalence: number;
+  odds_ratio: number;
+  ci_lower: number;
+  ci_upper: number;
 }
 
 export type ComorbiditiesTreemapResponse = ComorbiditiesTreemapItem[];
@@ -547,6 +551,10 @@ export interface DiagnosticScatterItem {
   diag_method: string;
   avg_latency: number;
   volume: number;
+  uti_count: number;
+  uti_rate: number;
+  death_count: number;
+  death_rate: number;
 }
 
 export interface DiagnosticResilienceResponse {
