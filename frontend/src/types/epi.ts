@@ -70,9 +70,20 @@ export interface UnitStats {
   [key: string]: unknown;
 }
 
+export interface ClinicalFlowNode {
+  name: string;
+}
+
+export interface ClinicalFlowLink {
+  source: string;
+  target: string;
+  value: number;
+  pct?: number;
+}
+
 export interface ClinicalFlow {
-  nodes: Array<Record<string, unknown>>;
-  links: Array<Record<string, unknown>>;
+  nodes: ClinicalFlowNode[];
+  links: ClinicalFlowLink[];
 }
 
 export interface IcuBottleneckRecord {

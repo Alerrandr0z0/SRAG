@@ -99,6 +99,14 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
           obitos: item.obitos ?? 0,
           ignorados: item.ignorados ?? 0,
         },
+        sortValues: {
+          bairro: item.bairro,
+          count: item.count,
+          curados: item.curados ?? 0,
+          obitos: item.obitos ?? 0,
+          ignorados: item.ignorados ?? 0,
+        },
+        searchText: item.bairro.toLowerCase(),
       })),
     [territory?.bairros],
   );
@@ -107,18 +115,19 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
     <div className="stack" style={{ gap: '1.5rem' }}>
       {loading && <p className="meta">Carregando dados territoriais...</p>}
 
-      <article className="panel" style={{ boxShadow: 'none' }}>
+      <article className="panel">
         <RankTable
           title="Localidades notificadas"
           searchPlaceholder="Buscar localidade"
           columns={[
-            { key: 'bairro', label: 'Localidade' },
-            { key: 'count', label: 'Notificados', align: 'right' },
-            { key: 'curados', label: 'Curados', align: 'right' },
-            { key: 'obitos', label: 'Óbitos', align: 'right' },
-            { key: 'ignorados', label: 'Ignorados', align: 'right' },
+            { key: 'bairro', label: 'Localidade', sortable: true },
+            { key: 'count', label: 'Notificados', align: 'right', sortable: true },
+            { key: 'curados', label: 'Curados', align: 'right', sortable: true },
+            { key: 'obitos', label: 'Óbitos', align: 'right', sortable: true },
+            { key: 'ignorados', label: 'Ignorados', align: 'right', sortable: true },
           ]}
           rows={bairroRows}
+          exportable={{ filename: 'localidades_notificadas', title: 'Localidades notificadas' }}
         />
       </article>
 
@@ -127,7 +136,40 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
         <div className="section-header">
           <div>
             <h3>Atraso de Notificação por Localidade</h3>
-            <p className="meta">Distribuição de dias entre primeiros sintomas e notificação</p>
+          </div>
+          <div className="rank-tooltip-wrapper">
+            <button
+              type="button"
+              className="rank-tooltip-trigger"
+              aria-label="Sobre o atraso de notificação por localidade"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </button>
+            <div className="rank-tooltip-content rank-tooltip-content--align-right" style={{ width: '340px' }}>
+              <div>
+                <b>Atraso de Notificação por Localidade</b>
+                <br />
+                Distribuição de dias entre os primeiros sintomas e a notificação da ficha por bairro/localidade.
+              </div>
+              <br />• <b>Ordenação por Risco (Descendente)</b>: as localidades com maior mediana de atraso aparecem no topo para destacar as regiões com menor tempestividade.
+              <br />• <b>Classificação por Mediana</b>: Adequado ≤5d, Atenção ≤10d, Crítico &gt;10d.
+              <br />• Linha tracejada em <b>7d</b>: limite operacional de oportunidade (Portaria SVS/MS).
+              <br />• Passe o mouse na linha de cada localidade para ver o nome completo sem truncamento, média, P75 e P90.
+              <br />• Exibidas apenas localidades com ≥5 casos notificados.
+            </div>
           </div>
         </div>
         <div style={{ marginTop: '15px' }}>
@@ -155,8 +197,7 @@ const TerritoryPanel: React.FC<TerritoryPanelProps> = ({
             lineHeight: '1.4',
           }}
         >
-          * Exibidas apenas localidades com ≥5 casos notificados. Amostra de até 100 casos por
-          localidade.
+          * Exibidas apenas localidades com ≥5 casos notificados.
         </p>
       </article>
 

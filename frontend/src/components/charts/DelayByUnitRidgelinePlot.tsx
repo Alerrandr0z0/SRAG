@@ -52,13 +52,16 @@ function kde(
   });
 }
 
-const formatUnitName = (name: string | undefined, fallback: string, max = 32): string => {
+const PAGE_SIZE = 5;
+
+const formatUnitName = (name: string | undefined, fallback: string, max = 40): string => {
   const v = name && name.trim().length > 0 ? name : fallback;
   return v.length > max ? `${v.substring(0, max - 1)}…` : v;
 };
 
 const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
     visible: boolean;
     x: number;
@@ -92,7 +95,7 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
     if (!data || data.length === 0) return 1;
     const valid = data.filter((d) => d.total >= MIN_CASES && d.delay_samples.length >= 2);
     const list = valid.length > 0 ? valid : data;
-    return Math.max(1, Math.ceil(list.length / 8));
+    return Math.max(1, Math.ceil(list.length / PAGE_SIZE));
   }, [data]);
 
   useEffect(() => {
@@ -108,16 +111,15 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
     svg.selectAll('*').remove();
 
     try {
-      const sortedAll = [...data].sort((a, b) => a.median_delay - b.median_delay);
+      const sortedAll = [...data].sort((a, b) => b.median_delay - a.median_delay);
       let validUnits = sortedAll.filter((d) => d.total >= MIN_CASES && d.delay_samples.length >= 2);
       if (validUnits.length === 0) {
         validUnits = sortedAll.filter((d) => d.delay_samples.length >= 1);
       }
       if (validUnits.length === 0) return;
 
-      const maxGroups = 8;
-      const totalPages = Math.max(1, Math.ceil(validUnits.length / maxGroups));
-      const currentPage = Math.min(page, totalPages - 1);
+      const maxGroups = PAGE_SIZE;
+      const currentPage = Math.min(page, pageCount - 1);
       const pagedUnits = validUnits.slice(
         currentPage * maxGroups,
         Math.min(validUnits.length, (currentPage + 1) * maxGroups),
@@ -130,6 +132,7 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
 
       interface RidgeGroup {
         key: string;
+        fullName: string;
         label: string;
         median: number;
         avg: number;
@@ -152,8 +155,10 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
           x: pt.x,
           y: maxDensity > 0 ? pt.y / maxDensity : 0,
         }));
+        const fullName = unit.nome_fantasia || unit.id_unidade;
         return {
           key: unit.id_unidade,
+          fullName,
           label: formatUnitName(unit.nome_fantasia, unit.id_unidade),
           median: unit.median_delay,
           avg: unit.avg_delay,
@@ -164,8 +169,9 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
         };
       });
 
-      const containerWidth = svgRef.current.parentElement?.clientWidth || 820;
-      const margin = { top: 32, right: 24, bottom: 44, left: 168 };
+      const rawWidth = svgRef.current.parentElement?.clientWidth ?? 0;
+      const containerWidth = rawWidth > 0 ? rawWidth : 820;
+      const margin = { top: 32, right: 24, bottom: 44, left: 240 };
       const width = containerWidth - margin.left - margin.right;
       const rowHeight = 56;
       const ridgeHeightMax = rowHeight * 0.82;
@@ -337,6 +343,16 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
         .attr('opacity', 0.55);
       ridgeGroups
         .append('line')
+        .attr('x1', (d) => x(d.p90))
+        .attr('x2', (d) => x(d.p90))
+        .attr('y1', -y(0.14))
+        .attr('y2', 0)
+        .attr('stroke', (d) => getRidgeColor(d.median))
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,3')
+        .attr('opacity', 0.35);
+      ridgeGroups
+        .append('line')
         .attr('x1', (d) => x(d.median))
         .attr('x2', (d) => x(d.median))
         .attr('y1', -y(0.8))
@@ -384,13 +400,17 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
         .attr('width', width)
         .attr('height', ridgeHeightMax + 4)
         .attr('fill', 'transparent')
-        .on('mousemove', (event, d) => {
-          const [mx, my] = d3.pointer(event, svgRef.current!);
+        .on('mousemove', (event: MouseEvent, d) => {
+          const wrap = wrapRef.current;
+          if (!wrap) return;
+          const rect = wrap.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
           setTooltip({
             visible: true,
-            x: mx,
-            y: my,
-            name: d.label,
+            x,
+            y,
+            name: d.fullName,
             median: d.median,
             avg: d.avg,
             total: d.total,
@@ -402,10 +422,59 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
     } catch (err) {
       console.error('Erro render Ridgeline por Unidade:', err);
     }
-  }, [data, themeColors, page]);
+    return () => {
+      svg.selectAll('*').interrupt();
+    };
+  }, [data, themeColors, page, pageCount]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        style={{
+          padding: '28px 16px',
+          textAlign: 'center',
+          color: themeColors.text,
+          fontSize: 13,
+          background: themeColors.panel,
+          border: `1px dashed ${themeColors.muted}`,
+          borderRadius: 10,
+        }}
+      >
+        Sem dados de atraso por unidade para os filtros atuais.
+        <div style={{ marginTop: 6, fontSize: 11, color: themeColors.text }}>
+          Tente remover filtros de agente, ano ou unidade.
+        </div>
+      </div>
+    );
+  }
+
+  const hasValidUnits = (() => {
+    const sortedAll = [...data].sort((a, b) => b.median_delay - a.median_delay);
+    let valid = sortedAll.filter((d) => d.total >= MIN_CASES && d.delay_samples.length >= 2);
+    if (valid.length === 0) valid = sortedAll.filter((d) => d.delay_samples.length >= 1);
+    return valid.length > 0;
+  })();
+
+  if (!hasValidUnits) {
+    return (
+      <div
+        style={{
+          padding: '28px 16px',
+          textAlign: 'center',
+          color: themeColors.text,
+          fontSize: 13,
+          background: themeColors.panel,
+          border: `1px dashed ${themeColors.muted}`,
+          borderRadius: 10,
+        }}
+      >
+        Nenhuma unidade com amostra suficiente (≥5 casos) nos filtros atuais.
+      </div>
+    );
+  }
 
   return (
-    <div style={{ width: '100%', position: 'relative' }}>
+    <div ref={wrapRef} style={{ width: '100%', position: 'relative' }}>
       <div
         style={{
           display: 'flex',
@@ -434,8 +503,8 @@ const DelayByUnitRidgelinePlot: React.FC<DelayByUnitRidgelinePlotProps> = ({ dat
           <div
             style={{
               position: 'absolute',
-              left: tooltip.x + 14,
-              top: Math.max(0, tooltip.y - 20),
+              left: Math.max(8, Math.min(tooltip.x + 14, (wrapRef.current?.clientWidth ?? 820) - 224)),
+              top: Math.max(8, tooltip.y - 20),
               background: themeColors.bg,
               border: `1px solid ${themeColors.border}`,
               borderRadius: '8px',

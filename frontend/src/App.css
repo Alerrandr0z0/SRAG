@@ -3068,6 +3068,7 @@ select {
   left: auto;
   right: -6px;
   transform: none;
+  max-width: calc(100vw - 20px);
 }
 
 .rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--align-right::after {
@@ -3081,10 +3082,16 @@ select {
   bottom: auto;
 }
 
-.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--below::after {
-  top: auto;
-  bottom: 100%;
-  border-color: transparent transparent var(--bg-sidebar) transparent;
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--align-left {
+  right: auto;
+  left: -6px;
+  transform: none;
+}
+
+.rank-tooltip-wrapper .rank-tooltip-content.rank-tooltip-content--align-left::after {
+  right: auto;
+  left: 14px;
+  margin-left: 0;
 }
 
 .rank-tooltip-wrapper:hover .rank-tooltip-content {

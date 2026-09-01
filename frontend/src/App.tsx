@@ -233,9 +233,9 @@ function App() {
   useEffect(() => {
     const selectedAgent = agentFilter[0];
     if (selectedAgent === 'Influenza') {
-      setSwimmerVirus('gripe');
+      setSwimmerVirus((prev) => (prev !== 'gripe' ? 'gripe' : prev));
     } else if (selectedAgent === 'COVID-19') {
-      setSwimmerVirus('covid');
+      setSwimmerVirus((prev) => (prev !== 'covid' ? 'covid' : prev));
     }
   }, [agentFilter]);
 
@@ -464,37 +464,32 @@ function App() {
         ) : (
           <section className="main-grid">
             {panel === 'territorio' && (
-              <article className="panel">
-                <TerritoryPanel
-                  loading={territoryData.loading}
-                  territory={territoryData.territory}
-                  boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
-                  choropleth={territoryData.choropleth}
-                  ruralData={territoryData.ruralData}
-                  ruralSectorsGeo={
-                    territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
-                  }
-                  zoneFilter={zoneFilter}
-                  delayByBairro={territoryData.delayByBairro}
-                />
-              </article>
+              <TerritoryPanel
+                loading={territoryData.loading}
+                territory={territoryData.territory}
+                boundary={territoryData.boundary as import('geojson').FeatureCollection | null}
+                choropleth={territoryData.choropleth}
+                ruralData={territoryData.ruralData}
+                ruralSectorsGeo={
+                  territoryData.ruralSectorsGeo as import('geojson').FeatureCollection
+                }
+                zoneFilter={zoneFilter}
+                delayByBairro={territoryData.delayByBairro}
+              />
             )}
 
             {panel === 'unidades' && (
-              <article className="panel">
-                <UnitsPanel
-                  loading={unitsData.loading}
-                  units={unitsData.units}
-                  hospitalization={unitsData.hospitalization}
-                  clinicalFlow={unitsData.clinicalFlow}
-                  timelineData={unitsData.timelineData}
-                  delayByUnit={data?.laboratoryNetwork?.delay_by_unit ?? null}
-                  swimmerVirus={swimmerVirus}
-                  setSwimmerVirus={setSwimmerVirus}
-                  etiologicAgentFilter={agentFilter}
-                  dashboardYear={dashboardYear}
-                />
-              </article>
+              <UnitsPanel
+                loading={unitsData.loading}
+                units={unitsData.units}
+                hospitalization={unitsData.hospitalization}
+                clinicalFlow={unitsData.clinicalFlow}
+                timelineData={unitsData.timelineData}
+                delayByUnit={unitsData.delayByUnit}
+                swimmerVirus={swimmerVirus}
+                setSwimmerVirus={setSwimmerVirus}
+                etiologicAgentFilter={agentFilter}
+              />
             )}
 
             {panel === 'cidadao' && (

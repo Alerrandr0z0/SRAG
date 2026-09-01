@@ -11,7 +11,7 @@ import { NosocomialRiskChart } from '../charts/NosocomialRiskChart';
 import NotificationDelayChart from '../charts/NotificationDelayChart';
 import SeverityPyramidChart from '../charts/SeverityPyramidChart';
 import TrendChart from '../charts/TrendChart';
-import VirusProfileChart from '../charts/VirusProfileChart';
+import VirusProfileChart, { getVirusColor } from '../charts/VirusProfileChart';
 
 /* ─────── Props ─────── */
 
@@ -275,9 +275,9 @@ const VigilanceViralProfile = React.memo<ViralSectionProps>(
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            marginBottom: '8px',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '6px',
           }}
         >
           <h3
@@ -285,6 +285,82 @@ const VigilanceViralProfile = React.memo<ViralSectionProps>(
           >
             Perfil viral
           </h3>
+          <div className="rank-tooltip-wrapper">
+            <button
+              type="button"
+              className="rank-tooltip-trigger"
+              aria-label="Sobre a distribuição do perfil viral"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </button>
+            <div className="rank-tooltip-content rank-tooltip-content--align-left" style={{ width: '200px' }}>
+              <div>
+                <b>Composição Viral (0% a 100%)</b>
+                <br />
+                Proporção dos agentes etiológicos notificados nos filtros atuais.
+              </div>
+              {virus && virus.length > 0 && (
+                <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
+                  {(() => {
+                    const totalCases = virus.reduce((s, d) => s + d.count, 0);
+                    return virus.map((d, idx) => {
+                      const color = getVirusColor(d.virus, idx);
+                      const pct = totalCases ? (d.count / totalCases) * 100 : 0;
+                      return (
+                        <div
+                          key={d.virus}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            marginTop: '3px',
+                            fontSize: '10px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              backgroundColor: color,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {d.virus}
+                          </span>
+                          <b style={{ color: 'var(--text-main)' }}>{d.count.toLocaleString('pt-BR')}</b>
+                          <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>({pct.toFixed(1)}%)</span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="chart-wrap" style={{ flex: 1, minHeight: 0 }}>
+          {virus && <VirusProfileChart data={virus} />}
+        </div>
+        <div
+          style={{
+            marginTop: '8px',
+          }}
+        >
           <select
             value={virusDetail}
             onChange={(e) => onVirusDetail(e.target.value)}
@@ -311,9 +387,6 @@ const VigilanceViralProfile = React.memo<ViralSectionProps>(
               <option value="influenza_detailed">Detalhado Influenza</option>
             )}
           </select>
-        </div>
-        <div className="chart-wrap" style={{ flex: 1, minHeight: 0 }}>
-          {virus && <VirusProfileChart data={virus} />}
         </div>
       </article>
     );

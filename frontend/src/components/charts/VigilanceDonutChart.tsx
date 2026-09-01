@@ -36,7 +36,10 @@ const VigilanceDonutChart: React.FC<VigilanceDonutChartProps> = ({ data, title }
       },
       tooltip: {
         trigger: 'item',
+        confine: true,
+        appendToBody: false,
         formatter: '{b}: <b>{c}</b> ({d}%)',
+        extraCssText: 'max-width:220px;white-space:normal;word-break:break-word;',
       },
       legend: {
         show: false,

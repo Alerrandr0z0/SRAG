@@ -2,6 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useEcharts } from '../../hooks/useEcharts';
 import { useThemeMode } from '../../hooks/useThemeMode';
 
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const round1 = (value: number): number => Math.round(value * 10) / 10;
+
 interface SankeyChartProps {
   nodes: { name: string }[];
   links: { source: string; target: string; value: number; pct?: number }[];
@@ -111,7 +121,7 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
         links.filter((l) => l.source === n.name).reduce((sum, l) => sum + l.value, 0) ||
         links.filter((l) => l.target === n.name).reduce((sum, l) => sum + l.value, 0);
 
-      const nodePct = rootTotal > 0 ? ((nodeVolume / rootTotal) * 100).round(1) : 0;
+      const nodePct = rootTotal > 0 ? round1((nodeVolume / rootTotal) * 100) : 0;
 
       const isRightmost = ['Cura', 'Óbito', 'Em Aberto'].includes(n.name);
       const isTimelinessTerminal = [
@@ -132,8 +142,8 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
           formatter: () => displayName,
         },
         itemStyle: {
-          color: colorMap[n.name] || '#ccc',
-          opacity: isNoise ? 0.4 : 1,
+          color: colorMap[n.name] || '#64748b',
+          opacity: isNoise ? 0.45 : 1,
           borderWidth: isNoise ? 1 : 0,
           borderColor: '#94a3b8',
         },
@@ -183,29 +193,34 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
               p.name.includes('(Ignorado)') ||
               p.name === 'Em Aberto' ||
               p.name.startsWith('Sem Data ');
+            const safeName = escapeHtml(p.name);
+            const pctText = p.data.nodePct != null ? `${p.data.nodePct}%` : '—';
             return `
                     <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">
                         ${isNoise ? 'QUALIDADE DE DADO' : 'MARCO CLÍNICO'}
                     </div>
-                    <b style="font-size:14px; color:${mainTextColor};">${p.name}</b><br/>
+                    <b style="font-size:14px; color:${mainTextColor};">${safeName}</b><br/>
                     <div style="margin-top:8px; display:flex; justify-content:space-between; gap:20px;">
                         <span>Volume:</span> <b>${p.data.value} casos</b>
                     </div>
                     <div style="display:flex; justify-content:space-between; gap:20px;">
-                        <span>Representatividade:</span> <b>${p.data.nodePct}%</b>
+                        <span>Representatividade:</span> <b>${pctText}</b>
                     </div>
                 `;
           }
+          const safeSource = escapeHtml(p.data.source);
+          const safeTarget = escapeHtml(p.data.target);
+          const pctLabel = p.data.pct != null ? `${p.data.pct}%` : '—';
           return `
                 <div style="font-size:10px; color:${mutedTextColor}; margin-bottom:4px;">FLUXO DE PACIENTES</div>
                 <div style="margin-bottom:8px;">
-                    <b style="color:${mainTextColor};">${p.data.source}</b> ➔ <b style="color:${mainTextColor};">${p.data.target}</b>
+                    <b style="color:${mainTextColor};">${safeSource}</b> ➔ <b style="color:${mainTextColor};">${safeTarget}</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
                     <span>Volume:</span> <b>${p.data.value} casos</b>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:20px;">
-                    <span>Proporção na Origem:</span> <b style="color:#3b82f6;">${p.data.pct}%</b>
+                    <span>Proporção na Origem:</span> <b style="color:#3b82f6;">${pctLabel}</b>
                 </div>
             `;
         },
@@ -238,17 +253,6 @@ const SankeyChart: React.FC<SankeyChartProps> = ({ nodes, links }) => {
   const { chartRef } = useEcharts(option, [nodes, links, theme, isNarrow]);
 
   return <div ref={chartRef} className="echart-host" />;
-};
-
-// Extensão de arredondamento
-declare global {
-  interface Number {
-    round(precision: number): number;
-  }
-}
-Number.prototype.round = function (p: number) {
-  const f = 10 ** p;
-  return Math.round(this.valueOf() * f) / f;
 };
 
 export default SankeyChart;

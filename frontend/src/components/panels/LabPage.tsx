@@ -668,6 +668,14 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
           cobertura: <strong>{formatMetric(lab.resultado_pct, '%')}</strong>,
           sinal_alarme: <span>{alert.label}</span>,
         },
+        sortValues: {
+          laboratorio: lab.laboratorio,
+          total: lab.total,
+          score: lab.score,
+          median_turnaround_days: Number.isFinite(turnaround) ? turnaround : -1,
+          cobertura: Number.isFinite(coverage) ? coverage : -1,
+          sinal_alarme: alert.label,
+        },
       };
     });
 
@@ -684,24 +692,45 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
             title="Desempenho por Laboratório"
             subtitle={
               <>
-                Ranqueamento da qualidade operacional dos laboratórios responsáveis pelo diagnóstico laboratorial:<br/><br/>
-                • <b>Score de qualidade:</b> média de completude das quatro variáveis do bloco diagnóstico — amostra, data de coleta, data de resultado e resultado final. Formalmente, Score = (Σ completude<sub>i</sub> ÷ 4) × 100, em escala 0–100%. Ordena preenchimento e rastreabilidade e prioriza a classificação da tabela (desempate por latência e conclusão). Escores baixos sinalizam subregistro ou fluxo fragmentado.<br/><br/>
-                • <b>Latência mediana:</b> mediana em dias entre coleta e liberação do RT-PCR; valores elevados indicam gargalo.<br/><br/>
-                • <b>Conclusão de exames:</b> percentual de amostras com resultado final reportado; baixa indica represamento.<br/><br/>
-                • <b>Sinal de alerta:</b> classificação combinada (score, latência e cobertura) para priorização de supervisão.
+                Ranqueamento da qualidade operacional dos laboratórios responsáveis pelo diagnóstico
+                laboratorial:
+                <br />
+                <br />• <b>Score de qualidade:</b> média de completude das quatro variáveis do bloco
+                diagnóstico — amostra, data de coleta, data de resultado e resultado final.
+                Formalmente, Score = (Σ completude<sub>i</sub> ÷ 4) × 100, em escala 0–100%. Ordena
+                preenchimento e rastreabilidade e prioriza a classificação da tabela (desempate por
+                latência e conclusão). Escores baixos sinalizam subregistro ou fluxo fragmentado.
+                <br />
+                <br />• <b>Latência mediana:</b> mediana em dias entre coleta e liberação do RT-PCR;
+                valores elevados indicam gargalo.
+                <br />
+                <br />• <b>Conclusão de exames:</b> percentual de amostras com resultado final
+                reportado; baixa indica represamento.
+                <br />
+                <br />• <b>Sinal de alerta:</b> classificação combinada (score, latência e
+                cobertura) para priorização de supervisão.
               </>
             }
             subtitlePosition="bottom"
             searchPlaceholder="Buscar laboratório..."
             columns={[
-              { key: 'laboratorio', label: 'Laboratório' },
-              { key: 'total', label: 'Volume testado', align: 'right' },
-              { key: 'median_turnaround_days', label: 'Latência mediana', align: 'right' },
-              { key: 'cobertura', label: 'Conclusão de exames', align: 'right' },
-              { key: 'score', label: 'Score de qualidade', align: 'right' },
-              { key: 'sinal_alarme', label: 'Sinal de alerta' },
+              { key: 'laboratorio', label: 'Laboratório', sortable: true },
+              { key: 'total', label: 'Volume testado', align: 'right', sortable: true },
+              {
+                key: 'median_turnaround_days',
+                label: 'Latência mediana',
+                align: 'right',
+                sortable: true,
+              },
+              { key: 'cobertura', label: 'Conclusão de exames', align: 'right', sortable: true },
+              { key: 'score', label: 'Score de qualidade', align: 'right', sortable: true },
+              { key: 'sinal_alarme', label: 'Sinal de alerta', sortable: true },
             ]}
             rows={labRows}
+            exportable={{
+              filename: 'desempenho_laboratorios',
+              title: 'Desempenho por Laboratório',
+            }}
             initialPageSize={10}
           />
         </article>
@@ -1369,10 +1398,20 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                       <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                   </button>
-                  <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
-                    Distribuição temporal entre início de sintomas e início do antiviral, por fármaco:<br/><br/>
-                    • <b>Densidade por fármaco (KDE normalizada):</b> cada curva representa um antiviral; o pico indica a latência mais frequente e a largura da cauda revela variabilidade operacional.<br/><br/>
-                    • <b>Meta 2 dias (linha tracejada vermelha):</b> limite considerado oportuno. Picos à esquerda da meta indicam entrega oportuna; picos à direita e caudas longas sinalizam atraso sistêmico e perda de janela terapêutica.
+                  <div
+                    className="rank-tooltip-content"
+                    style={{ width: '320px', left: '0%', transform: 'none' }}
+                  >
+                    Distribuição temporal entre início de sintomas e início do antiviral, por
+                    fármaco:
+                    <br />
+                    <br />• <b>Densidade por fármaco (KDE normalizada):</b> cada curva representa um
+                    antiviral; o pico indica a latência mais frequente e a largura da cauda revela
+                    variabilidade operacional.
+                    <br />
+                    <br />• <b>Meta 2 dias (linha tracejada vermelha):</b> limite considerado
+                    oportuno. Picos à esquerda da meta indicam entrega oportuna; picos à direita e
+                    caudas longas sinalizam atraso sistêmico e perda de janela terapêutica.
                   </div>
                 </span>
               </div>
@@ -1446,10 +1485,19 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                         <line x1="12" y1="17" x2="12.01" y2="17" />
                       </svg>
                     </button>
-                    <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
-                      Evolução das taxas de desfecho por janela de tempo entre sintomas e antiviral:<br/><br/>
-                      • <b>Cura (linha verde) e Óbito (linha vermelha):</b> proporções por janela terapêutica. Declínio da cura e elevação do óbito nas janelas tardias evidenciam perda de efetividade com o atraso.<br/><br/>
-                      • <b>Margem cura−óbito (tracejada petróleo com área):</b> benefício líquido. Estreitamento ou inversão sinaliza janela onde o efeito clínico se atenua e orienta antecipação na atenção primária.
+                    <div
+                      className="rank-tooltip-content"
+                      style={{ width: '320px', left: '0%', transform: 'none' }}
+                    >
+                      Evolução das taxas de desfecho por janela de tempo entre sintomas e antiviral:
+                      <br />
+                      <br />• <b>Cura (linha verde) e Óbito (linha vermelha):</b> proporções por
+                      janela terapêutica. Declínio da cura e elevação do óbito nas janelas tardias
+                      evidenciam perda de efetividade com o atraso.
+                      <br />
+                      <br />• <b>Margem cura−óbito (tracejada petróleo com área):</b> benefício
+                      líquido. Estreitamento ou inversão sinaliza janela onde o efeito clínico se
+                      atenua e orienta antecipação na atenção primária.
                     </div>
                   </span>
                 </div>
@@ -1627,10 +1675,22 @@ const LabPage: React.FC<LabPageProps> = ({ data, qualityByLaboratory }) => {
                       <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                   </button>
-                  <div className="rank-tooltip-content" style={{ width: '320px', left: '0%', transform: 'none' }}>
-                    Relação entre achados de imagem e gravidade clínica, com escala compartilhada entre Raio-X e Tomografia:<br/><br/>
-                    • <b>UTI (eixo X) e Letalidade - CFR (eixo Y):</b> proporção de casos com o achado que evoluíram para UTI e para óbito. Tamanho da bolha proporcional ao volume de casos.<br/><br/>
-                    • <b>Quadrantes e Alto Risco (área avermelhada superior direita):</b> medianas tracejadas particionam o espaço; achados acima da mediana em ambos os eixos concentram maior severidade. Quadrante inferior esquerdo associa-se a menor risco. Maior dispersão vertical na tomografia indica melhor discriminação de risco.
+                  <div
+                    className="rank-tooltip-content"
+                    style={{ width: '320px', left: '0%', transform: 'none' }}
+                  >
+                    Relação entre achados de imagem e gravidade clínica, com escala compartilhada
+                    entre Raio-X e Tomografia:
+                    <br />
+                    <br />• <b>UTI (eixo X) e Letalidade - CFR (eixo Y):</b> proporção de casos com
+                    o achado que evoluíram para UTI e para óbito. Tamanho da bolha proporcional ao
+                    volume de casos.
+                    <br />
+                    <br />• <b>Quadrantes e Alto Risco (área avermelhada superior direita):</b>{' '}
+                    medianas tracejadas particionam o espaço; achados acima da mediana em ambos os
+                    eixos concentram maior severidade. Quadrante inferior esquerdo associa-se a
+                    menor risco. Maior dispersão vertical na tomografia indica melhor discriminação
+                    de risco.
                   </div>
                 </span>
               </h3>

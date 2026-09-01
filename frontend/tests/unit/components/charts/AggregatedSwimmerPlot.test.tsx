@@ -4,7 +4,7 @@ import AggregatedSwimmerPlot, {
   type EnrichedTimeline,
 } from '../../../../src/components/charts/AggregatedSwimmerPlot';
 
-describe('AggregatedSwimmerPlot — component', () => {
+describe('AggregatedSwimmerPlot (Milestone Flow) — component', () => {
   const baseData: EnrichedTimeline = {
     perfil: 'bivalente',
     gripe_status: 'protegido',
@@ -39,36 +39,16 @@ describe('AggregatedSwimmerPlot — component', () => {
     taxa_obito: 0.88,
   };
 
-  describe('caption and legends', () => {
-    it('renders the chart caption and legends', () => {
-      render(<AggregatedSwimmerPlot data={[baseData]} debug />);
+  describe('table headers and content', () => {
+    it('renders the table header columns', () => {
+      render(<AggregatedSwimmerPlot data={[baseData]} />);
 
-      expect(screen.getByText('Marcadores')).toBeInTheDocument();
-      expect(screen.getByText('Status vacinal da gripe')).toBeInTheDocument();
+      expect(screen.getByText('Perfil Vacinal')).toBeInTheDocument();
+      expect(screen.getByText('Última Dose')).toBeInTheDocument();
+      expect(screen.getByText('Jornada Clínica (Sintoma → Desfecho)')).toBeInTheDocument();
+      expect(screen.getByText('Admissão UTI')).toBeInTheDocument();
+      expect(screen.getByText('Desfecho (Cura / Óbito)')).toBeInTheDocument();
       expect(screen.getByText('Bivalente')).toBeInTheDocument();
-    });
-
-    it('renders all MARKER_LEGEND items', () => {
-      render(<AggregatedSwimmerPlot data={[baseData]} debug />);
-      const markers = [
-        'Última dose',
-        'Internação',
-        'Cura predominante',
-        'Óbito predominante',
-        'Pré-sintoma',
-        'Banda IQR',
-      ];
-      markers.forEach((label) => {
-        expect(screen.getByText(label)).toBeInTheDocument();
-      });
-    });
-
-    it('renders all GRIPE_LEGEND items', () => {
-      render(<AggregatedSwimmerPlot data={[baseData]} debug />);
-      const statuses = ['Protegida', 'Vencida', 'Não vacinada', 'Ignorado'];
-      statuses.forEach((label) => {
-        expect(screen.getByText(label)).toBeInTheDocument();
-      });
     });
   });
 
@@ -77,54 +57,31 @@ describe('AggregatedSwimmerPlot — component', () => {
       render(<AggregatedSwimmerPlot data={[]} />);
       expect(screen.getByText('Sem coortes para exibir.')).toBeInTheDocument();
     });
-
-    it('hides legends when data is empty', () => {
-      render(<AggregatedSwimmerPlot data={[]} />);
-      expect(screen.queryByText('Marcadores')).not.toBeInTheDocument();
-      expect(screen.queryByText('Status vacinal da gripe')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('no obito divider (consistent layout)', () => {
-    it('never shows divider section labels', () => {
-      render(<AggregatedSwimmerPlot data={[obitoData, baseData]} />);
-      expect(screen.queryByText('ÓBITO PREDOMINANTE')).not.toBeInTheDocument();
-      expect(screen.queryByText('CURA PREDOMINANTE')).not.toBeInTheDocument();
-    });
   });
 
   describe('data with null dose', () => {
     it('renders row without dose marker when mediana_dose_sintoma is null', () => {
       render(
         <AggregatedSwimmerPlot
-          data={[{ ...baseData, mediana_dose_sintoma: null, doseP25: null, doseP75: null }]}
+          data={[{ ...baseData, mediana_dose_sintoma: null }]}
         />,
       );
       expect(screen.getByText('Bivalente')).toBeInTheDocument();
-    });
-  });
-
-  describe('uti color hint in footer', () => {
-    it('renders the color hint text below grip legend', () => {
-      render(<AggregatedSwimmerPlot data={[baseData]} />);
-      expect(screen.getByText('Status vacinal da gripe')).toBeInTheDocument();
-      expect(screen.getByText('Protegida')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
     });
   });
 
   describe('multiple cohorts', () => {
-    it('renders SVG with two rows', () => {
+    it('renders table with multiple rows', () => {
       render(<AggregatedSwimmerPlot data={[obitoData, baseData]} />);
-      const svg = document.querySelector('svg');
-      expect(svg).toBeTruthy();
       expect(screen.getByText('Não Vacinado')).toBeInTheDocument();
       expect(screen.getByText('Bivalente')).toBeInTheDocument();
     });
 
-    it('shows correct UTI values per cohort', () => {
+    it('shows correct UTI percentages per cohort', () => {
       render(<AggregatedSwimmerPlot data={[obitoData, baseData]} />);
-      expect(screen.getByText(/UTI 45%/)).toBeInTheDocument();
-      expect(screen.getByText(/UTI 18%/)).toBeInTheDocument();
+      expect(screen.getByText('45% UTI')).toBeInTheDocument();
+      expect(screen.getByText('18% UTI')).toBeInTheDocument();
     });
   });
 });

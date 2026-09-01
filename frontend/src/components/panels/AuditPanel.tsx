@@ -221,19 +221,19 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
   const qualColumns: RankTableColumn[] =
     qualMode === 'unidade'
       ? [
-          { key: 'estabelecimento', label: 'Unidade Notificadora' },
-          { key: 'localizacao', label: 'Localização' },
-          { key: 'total', label: 'Notificações', align: 'right' },
-          { key: 'score', label: 'Score Geral (%)', align: 'right' },
-          { key: 'worst_field', label: 'Campo Mais Negligenciado' },
-          { key: 'worst_rate', label: 'Completude Campo (%)', align: 'right' },
+          { key: 'estabelecimento', label: 'Unidade Notificadora', sortable: true },
+          { key: 'localizacao', label: 'Localização', sortable: true },
+          { key: 'total', label: 'Notificações', align: 'right', sortable: true },
+          { key: 'score', label: 'Score Geral (%)', align: 'right', sortable: true },
+          { key: 'worst_field', label: 'Campo Mais Negligenciado', sortable: true },
+          { key: 'worst_rate', label: 'Completude Campo (%)', align: 'right', sortable: true },
         ]
       : [
-          { key: 'localizacao', label: 'Bairro/Comunidade' },
-          { key: 'total', label: 'Notificações', align: 'right' },
-          { key: 'score', label: 'Score Geral (%)', align: 'right' },
-          { key: 'worst_field', label: 'Pior Campo' },
-          { key: 'worst_rate', label: 'Completude (%)', align: 'right' },
+          { key: 'localizacao', label: 'Bairro/Comunidade', sortable: true },
+          { key: 'total', label: 'Notificações', align: 'right', sortable: true },
+          { key: 'score', label: 'Score Geral (%)', align: 'right', sortable: true },
+          { key: 'worst_field', label: 'Pior Campo', sortable: true },
+          { key: 'worst_rate', label: 'Completude (%)', align: 'right', sortable: true },
         ];
 
   const qualRows =
@@ -271,6 +271,17 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
               </span>
             ),
           },
+          sortValues: {
+            estabelecimento: unit.nome_fantasia,
+            localizacao:
+              unit.municipio && unit.uf ? `${unit.municipio} - ${unit.uf}` : 'Não informado',
+            total: unit.total,
+            score: unit.score,
+            worst_field: unit.worst_field,
+            worst_rate: unit.worst_rate,
+          },
+          searchText:
+            `${unit.nome_fantasia} ${unit.id_unidade} ${unit.municipio ?? ''} ${unit.uf ?? ''}`.toLowerCase(),
         }))
       : localidadeData.map((loc) => ({
           key: loc.bairro,
@@ -295,6 +306,14 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
               </span>
             ),
           },
+          sortValues: {
+            localizacao: loc.bairro,
+            total: loc.total,
+            score: loc.score,
+            worst_field: loc.worst_field,
+            worst_rate: loc.worst_rate,
+          },
+          searchText: loc.bairro.toLowerCase(),
         }));
 
   return (
@@ -978,12 +997,16 @@ const AuditPanel: React.FC<AuditPanelProps> = ({
       </article>
 
       {/* SECTION 4: Qualidade por Estabelecimento */}
-      <article className="panel" style={{ boxShadow: 'none' }}>
+      <article className="panel">
         <RankTable
           title={qualTitle}
           searchPlaceholder={qualPlaceholder}
           columns={qualColumns}
           rows={qualRows}
+          exportable={{
+            filename: qualMode === 'unidade' ? 'qualidade_unidades' : 'qualidade_localidades',
+            title: qualTitle,
+          }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <div className="pill-group">

@@ -16,11 +16,30 @@ export function useUnitsData(
   occupations?: string[],
   schooling?: string[],
   riskFactors?: string[],
-  _months?: number[],
-  _days?: number[],
+  months?: number[],
+  days?: number[],
 ) {
-  const queryKey = [
-    'unitsData',
+  const baseQueryKey = [
+    'unitsDataBase',
+    active,
+    profile,
+    raceFilter,
+    genderFilter,
+    zoneFilter,
+    bairroFilter,
+    unitFilter,
+    years,
+    agents,
+    maternal,
+    occupations,
+    schooling,
+    riskFactors,
+    months,
+    days,
+  ];
+
+  const timelineQueryKey = [
+    'unitsTimeline',
     active,
     swimmerVirus,
     profile,
@@ -35,13 +54,15 @@ export function useUnitsData(
     occupations,
     schooling,
     riskFactors,
+    months,
+    days,
   ];
 
-  const { data, isLoading } = useQuery({
-    queryKey,
+  const baseQuery = useQuery({
+    queryKey: baseQueryKey,
     queryFn: async () => {
       if (active) {
-        const [unitsData, flowData, hospData, timeline] = await Promise.all([
+        const [unitsData, flowData, hospData, labNetwork] = await Promise.all([
           api.fetchUnits(
             profile,
             raceFilter,
@@ -55,8 +76,8 @@ export function useUnitsData(
             occupations,
             schooling,
             riskFactors,
-            _months,
-            _days,
+            months,
+            days,
           ),
           api.fetchClinicalFlow(
             profile,
@@ -71,8 +92,8 @@ export function useUnitsData(
             occupations,
             schooling,
             riskFactors,
-            _months,
-            _days,
+            months,
+            days,
           ),
           api.fetchHospitalizationDuration(
             profile,
@@ -87,11 +108,10 @@ export function useUnitsData(
             occupations,
             schooling,
             riskFactors,
-            _months,
-            _days,
+            months,
+            days,
           ),
-          api.fetchTimelineAgg(
-            swimmerVirus,
+          api.fetchLaboratoryNetwork(
             profile,
             raceFilter,
             genderFilter,
@@ -104,39 +124,78 @@ export function useUnitsData(
             occupations,
             schooling,
             riskFactors,
-            _months,
-            _days,
+            months,
+            days,
           ),
         ]);
-        return { unitsData, flowData, hospData, timeline };
-      } else {
-        const unitsData = await api.fetchUnits(
-          profile,
-          raceFilter,
-          genderFilter,
-          zoneFilter,
-          bairroFilter,
-          unitFilter,
-          years,
-          agents,
-          maternal,
-          occupations,
-          schooling,
-          riskFactors,
-          _months,
-          _days,
-        );
-        return { unitsData, flowData: { nodes: [], links: [] }, hospData: null, timeline: [] };
+        return {
+          unitsData,
+          flowData,
+          hospData,
+          delayByUnit: labNetwork.delay_by_unit ?? null,
+        };
       }
+      const unitsData = await api.fetchUnits(
+        profile,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        years,
+        agents,
+        maternal,
+        occupations,
+        schooling,
+        riskFactors,
+        months,
+        days,
+      );
+      return {
+        unitsData,
+        flowData: { nodes: [], links: [] },
+        hospData: null,
+        delayByUnit: null,
+      };
     },
     staleTime: 5 * 60 * 1000,
   });
 
+  const timelineQuery = useQuery({
+    queryKey: timelineQueryKey,
+    queryFn: () =>
+      api.fetchTimelineAgg(
+        swimmerVirus,
+        profile,
+        raceFilter,
+        genderFilter,
+        zoneFilter,
+        bairroFilter,
+        unitFilter,
+        years,
+        agents,
+        maternal,
+        occupations,
+        schooling,
+        riskFactors,
+        months,
+        days,
+      ),
+    enabled: active,
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
+  });
+
   return {
-    units: data?.unitsData || [],
-    clinicalFlow: data?.flowData || { nodes: [], links: [] },
-    hospitalization: data?.hospData || null,
-    timelineData: data?.timeline || [],
-    loading: isLoading,
+    units: baseQuery.data?.unitsData || [],
+    clinicalFlow: baseQuery.data?.flowData || { nodes: [], links: [] },
+    hospitalization: baseQuery.data?.hospData || null,
+    timelineData: (timelineQuery.data as never[]) || [],
+    delayByUnit:
+      (baseQuery.data?.delayByUnit as
+        | import('../components/charts/DelayByUnitRidgelinePlot').UnitDelayRecord[]
+        | null) ?? null,
+    loading: baseQuery.isLoading,
+    timelineLoading: timelineQuery.isLoading || timelineQuery.isFetching,
   };
 }

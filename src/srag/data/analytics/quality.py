@@ -1123,7 +1123,7 @@ def compute_delay_by_unit(df: pd.DataFrame, limit: int = 30) -> list[dict[str, A
             median_delay=("delay", "median"),
             avg_delay=("delay", "mean"),
             total=("delay", "size"),
-            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())[:100]),
+            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())),
         )
         .reset_index()
     )
@@ -1185,7 +1185,7 @@ def compute_delay_by_bairro(df: pd.DataFrame, limit: int = 30) -> list[dict[str,
             median_delay=("delay", "median"),
             avg_delay=("delay", "mean"),
             total=("delay", "size"),
-            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())[:100]),
+            delay_list=("delay", lambda s: sorted(int(v) for v in s.tolist())),
         )
         .reset_index()
     )
